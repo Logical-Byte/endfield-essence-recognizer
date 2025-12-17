@@ -26,10 +26,6 @@ a = Analysis(
             "src/endfield_essence_recognizer/templates",
             "endfield_essence_recognizer/templates",
         ),
-        (
-            "src/endfield_essence_recognizer/sounds",
-            "endfield_essence_recognizer/sounds",
-        ),
     ],
     hiddenimports=[],
     hookspath=[],
