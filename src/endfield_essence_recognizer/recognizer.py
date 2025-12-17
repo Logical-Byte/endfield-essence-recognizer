@@ -121,12 +121,8 @@ class Recognizer:
         if best_score >= self.high_thresh:
             return best_label, float(best_score)
         elif best_score >= self.low_thresh:
-            logger.warning(
-                f"匹配置信水平较低: 最佳匹配={best_label} 分数={best_score:.3f}"
-            )
+            logger.warning(f"匹配分数较低: 最佳匹配={best_label} 分数={best_score:.3f}")
             return best_label, float(best_score)
         else:
-            logger.warning(
-                f"匹配置信水平很低: 最佳匹配={best_label} 分数={best_score:.3f}"
-            )
+            logger.warning(f"匹配分数很低: 最佳匹配={best_label} 分数={best_score:.3f}")
             return None, float(best_score)

@@ -52,7 +52,7 @@ text_recognizer = Recognizer(
     # preprocess_template=preprocess_text_template,
 )
 icon_recognizer = Recognizer(
-    labels=["deprecated", "not_deprecated", "locked", "not_locked"],
+    labels=["已弃用", "未弃用", "已锁定", "未锁定"],
     templates_dir=Path(str(screenshot_template_dir)),
 )
 
@@ -116,6 +116,7 @@ def main():
 <white>终末地基质妙妙小工具已启动</>
 <white>==================================================</>
 <green><bold>使用前阅读：</></>
+  <white>- 请在设置中将终末地分辨率调整为 <yellow><bold>1920×1080 窗口</></></>
   <white>- 请打开终末地<yellow><bold>贵重品库</></>并切换到<yellow><bold>武器基质</></>页面</>
   <white>- 在运行过程中，请确保终末地窗口<yellow><bold>置于前台</></></>
 <green><bold>功能介绍：</></>

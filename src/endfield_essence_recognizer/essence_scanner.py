@@ -53,17 +53,26 @@ def recognize_once(
 
     screenshot_image = screenshot_window(window, DEPRECATE_BUTTON_ROI)
     deprecated_str, max_val = icon_recognizer.recognize_roi(screenshot_image)
-    deprecated = deprecated_str == "deprecated"
-    logger.debug(f"废弃按钮识别结果: {deprecated_str} (分数: {max_val:.3f})")
+    deprecated_text = (
+        deprecated_str if deprecated_str is not None else "不知道是否已弃用"
+    )
+    logger.debug(f"弃用按钮识别结果: {deprecated_str} (分数: {max_val:.3f})")
 
     screenshot_image = screenshot_window(window, LOCK_BUTTON_ROI)
     locked_str, max_val = icon_recognizer.recognize_roi(screenshot_image)
-    locked = locked_str == "locked"
+    locked_text = locked_str if locked_str is not None else "不知道是否已锁定"
     logger.debug(f"锁定按钮识别结果: {locked_str} (分数: {max_val:.3f})")
 
     logger.opt(colors=True).info(
-        f"已识别当前基质，属性: <magenta>{stats}</>, 废弃: <magenta>{deprecated}</>, 锁定: <magenta>{locked}</>"
+        f"已识别当前基质，属性: <magenta>{stats}</>, <magenta>{deprecated_text}</>, <magenta>{locked_text}</>"
     )
+
+    if (
+        any(stat is None for stat in stats)
+        or deprecated_str is None
+        or locked_str is None
+    ):
+        return
 
     for weapon_id, weapon_data in weapons.items():
         if (
@@ -137,21 +146,30 @@ class EssenceScanner(threading.Thread):
             deprecated_str, max_val = self._icon_recognizer.recognize_roi(
                 screenshot_image
             )
-            deprecated = deprecated_str == "deprecated"
+            deprecated_text = (
+                deprecated_str if deprecated_str is not None else "不知道是否已弃用"
+            )
             logger.debug(
-                f"第 {i + 1} 行第 {j + 1} 列基质的废弃按钮识别结果: {deprecated_str} (分数: {max_val:.3f})"
+                f"第 {i + 1} 行第 {j + 1} 列基质的弃用按钮识别结果: {deprecated_str} (分数: {max_val:.3f})"
             )
 
             screenshot_image = screenshot_window(window, LOCK_BUTTON_ROI)
             locked_str, max_val = self._icon_recognizer.recognize_roi(screenshot_image)
-            locked = locked_str == "locked"
+            locked_text = locked_str if locked_str is not None else "不知道是否已锁定"
             logger.debug(
                 f"第 {i + 1} 行第 {j + 1} 列基质的锁定按钮识别结果: {locked_str} (分数: {max_val:.3f})"
             )
 
             logger.opt(colors=True).info(
-                f"已识别第 {i + 1} 行第 {j + 1} 列的基质，属性: <magenta>{stats}</>, 废弃: <magenta>{deprecated}</>, 锁定: <magenta>{locked}</>"
+                f"已识别第 {i + 1} 行第 {j + 1} 列的基质，属性: <magenta>{stats}</>, <magenta>{deprecated_text}</>, <magenta>{locked_text}</>"
             )
+
+            if (
+                any(stat is None for stat in stats)
+                or deprecated_str is None
+                or locked_str is None
+            ):
+                continue
 
             for weapon_id, weapon_data in weapons.items():
                 if (
@@ -162,17 +180,17 @@ class EssenceScanner(threading.Thread):
                     logger.opt(colors=True).success(
                         f"第 {i + 1} 行第 {j + 1} 列的基质是<green><bold><underline>宝藏</></></>，它完美契合武器<bold>{weapon_data['weaponName']}</>。"
                     )
-                    if not locked:
+                    if locked_str == "未锁定":
                         click_on_window(window, *LOCK_BUTTON_POS)
-                    logger.success("给你自动锁上了，记得保管好哦！(*/ω＼*)")
+                        logger.success("给你自动锁上了，记得保管好哦！(*/ω＼*)")
                     break
             else:
                 logger.opt(colors=True).success(
                     f"第 {i + 1} 行第 {j + 1} 列的基质是<red><bold><underline>垃圾</></></>，它不匹配任何已实装武器。"
                 )
-                if locked:
+                if locked_str == "已锁定":
                     click_on_window(window, *LOCK_BUTTON_POS)
-                logger.success("给你自动解锁了，可以放心当狗粮用啦！ヾ(≧▽≦*)o")
+                    logger.success("给你自动解锁了，可以放心当狗粮用啦！ヾ(≧▽≦*)o")
 
             # datetime_str = datetime.now().astimezone().strftime("%Y%m%d_%H%M%S_%f")
             # save_image(
