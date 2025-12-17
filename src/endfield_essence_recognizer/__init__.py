@@ -22,9 +22,12 @@ from endfield_essence_recognizer.recognizer import (
 from endfield_essence_recognizer.window import get_active_support_window
 
 # 资源路径
-enable_sound_path = Path("sounds/enable.wav")
-disable_sound_path = Path("sounds/disable.wav")
-screenshot_dir = Path("screenshots")
+enable_sound_path = (
+    importlib.resources.files("endfield_essence_recognizer") / "sounds/enable.wav"
+)
+disable_sound_path = (
+    importlib.resources.files("endfield_essence_recognizer") / "sounds/disable.wav"
+)
 generated_template_dir = (
     importlib.resources.files("endfield_essence_recognizer") / "templates/generated"
 )
