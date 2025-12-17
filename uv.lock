@@ -27,7 +27,7 @@ wheels = [
 
 [[package]]
 name = "endfield-essence-recognizer"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "." }
 dependencies = [
     { name = "keyboard" },
