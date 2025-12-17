@@ -19,10 +19,7 @@ from loguru import logger
 # )
 
 default_format: str = (
-    "<green>{time:MM-DD HH:mm:ss}</> "
-    "[<level>{level}</>] "
-    "<cyan>{module}</>:<cyan>{line}</> | "
-    "<level><normal>{message}</></>"
+    "<green>{time:MM-DD HH:mm:ss}</> [<level>{level}</>] <level><normal>{message}</></>"
 )
 
 logger.remove()

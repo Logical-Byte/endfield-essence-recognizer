@@ -16,6 +16,8 @@ dependencies = [
 [dependency-groups]
 dev = [
     "pillow>=12.0.0",
+]
+build = [
     "pyinstaller>=6.17.0",
 ]
 
