@@ -1,6 +1,6 @@
 [project]
 name = "endfield-essence-recognizer"
-version = "0.1.2"
+version = "0.1.3"
 description = "不知道哪些基质该留哪些该扔？逝逝这个妙妙小工具吧！"
 readme = "README.md"
 requires-python = ">=3.12"
