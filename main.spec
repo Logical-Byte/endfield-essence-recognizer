@@ -69,3 +69,14 @@ coll = COLLECT(
 readme_src = Path("README.md")
 readme_dst = Path(DISTPATH) / "endfield-essence-recognizer" / "README.md"
 shutil.copy(readme_src, readme_dst)
+
+# 删除不需要的 opencv_videoio_ffmpeg DLL
+ffmpeg_dll = (
+    Path(DISTPATH)
+    / "endfield-essence-recognizer"
+    / "_internal"
+    / "cv2"
+    / "opencv_videoio_ffmpeg4120_64.dll"
+)
+if ffmpeg_dll.exists():
+    ffmpeg_dll.unlink()
