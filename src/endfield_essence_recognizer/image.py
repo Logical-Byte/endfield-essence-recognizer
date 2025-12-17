@@ -56,11 +56,3 @@ def save_image(
 def linear_operation(image: MatLike, min_value: int, max_value: int) -> MatLike:
     image = (image.astype(np.float64) - min_value) / (max_value - min_value) * 255
     return np.clip(image, 0, 255).astype(np.uint8)
-
-
-def scope_to_slice(scope: Scope | None) -> Slice:
-    """((x0, y0), (x1, y1)) -> (slice(y0, y1), slice(x0, x1))"""
-    if scope is None:
-        return slice(None), slice(None)
-    (x0, y0), (x1, y1) = scope
-    return slice(y0, y1), slice(x0, x1)

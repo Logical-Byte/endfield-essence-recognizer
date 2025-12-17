@@ -5,7 +5,6 @@ import ctypes.wintypes
 from collections.abc import Container
 
 import numpy as np
-import pyautogui
 import pygetwindow
 import win32con
 import win32gui
@@ -13,37 +12,6 @@ import win32ui
 from cv2.typing import MatLike
 
 from endfield_essence_recognizer.image import load_image
-
-
-def __get_client_rect_screen_by_ctypes(hwnd: int) -> tuple[int, int, int, int]:
-    """
-    获取窗口客户区在屏幕上的位置和大小。
-
-    Args:
-        hwnd: 窗口句柄
-
-    Returns:
-        (left, top, width, height) 元组，表示客户区的屏幕坐标和尺寸
-    """
-    rect = ctypes.wintypes.RECT()
-    ctypes.windll.user32.GetClientRect(hwnd, ctypes.byref(rect))
-    width = rect.right - rect.left
-    height = rect.bottom - rect.top
-
-    point = ctypes.wintypes.POINT(rect.left, rect.top)
-    ctypes.windll.user32.ClientToScreen(hwnd, ctypes.byref(point))
-
-    return point.x, point.y, width, height
-
-
-def __get_client_rect_screen_by_win32gui(hwnd: int) -> tuple[int, int, int, int]:
-    """另一个实现，使用 win32gui"""
-    left, top = win32gui.ClientToScreen(hwnd, (0, 0))
-    cr = win32gui.GetClientRect(hwnd)
-    right, bottom = win32gui.ClientToScreen(hwnd, (cr[2], cr[3]))
-    width = right - left
-    height = bottom - top
-    return left, top, width, height
 
 
 def get_window_hwnd(window: pygetwindow.Window) -> int:
@@ -145,25 +113,6 @@ def screenshot_by_win32ui(rect: tuple[int, int, int, int]) -> MatLike:
     return arr.copy()
 
 
-def __screenshot_by_pyautogui(rect: tuple[int, int, int, int]) -> MatLike:
-    """
-    使用 pyautogui 截取屏幕指定区域，返回 BGR 格式的 numpy 图像。
-
-    Args:
-        rect: 矩形区域 (left, top, right, bottom) 的屏幕坐标
-
-    Returns:
-        numpy 数组（BGR 格式，OpenCV 兼容）
-    """
-    left, top, right, bottom = rect
-    width, height = right - left, bottom - top
-    if width <= 0 or height <= 0:
-        raise ValueError(f"Try to screenshot with invalid rect: {rect}")
-
-    screenshot = pyautogui.screenshot(region=(left, top, width, height))
-    return load_image(screenshot)
-
-
 def screenshot_window(
     window: pygetwindow.Window, relative_region: tuple[int, int, int, int] | None = None
 ) -> MatLike:
@@ -191,46 +140,6 @@ def screenshot_window(
     return screenshot_by_win32ui((left, top, right, bottom))
 
 
-def __capture_client_roi_np(
-    hwnd: int, rect: tuple[int, int, int, int]
-) -> np.ndarray | None:
-    """
-    抓取窗口客户区内指定 ROI 区域，返回 BGR 格式的 numpy 图像。
-
-    此函数用于在内存中直接获取屏幕区域的像素数据，无需保存文件，
-    适合实时图像识别场景。
-
-    Args:
-        hwnd: 窗口句柄
-        rect: ROI 矩形，使用客户区像素坐标 (x1, y1, x2, y2)
-            - x1, y1: 左上角坐标（相对于客户区左上角）
-            - x2, y2: 右下角坐标（相对于客户区左上角）
-
-    Returns:
-        numpy 数组（BGR 格式，OpenCV 兼容）
-
-    技术细节：
-        - 将客户区坐标转换为屏幕坐标
-        - 使用 GDI BitBlt 复制屏幕区域
-        - 读取位图原始字节并转换为 numpy 数组
-        - 处理字节对齐（stride）和颜色通道顺序
-        - 自动丢弃 alpha 通道（如果存在）
-    """
-    x1, y1, x2, y2 = rect
-    if x2 <= x1 or y2 <= y1:
-        return None
-
-    # 计算屏幕绝对坐标
-    left, top, _, _ = __get_client_rect_screen_by_ctypes(hwnd)
-    abs_left = left + x1
-    abs_top = top + y1
-    abs_right = left + x2
-    abs_bottom = top + y2
-
-    # 调用 screenshot 函数获取屏幕区域
-    return screenshot_by_win32ui((abs_left, abs_top, abs_right, abs_bottom))
-
-
 def get_active_support_window(
     supported_window_titles: Container[str],
 ) -> pygetwindow.Window | None:
@@ -239,13 +148,3 @@ def get_active_support_window(
         return active_window
     else:
         return None
-
-
-def click_on_window(
-    window: pygetwindow.Window, relative_x: int, relative_y: int
-) -> None:
-    """在指定窗口的客户区坐标 (x, y) 位置点击"""
-    client_rect = get_client_rect(window)
-    screen_x = client_rect["left"] + relative_x
-    screen_y = client_rect["top"] + relative_y
-    pyautogui.click(screen_x, screen_y)
