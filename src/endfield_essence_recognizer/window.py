@@ -1,7 +1,5 @@
 """窗口截图和区域捕获工具模块。"""
 
-import ctypes
-import ctypes.wintypes
 from collections.abc import Container
 
 import numpy as np
@@ -10,8 +8,6 @@ import win32con
 import win32gui
 import win32ui
 from cv2.typing import MatLike
-
-from endfield_essence_recognizer.image import load_image
 
 
 def get_window_hwnd(window: pygetwindow.Window) -> int:

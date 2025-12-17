@@ -1,7 +1,3 @@
-import threading
-import time
-from collections.abc import Container
-
 import numpy as np
 import pygetwindow
 
@@ -19,11 +15,6 @@ essence_icon_y_list = np.linspace(196, 819, 5).astype(int)
 
 # 识别相关常量
 RESOLUTION = (1920, 1080)
-AREA = (1465, 79, 1883, 532)
-DEPRECATE_BUTTON_POS = (1807, 284)
-"""弃用按钮点击坐标"""
-LOCK_BUTTON_POS = (1839, 286)
-"""锁定按钮点击坐标"""
 DEPRECATE_BUTTON_ROI = (1790, 270, 1823, 302)
 """弃用按钮截图区域"""
 LOCK_BUTTON_ROI = (1825, 270, 1857, 302)

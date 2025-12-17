@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ctypes
 import importlib.resources
 import time
 from pathlib import Path
@@ -69,6 +70,9 @@ def on_exit():
 def main():
     """主函数"""
     global running
+
+    # 设置 DPI 感知，防止高 DPI 缩放问题
+    ctypes.windll.user32.SetProcessDPIAware()
 
     message = """
 
