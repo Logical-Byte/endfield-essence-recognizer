@@ -7,23 +7,25 @@ import sys
 
 from loguru import logger
 
-file_log_format: str = (
+file_log_format = (
     '<dim>File <cyan>"{file.path}"</>, line <cyan>{line}</>, in <cyan>{function}</></>\n'
     "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</> "
     "[<level>{level}</>] "
     "<level><normal>{message}</></>"
 )
 
-# default_format: str = (
+# default_format = (
 #     "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</> "
 #     "[<level>{level}</>] "
 #     "<cyan>{module}</>:<cyan>{function}</>:<cyan>{line}</> | "
 #     "<level><normal>{message}</></>"
 # )
 
-console_log_format: str = (
+console_log_format = (
     "<green>{time:MM-DD HH:mm:ss}</> [<level>{level}</>] <level><normal>{message}</></>"
 )
+
+gui_log_format = file_log_format
 
 
 # https://loguru.readthedocs.io/en/stable/overview.html#entirely-compatible-with-standard-logging
@@ -41,9 +43,21 @@ class LoguruHandler(logging.Handler):  # pragma: no cover
             frame = frame.f_back
             depth += 1
 
-        logger.opt(depth=depth, exception=record.exc_info).log(
-            level, record.getMessage()
+        message = f"<magenta>{record.name.split('.')[0]}</> | {record.getMessage()}"
+        logger.opt(colors=True, depth=depth, exception=record.exc_info).log(
+            level, message
         )
+
+
+LOGGING_CONFIG = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {"default": {"class": "endfield_essence_recognizer.log.LoguruHandler"}},
+    "loggers": {
+        "uvicorn.error": {"handlers": ["default"], "level": "INFO"},
+        "uvicorn.access": {"handlers": ["default"], "level": "INFO"},
+    },
+}
 
 
 class WebSocketHandler:

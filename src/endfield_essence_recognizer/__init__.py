@@ -7,6 +7,9 @@ from typing import TYPE_CHECKING
 from endfield_essence_recognizer.log import logger
 
 if TYPE_CHECKING:
+    import multiprocessing
+    import threading
+
     from endfield_essence_recognizer.essence_scanner import EssenceScanner
     from endfield_essence_recognizer.recognizer import Recognizer
 
@@ -29,10 +32,11 @@ supported_window_titles = ["EndfieldTBeta2", "明日方舟：终末地"]
 """支持的窗口标题列表"""
 
 # 全局变量
-# running = True
-"""程序运行状态标志"""
 essence_scanner_thread: EssenceScanner | None = None
 """基质扫描器线程实例"""
+webview_process: multiprocessing.Process | None = None
+"""WebView 进程实例"""
+server_thread: threading.Thread | None = None
 
 # 构造识别器实例
 text_recognizer: Recognizer | None = None
@@ -86,22 +90,39 @@ def on_bracket_right():
             )
 
 
-# def on_exit():
-#     """处理 Alt+Delete 按下事件 - 退出程序"""
-#     global running, essence_scanner_thread
-#     logger.info('检测到 "Alt+Delete"，正在退出程序...')
-#     running = False
-#     if essence_scanner_thread is not None:
-#         essence_scanner_thread.stop()
-#         essence_scanner_thread = None
+def on_exit():
+    """处理 Alt+Delete 按下事件 - 退出程序"""
+    logger.info('检测到 "Alt+Delete"，正在退出程序...')
+
+    global essence_scanner_thread
+
+    if essence_scanner_thread is not None:
+        essence_scanner_thread.stop()
+        essence_scanner_thread = None
+    if webview_process is not None and webview_process.is_alive():
+        webview_process.terminate()
+        webview_process.join()
+    if server_thread is not None and server_thread.is_alive():
+        from endfield_essence_recognizer.server import server
+
+        server.should_exit = True
+        server_thread.join()
 
 
 def main():
     """主函数"""
 
-    # global running, text_recognizer, icon_recognizer
-    global text_recognizer, icon_recognizer
+    global text_recognizer, icon_recognizer, essence_scanner_thread, webview_process
 
+    # 尽早启动 webui（webview 必须在主线程启动，因此这里使用多进程）
+    import multiprocessing
+
+    from endfield_essence_recognizer.webui import start_pywebview
+
+    webview_process = multiprocessing.Process(target=start_pywebview)
+    webview_process.start()
+
+    # 打印欢迎信息
     message = """
 
 <white>==================================================</>
@@ -153,35 +174,45 @@ def main():
 
     keyboard.add_hotkey("[", on_bracket_left)
     keyboard.add_hotkey("]", on_bracket_right)
-    # keyboard.add_hotkey("alt+delete", on_exit)
+    keyboard.add_hotkey("alt+delete", on_exit)
 
     logger.info("开始监听热键...")
 
     # 启动 web 后端
     import threading
 
-    from endfield_essence_recognizer.webui import (
-        api_host,
-        api_port,
-        start_api_server,
-        start_pywebview,
-        webview_url,
-    )
+    from endfield_essence_recognizer.server import server
 
-    api_thread = threading.Thread(
-        target=start_api_server,
-        args=(api_host, api_port),
+    server_thread = threading.Thread(
+        target=server.run,
         daemon=True,
     )
-    api_thread.start()
+    server_thread.start()
 
-    # 启动 webui
+    # 主线程等待 webview 关闭，或者捕获中断信号退出
+    import time
+
     try:
-        start_pywebview(webview_url)
+        while webview_process.is_alive():
+            time.sleep(0.01)
+        logger.info("WebView 窗口已关闭，正在退出程序...")
+        webview_process.join()
     except (KeyboardInterrupt, SystemExit):
         logger.info("程序被中断，正在退出...")
+        # 关闭 webview
+        webview_process.terminate()
+        webview_process.join()
+        # 继续上抛异常
+        raise
     finally:
-        # 清理
+        # 停止基质扫描线程
+        if essence_scanner_thread is not None:
+            essence_scanner_thread.stop()
+            essence_scanner_thread = None
+        # 关闭后端
+        server.should_exit = True
+        server_thread.join()
+        # 解除热键绑定
         keyboard.unhook_all()
         logger.info("程序已退出")
 
