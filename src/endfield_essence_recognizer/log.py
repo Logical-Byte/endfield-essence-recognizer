@@ -91,4 +91,6 @@ logger.add(
     websocket_handler,
     level="INFO",
     format=console_log_format,
+    diagnose=True,
+    colorize=True,
 )

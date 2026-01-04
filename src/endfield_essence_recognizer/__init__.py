@@ -71,18 +71,24 @@ def toggle_scan():
             supported_window_titles=supported_window_titles,
         )
         essence_scanner_thread.start()
-        winsound.PlaySound(
-            enable_sound_path.read_bytes(),
-            winsound.SND_MEMORY | winsound.SND_ASYNC,
-        )
+        with importlib.resources.as_file(
+            enable_sound_path
+        ) as enable_sound_path_ensured:
+            winsound.PlaySound(
+                str(enable_sound_path_ensured),
+                winsound.SND_FILENAME | winsound.SND_ASYNC,
+            )
     else:
         logger.info("停止扫描基质")
         essence_scanner_thread.stop()
         essence_scanner_thread = None
-        winsound.PlaySound(
-            disable_sound_path.read_bytes(),
-            winsound.SND_MEMORY | winsound.SND_ASYNC,
-        )
+        with importlib.resources.as_file(
+            disable_sound_path
+        ) as disable_sound_path_ensured:
+            winsound.PlaySound(
+                str(disable_sound_path_ensured),
+                winsound.SND_FILENAME | winsound.SND_ASYNC,
+            )
 
 
 def on_bracket_right():
@@ -117,26 +123,25 @@ def main():
 
     # 打印欢迎信息
     message = """
-
-<white>==================================================</>
+==================================================
 <green><bold>终末地基质妙妙小工具已启动</></>
-<white>==================================================</>
+==================================================
 <green><bold>使用前阅读：</></>
-  <white>- 请使用<yellow><bold>管理员权限</></>运行本工具，否则无法捕获全局热键</>
-  <white>- 请在终末地的设置中将分辨率调整为 <yellow><bold>1920×1080 窗口</></></>
-  <white>- 请按 "<green><bold>N</></>" 键打开终末地<yellow><bold>贵重品库</></>并切换到<yellow><bold>武器基质</></>页面</>
-  <white>- 在运行过程中，请确保终末地窗口<yellow><bold>置于前台</></></>
+  - 请使用<yellow><bold>管理员权限</></>运行本工具，否则无法捕获全局热键
+  - 请在终末地的设置中将分辨率调整为 <yellow><bold>1920×1080 窗口</></>
+  - 请按 "<green><bold>N</></>" 键打开终末地<yellow><bold>贵重品库</></>并切换到<yellow><bold>武器基质</></>页面
+  - 在运行过程中，请确保终末地窗口<yellow><bold>置于前台</></>
 
 <green><bold>功能介绍：</></>
-  <white>- 按 "<green><bold>[</></>" 键识别当前基质，仅识别不操作</>
-  <white>- 按 "<green><bold>]</></>" 键扫描所有基质，并自动锁定宝藏基质，解锁垃圾基质</>
-  <white>  基质扫描过程中再次按 "<green><bold>]</></>" 键中断扫描</>
-  <white>- 按 "<green><bold>Alt+Delete</></>" 退出程序</>
+  - 按 "<green><bold>[</></>" 键识别当前基质，仅识别不操作
+  - 按 "<green><bold>]</></>" 键扫描所有基质，并自动锁定宝藏基质，解锁垃圾基质
+    基质扫描过程中再次按 "<green><bold>]</></>" 键中断扫描
+  - 按 "<green><bold>Alt+Delete</></>" 退出程序
 
-  <white><cyan><bold>宝藏基质和垃圾基质：</></>如果这个基质和任何一把武器能对上，则是宝藏，否则是垃圾。</>
-<white>==================================================</>
+  <cyan><bold>宝藏基质和垃圾基质：</></>如果这个基质和任何一把武器能对上，则是宝藏，否则是垃圾。
+==================================================
 """
-    logger.opt(colors=True).success(message)
+    logger.opt(colors=True).info(message)
 
     # 读取配置
     from endfield_essence_recognizer.config import config

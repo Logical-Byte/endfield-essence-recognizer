@@ -12,7 +12,11 @@
     </div>
     <!-- 先用 id 选择器凑合一下，因为用 v-card 上用 ref 绑定的并不是 DOM 元素，而是那个奇妙的 v-card 对象 -->
     <v-card id="log-card" class="flex-grow-1 pa-4 overflow-auto">
-      <pre v-if="logs.length > 0" class="logs-content text-pre-wrap h-0">{{ logs.join('') }}</pre>
+      <pre
+        v-if="logs.length > 0"
+        class="logs-content text-pre-wrap h-0"
+        v-html="logs.join('')"
+      ></pre>
       <pre v-else>暂无日志...</pre>
     </v-card>
   </v-container>
@@ -54,7 +58,7 @@ watch(
       })
     }
   },
-  { deep: true }
+  { deep: true },
 )
 
 // 初始滚动到底部
