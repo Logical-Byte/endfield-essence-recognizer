@@ -50,7 +50,7 @@
     "rarity": 5,
     "stats": {
       "attribute": "智识提升",
-      "secondary": "法术伤害提升",
+      "secondary": "终结技效率提升",
       "skill": "昂扬"
     }
   },
@@ -61,7 +61,7 @@
     "rarity": 5,
     "stats": {
       "attribute": "力量提升",
-      "secondary": "终结技效率提升",
+      "secondary": "寒冷伤害提升",
       "skill": "压制"
     }
   },
@@ -137,7 +137,7 @@
     "weaponType": "单手剑",
     "rarity": 6,
     "stats": {
-      "attribute": "主能力提升",
+      "attribute": "智识提升",
       "secondary": "灼热伤害提升",
       "skill": "附术"
     }
@@ -148,7 +148,7 @@
     "weaponType": "单手剑",
     "rarity": 6,
     "stats": {
-      "attribute": "敏捷提升",
+      "attribute": "主能力提升",
       "secondary": "暴击率提升",
       "skill": "夜幕"
     }
@@ -170,7 +170,7 @@
     "weaponType": "单手剑",
     "rarity": 6,
     "stats": {
-      "attribute": "敏捷提升",
+      "attribute": "主能力提升",
       "secondary": "物理伤害提升",
       "skill": "残暴"
     }
@@ -181,7 +181,7 @@
     "weaponType": "单手剑",
     "rarity": 6,
     "stats": {
-      "attribute": "智识提升",
+      "attribute": "主能力提升",
       "secondary": "源石技艺提升",
       "skill": "附术"
     }
@@ -281,7 +281,7 @@
     "rarity": 6,
     "stats": {
       "attribute": "力量提升",
-      "secondary": "寒冷伤害提升",
+      "secondary": "攻击提升",
       "skill": "迸发"
     }
   },
@@ -314,7 +314,7 @@
     "rarity": 6,
     "stats": {
       "attribute": "力量提升",
-      "secondary": "攻击提升",
+      "secondary": "暴击率提升",
       "skill": "粉碎"
     }
   },
@@ -412,7 +412,7 @@
     "weaponType": "长柄武器",
     "rarity": 6,
     "stats": {
-      "attribute": "意志提升",
+      "attribute": "主能力提升",
       "secondary": "攻击提升",
       "skill": "压制"
     }
@@ -500,8 +500,8 @@
     "weaponType": "手铳",
     "rarity": 6,
     "stats": {
-      "attribute": "主能力提升",
-      "secondary": "终结技效率提升",
+      "attribute": "智识提升",
+      "secondary": "寒冷伤害提升",
       "skill": "附术"
     }
   },
@@ -511,8 +511,8 @@
     "weaponType": "手铳",
     "rarity": 6,
     "stats": {
-      "attribute": "智识提升",
-      "secondary": "攻击提升",
+      "attribute": "主能力提升",
+      "secondary": "暴击率提升",
       "skill": "附术"
     }
   },
@@ -522,8 +522,8 @@
     "weaponType": "手铳",
     "rarity": 6,
     "stats": {
-      "attribute": "力量提升",
-      "secondary": "攻击提升",
+      "attribute": "主能力提升",
+      "secondary": "法术提升",
       "skill": "附术"
     }
   },
@@ -643,8 +643,8 @@
     "weaponType": "施术单元",
     "rarity": 6,
     "stats": {
-      "attribute": "主能力提升",
-      "secondary": "攻击提升",
+      "attribute": "意志提升",
+      "secondary": "自然伤害提升",
       "skill": "压制"
     }
   },
@@ -654,7 +654,7 @@
     "weaponType": "施术单元",
     "rarity": 6,
     "stats": {
-      "attribute": "智识提升",
+      "attribute": "主能力提升",
       "secondary": "源石技艺提升",
       "skill": "迸发"
     }
@@ -666,7 +666,7 @@
     "rarity": 6,
     "stats": {
       "attribute": "智识提升",
-      "secondary": "攻击提升",
+      "secondary": "法术提升",
       "skill": "夜幕"
     }
   },
