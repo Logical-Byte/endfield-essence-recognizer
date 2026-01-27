@@ -29,7 +29,7 @@ screenshot_template_dir = (
     importlib.resources.files("endfield_essence_recognizer") / "templates/screenshot"
 )
 
-supported_window_titles = ["EndfieldTBeta2", "明日方舟：终末地"]
+supported_window_titles = ["EndfieldTBeta2", "明日方舟：终末地","Endfield"]
 """支持的窗口标题列表"""
 
 # 全局变量
