@@ -63,6 +63,19 @@ def recognize_once(
     ):
         return
 
+    matached_weapon = filter( lambda item: item[1]["stats"]["attribute"] == stats[0] and item[1]["stats"]["secondary"] == stats[1] and item[1]["stats"]["skill"] == stats[2], weapons.items())
+    if matached_weapon:
+        for weapon in matached_weapon:
+            weapon_data = weapon[1]
+            logger.opt(colors=True).success(
+                f"这个基质是<green><bold><underline>宝藏</></></>，它完美契合武器<bold>{weapon_data['weaponName']}（{weapon_data['rarity']}★ {weapon_data['weaponType']}）</>。"
+            )
+    else:
+        logger.opt(colors=True).success(
+            "这个基质是<red><bold><underline>垃圾</></></>，它不匹配任何已实装武器。"
+        )
+    return 
+    
     for weapon_id, weapon_data in weapons.items():
         if (
             weapon_data["stats"]["attribute"] == stats[0]
