@@ -73,6 +73,8 @@ def main():
 
     # 设置 DPI 感知，防止高 DPI 缩放问题
     ctypes.windll.user32.SetProcessDPIAware()
+    if not ctypes.windll.shell32.IsUserAnAdmin():
+        logger.error("<red><bold>请使用管理员权限运行本工具！</></>")
 
     message = """
 
