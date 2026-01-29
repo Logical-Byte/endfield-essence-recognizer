@@ -31,6 +31,7 @@
     "sass-embedded": "^1.92.1",
     "typescript": "~5.9.2",
     "vite": "^7.1.5",
+    "vite-plugin-vue-devtools": "^8.0.5",
     "vite-plugin-vuetify": "^2.1.2",
     "vue-tsc": "^3.0.7"
   }

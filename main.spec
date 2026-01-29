@@ -17,7 +17,7 @@ a = Analysis(
     datas=[
         *collect_data_files("endfield_essence_recognizer"),
         (
-            "frontend-vuetify/dist",
+            "frontend/dist",
             "endfield_essence_recognizer/webui_dist",
         ),
     ],
@@ -47,7 +47,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=["frontend-vuetify/public/favicon.ico"],
+    icon=["frontend/public/favicon.ico"],
 )
 coll = COLLECT(
     exe,

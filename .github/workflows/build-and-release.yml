@@ -26,7 +26,7 @@ jobs:
           node-version: "24"
 
       - name: Build frontend
-        working-directory: ./frontend-vuetify
+        working-directory: ./frontend
         run: |
           npm ci
           npm run build
