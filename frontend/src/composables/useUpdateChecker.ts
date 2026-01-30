@@ -39,7 +39,6 @@ export function useUpdateChecker() {
     try {
       // 获取当前版本
       currentVersion.value = await fetch('/api/version').then((res) => res.json())
-      currentVersion.value = '0'
 
       if (!currentVersion.value) {
         updateErrorMessage.value = '无法获取当前版本信息'
