@@ -14,6 +14,7 @@ from fastapi.staticfiles import StaticFiles
 from endfield_essence_recognizer import supported_window_titles, toggle_scan
 from endfield_essence_recognizer.log import LOGGING_CONFIG, logger, websocket_handler
 from endfield_essence_recognizer.path import ROOT_DIR
+from endfield_essence_recognizer.version import __version__
 
 # 加载 .env 文件
 load_dotenv()
@@ -21,10 +22,10 @@ load_dotenv()
 # 从环境变量读取配置
 is_dev = os.getenv("EER_DEV_MODE", "false").lower() in ("true", "1", "yes")
 dist_dir_str = os.getenv("EER_DIST_DIR", "")
-api_host = os.getenv("EER_API_HOST", "127.0.0.1")
-api_port = int(os.getenv("EER_API_PORT", "8000"))
 dev_url = os.getenv("EER_DEV_URL", "http://localhost:3000")
-prod_url = f"http://{api_host}:{api_port}"
+api_host = os.getenv("EER_API_HOST", "localhost")
+api_port = int(os.getenv("EER_API_PORT", "8000"))
+prod_url = f"http://localhost:{api_port}"
 webview_url = dev_url if is_dev else prod_url
 
 logger.success(
@@ -143,13 +144,18 @@ async def get_screenshot(
     return f"data:{mime_type};base64,{base64_string}"
 
 
+@app.get("/api/version")
+async def get_version() -> str | None:
+    return __version__
+
+
 @app.post("/api/start_scanning")
-async def start_scanning():
+async def start_scanning() -> None:
     toggle_scan()
 
 
 @app.post("/api/open_logs_folder")
-async def open_logs_folder():
+async def open_logs_folder() -> None:
     import platform
 
     from endfield_essence_recognizer.log import logger

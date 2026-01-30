@@ -1,3 +1,5 @@
+import type { Language } from '@/composables/useLanguage'
+import { useLanguage } from '@/composables/useLanguage'
 import type { TranslationKey } from '@/types/common'
 import type { GemTable } from '@/types/endfielddata/TableCfg/GemTable'
 import type { GemTagIdTable } from '@/types/endfielddata/TableCfg/GemTagIdTable'
@@ -12,7 +14,6 @@ import type { WikiEntryTable } from '@/types/endfielddata/TableCfg/WikiEntryTabl
 import type { WikiGroupTable } from '@/types/endfielddata/TableCfg/WikiGroupTable'
 import type { WorldEnergyPointGroupTable } from '@/types/endfielddata/TableCfg/WorldEnergyPointGroupTable'
 import type { WorldEnergyPointTable } from '@/types/endfielddata/TableCfg/WorldEnergyPointTable'
-import { useLanguage } from '@/composables/useLanguage'
 import { ref } from 'vue'
 
 /** 获取指定语言的国际化文本表路径 */
@@ -62,8 +63,38 @@ const weaponBasicTablePath = 'endfielddata/TableCfg/WeaponBasicTable.json'
 const wikiEntryDataTablePath = 'endfielddata/TableCfg/WikiEntryDataTable.json'
 const wikiEntryTablePath = 'endfielddata/TableCfg/WikiEntryTable.json'
 const wikiGroupTablePath = 'endfielddata/TableCfg/WikiGroupTable.json'
-const i18nLanguages = ['CN', 'EN', 'JP', 'KR', 'MX', 'RU', 'TC']
-const usedLanguages = ['CN', 'EN', 'JP', 'KR', 'MX', 'RU', 'TC']
+const i18nLanguages: Language[] = [
+  'CN',
+  'TC',
+  'DE',
+  'EN',
+  'MX',
+  'FR',
+  'BR',
+  'ID',
+  'IT',
+  'JP',
+  'KR',
+  'RU',
+  'TH',
+  'VN',
+]
+const usedLanguages: Language[] = [
+  'CN',
+  'TC',
+  'DE',
+  'EN',
+  'MX',
+  'FR',
+  'BR',
+  'ID',
+  'IT',
+  'JP',
+  'KR',
+  'RU',
+  'TH',
+  'VN',
+]
 
 export const gemTable = ref<GemTable>({})
 export const gemTagIdTable = ref<GemTagIdTable>({})

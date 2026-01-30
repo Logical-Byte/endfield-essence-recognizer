@@ -3,6 +3,8 @@
     <div>
       <h1 v-if="false">日志</h1>
       <div class="d-flex flex-row flex-wrap ga-3">
+        <v-btn color="primary" @click="startScanning">开始扫描基质</v-btn>
+        <v-spacer />
         <v-btn color="error" @click="clearLogs">清空日志</v-btn>
         <v-btn :color="autoScroll ? 'success' : 'warning'" @click="toggleAutoScroll">
           {{ autoScroll ? '自动滚动：开' : '自动滚动：关' }}
@@ -14,7 +16,6 @@
             </v-badge>
           </template>
         </v-tooltip>
-        <v-btn color="primary" @click="startScanning">开始扫描基质</v-btn>
       </div>
     </div>
     <!-- 先用 id 选择器凑合一下,因为用 v-card 上用 ref 绑定的并不是 DOM 元素,而是那个奇妙的 v-card 对象 -->

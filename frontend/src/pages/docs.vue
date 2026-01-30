@@ -5,29 +5,20 @@
     <div class="d-flex flex-row flex-wrap ga-4">
       <v-btn
         append-icon="mdi-open-in-new"
-        class="essence-btn"
         color="primary"
-        href="https://cos.yituliu.cn/endfield/endfield-essence-recognizer/endfield-essence-recognizer-v0.2.1-windows.zip"
+        href="https://ef.yituliu.cn/resources/essence-recognizer"
         rel="noopener"
         target="_blank"
-        >下载最新版（国内）</v-btn
+        >官网</v-btn
       >
       <v-btn
         append-icon="mdi-open-in-new"
-        class="essence-btn"
-        href="https://github.com/Logical-Byte/endfield-essence-recognizer/releases/latest"
-        rel="noopener"
-        target="_blank"
-        >下载最新版（GitHub）</v-btn
-      >
-      <v-btn
-        append-icon="mdi-open-in-new"
-        class="essence-btn"
         href="https://github.com/Logical-Byte/endfield-essence-recognizer"
         rel="noopener"
         target="_blank"
         >项目地址</v-btn
       >
+      <v-btn prepend-icon="mdi-update" @click="checkForUpdates(true)">检查更新 </v-btn>
     </div>
 
     <section class="readme">
@@ -92,6 +83,10 @@
   </v-container>
 </template>
 
-<script lang="ts" setup></script>
+<script lang="ts" setup>
+import { useUpdateChecker } from '@/composables/useUpdateChecker'
+
+const { checkForUpdates } = useUpdateChecker()
+</script>
 
 <style scoped lang="scss"></style>

@@ -23,6 +23,7 @@
       <v-app-bar-nav-icon @click="drawer = !drawer"></v-app-bar-nav-icon>
       <v-app-bar-title>{{ route.meta?.title || '终末地基质妙妙小工具' }}</v-app-bar-title>
       <template #append>
+        <v-btn icon="mdi-update" @click="checkForUpdates(true)" />
         <v-tooltip location="start">
           仅游戏内文本支持多语言<br />界面文本目前仅支持简体中文
           <template v-slot:activator="{ props }">
@@ -51,13 +52,18 @@
     <v-main>
       <router-view />
     </v-main>
+
+    <!-- 更新提示 -->
+    <UpdateDialogs />
   </v-app>
 </template>
 
 <script lang="ts" setup>
 import Logo from '@/components/icons/logo.vue'
+import UpdateDialogs from '@/components/UpdateDialogs.vue'
 import { useLanguage } from '@/composables/useLanguage'
 import { useLogs } from '@/composables/useLogs'
+import { useUpdateChecker } from '@/composables/useUpdateChecker'
 import { initGameData } from '@/utils/gameData/gameData'
 import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -75,9 +81,14 @@ const { usedLanguages, languageToText, currentLanguage, setLanguage } = useLangu
 // 初始化日志 WebSocket 连接
 useLogs()
 
-// 初始化游戏数据
-onMounted(async () => {
-  await initGameData()
+// 检查更新
+const { checkForUpdates } = useUpdateChecker()
+
+onMounted(() => {
+  // 初始化游戏数据
+  initGameData()
+  // 初始检查更新
+  checkForUpdates(false)
 })
 </script>
 
