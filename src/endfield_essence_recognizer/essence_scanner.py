@@ -16,10 +16,10 @@ from endfield_essence_recognizer.game_data.weapon import (
     weapon_stats_dict,
     weapon_type_int_to_translation_key,
 )
-from endfield_essence_recognizer.image import load_image
-from endfield_essence_recognizer.log import logger
 from endfield_essence_recognizer.recognizer import Recognizer
-from endfield_essence_recognizer.window import (
+from endfield_essence_recognizer.utils.image import load_image
+from endfield_essence_recognizer.utils.log import logger
+from endfield_essence_recognizer.utils.window import (
     click_on_window,
     get_active_support_window,
     get_client_size,

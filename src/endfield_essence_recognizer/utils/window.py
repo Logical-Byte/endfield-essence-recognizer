@@ -1,4 +1,6 @@
-"""窗口截图和区域捕获工具模块。"""
+"""
+Windows OS-specific window utilities.
+"""
 
 from collections.abc import Container, Iterable
 
@@ -10,7 +12,7 @@ import win32gui  # ty:ignore[unresolved-import]
 import win32ui  # ty:ignore[unresolved-import]
 from cv2.typing import MatLike
 
-from endfield_essence_recognizer.image import Scope
+from endfield_essence_recognizer.utils.image import Scope
 
 
 def _get_window_hwnd(window: pygetwindow.Window) -> int:
