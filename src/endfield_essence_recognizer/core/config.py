@@ -102,8 +102,7 @@ def get_server_config() -> ServerConfig:
     """
     Get the singleton server configuration instance.
 
-    Args:
-        base_dir (Path | None): Optional base directory to locate the `.env` file. Otherwise,
-            the default settings are used.
+    This function takes no parameters and returns a cached `ServerConfig` instance,
+    initialized using the default configuration loading behavior.
     """
     return _get_fresh_server_config(base_dir=None, use_dotenv=True)
