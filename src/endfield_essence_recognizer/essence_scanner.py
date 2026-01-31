@@ -207,6 +207,7 @@ def judge_essence_quality(
             return "treasure"
 
     # 尝试匹配已实装武器
+    matched_weapons = []  # 收集所有匹配的武器
     for weapon_id, weapon_basic in weapon_basic_table.items():
         weapon_stats = weapon_stats_dict[weapon_id]
         if (
@@ -214,45 +215,68 @@ def judge_essence_quality(
             and weapon_stats["secondary"] == stats[1]
             and weapon_stats["skill"] == stats[2]
         ):
-            # 匹配到已实装武器
-            if weapon_id in config.trash_weapon_ids:
-                logger.opt(colors=True).warning(
-                    f"这个基质虽然匹配武器<bold>{get_item_name(weapon_id, 'CN')}（{weapon_basic_table[weapon_id]['rarity']}★ {get_translation(weapon_type_int_to_translation_key[weapon_id], 'CN')}）</>，但是它被认为是<red><bold><underline>垃圾</></></>。"
-                )
-                return "trash"
+            # 收集匹配的武器
+            matched_weapons.append((weapon_id, weapon_basic))
+
+    if matched_weapons:
+        # 检查是否有垃圾武器
+        trash_weapons = [wid for wid, _ in matched_weapons if wid in config.trash_weapon_ids]
+        treasure_weapons = [wid for wid, _ in matched_weapons if wid not in config.trash_weapon_ids]
+
+        # 如果有垃圾武器
+        if trash_weapons and not treasure_weapons:
+            # 只有垃圾武器
+            weapon_id = trash_weapons[0]
+            weapon_basic = weapon_basic_table[weapon_id]
+            logger.opt(colors=True).warning(
+                f"这个基质虽然匹配武器<bold>{get_item_name(weapon_id, 'CN')}（{weapon_basic['rarity']}★ {get_translation(weapon_type_int_to_translation_key[weapon_id], 'CN')}）</>，但是它被认为是<red><bold><underline>垃圾</></></>。"
+            )
+            return "trash"
+
+        # 有宝藏武器（可能也有垃圾武器，但优先显示宝藏）
+        treasure_summary_key = treasure_weapons[0]  # 使用第一个宝藏武器作为 key
+
+        # 收集所有宝藏武器的信息到摘要
+        if treasure_summary is not None and scanned_stats_set is not None:
+            # 检查是否已扫描过这个属性组合（去重）
+            if stats_tuple in scanned_stats_set:
+                logger.debug(f"属性组合 {stats_tuple} 已扫描过，跳过计数")
             else:
-                logger.opt(colors=True).success(
-                    f"这个基质是<green><bold><underline>宝藏</></></>，它完美契合武器<bold>{get_item_name(weapon_id, 'CN')}（{weapon_basic_table[weapon_id]['rarity']}★ {get_translation(weapon_type_int_to_translation_key[weapon_id], 'CN')}）</>。"
-                )
-                # 收集宝藏信息到摘要（按属性分组）
-                if treasure_summary is not None and scanned_stats_set is not None:
-                    # 检查是否已扫描过这个属性组合（去重）
-                    if stats_tuple in scanned_stats_set:
-                        logger.debug(f"属性组合 {stats_tuple} 已扫描过，跳过计数")
-                    else:
-                        scanned_stats_set.add(stats_tuple)
-                        # 查找所有具有这些属性的武器
-                        if stats_tuple not in treasure_summary:
-                            treasure_summary[stats_tuple] = {
-                                "weapons": [],
-                                "count": 0,
-                            }
-                        # 添加当前武器（如果还没添加）
-                        current_weapon_info = {
-                            "id": weapon_id,
-                            "name": get_item_name(weapon_id, "CN"),
-                            "rarity": weapon_basic_table[weapon_id]["rarity"],
-                            "weapon_type": get_translation(
-                                weapon_type_int_to_translation_key[weapon_id], "CN"
-                            ),
-                        }
-                        # 检查武器是否已在列表中
-                        if not any(
-                            w["id"] == weapon_id for w in treasure_summary[stats_tuple]["weapons"]
-                        ):
-                            treasure_summary[stats_tuple]["weapons"].append(current_weapon_info)
-                        treasure_summary[stats_tuple]["count"] += 1
-                return "treasure"
+                scanned_stats_set.add(stats_tuple)
+                # 查找所有具有这些属性的宝藏武器
+                if stats_tuple not in treasure_summary:
+                    treasure_summary[stats_tuple] = {
+                        "weapons": [],
+                        "count": 0,
+                    }
+
+                # 添加所有宝藏武器（如果还没添加）
+                for weapon_id in treasure_weapons:
+                    weapon_basic = weapon_basic_table[weapon_id]
+                    weapon_info = {
+                        "id": weapon_id,
+                        "name": get_item_name(weapon_id, "CN"),
+                        "rarity": weapon_basic["rarity"],
+                        "weapon_type": get_translation(
+                            weapon_type_int_to_translation_key[weapon_id], "CN"
+                        ),
+                    }
+                    # 检查武器是否已在列表中
+                    if not any(
+                        w["id"] == weapon_id for w in treasure_summary[stats_tuple]["weapons"]
+                    ):
+                        treasure_summary[stats_tuple]["weapons"].append(weapon_info)
+
+                treasure_summary[stats_tuple]["count"] += 1
+
+        # 记录匹配的武器（所有宝藏武器）
+        weapon_names = "、".join([
+            get_item_name(wid, "CN") for wid in treasure_weapons
+        ])
+        logger.opt(colors=True).success(
+            f"这个基质是<green><bold><underline>宝藏</></></>，它完美契合武器<bold>{weapon_names}</>。"
+        )
+        return "treasure"
     else:
         # 未匹配到任何已实装武器
         logger.opt(colors=True).success(
