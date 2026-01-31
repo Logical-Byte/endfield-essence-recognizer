@@ -7,6 +7,7 @@ from endfield_essence_recognizer.core.config import ServerConfig, get_server_con
 def clear_config_cache():
     """Clear the configuration cache before each test to ensure isolation."""
     get_server_config.cache_clear()
+    yield
 
 
 def test_server_config_defaults():
@@ -24,12 +25,14 @@ def test_server_config_defaults():
 def test_server_config_computed_properties():
     """Test computed properties prod_url and webview_url."""
     # Production mode
-    config_prod = ServerConfig(dev_mode=False, api_port=8080)
+    config_prod = ServerConfig(dev_mode=False, api_port=8080, _env_file=None)
     assert config_prod.prod_url == "http://localhost:8080"
     assert config_prod.webview_url == "http://localhost:8080"
 
     # Development mode
-    config_dev = ServerConfig(dev_mode=True, dev_url="http://localhost:5173")
+    config_dev = ServerConfig(
+        dev_mode=True, dev_url="http://localhost:5173", _env_file=None
+    )
     assert config_dev.webview_url == "http://localhost:5173"
 
 
