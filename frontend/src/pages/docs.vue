@@ -42,7 +42,9 @@
 
       <h2>功能介绍</h2>
       <ul>
-        <li>按 <v-hotkey keys="[" inline variant="flat" /> 键识别当前选中的基质是宝藏还是垃圾</li>
+        <li>
+          按 <v-hotkey keys="[" inline variant="flat" /> 键识别当前选中的基质是宝藏还是养成材料
+        </li>
         <li>
           按
           <v-hotkey keys="]" inline variant="flat" />
@@ -58,13 +60,13 @@
       </ul>
 
       <p>
-        <strong class="text-primary">宝藏基质和垃圾基质：</strong>可以在<router-link
+        <strong class="text-primary">宝藏基质和养成材料：</strong>可以在<router-link
           to="/settings"
           class="text-primary text-decoration-none"
           ><strong>设置</strong></router-link
         >界面自定义。默认情况下，如果这个基质和任何一把武器能对上<span class="text-secondary"
           >（基质的所有属性与至少 1 件已实装武器的属性完全相同）</span
-        >，则是宝藏，否则是垃圾。
+        >，则是宝藏，否则是养成材料。
       </p>
 
       <h2>说明</h2>
@@ -73,7 +75,6 @@
         <li>
           工具仅检索基质是否匹配已实装的武器，而没有能力预测是否能匹配未实装的武器。至于一个基质未来有没有用，你可以给海猫打个电话（
         </li>
-        <li>“宝藏”和“垃圾”仅为分类简称，不代表价值判断或其他含义。</li>
         <li>本工具按“原样”提供，作者不对可用性、准确性或使用效果作出任何保证。</li>
         <li>使用者必须确保使用本工具符合相关法律法规与服务条款，禁止用于任何违法或侵权行为。</li>
         <li>使用者需承担因使用本工具产生的任何风险、损失或责任。</li>

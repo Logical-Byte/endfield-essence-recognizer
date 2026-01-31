@@ -185,7 +185,7 @@
       <v-expansion-panel :value="2">
         <v-expansion-panel-title>操作设置</v-expansion-panel-title>
         <v-expansion-panel-text>
-          <h2>遇到宝藏或者垃圾基质时，该如何操作？</h2>
+          <h2>遇到宝藏基质或者养成材料时，该如何操作？</h2>
           <v-row>
             <v-col cols="12" md="6">
               <h3>对于<span class="text-success">宝藏基质</span>，我们</h3>
@@ -199,7 +199,7 @@
               </v-radio-group>
             </v-col>
             <v-col cols="12" md="6">
-              <h3>对于<span class="text-error">垃圾基质</span>，我们</h3>
+              <h3>对于<span class="text-error">养成材料</span>，我们</h3>
               <v-radio-group v-model="trashAction" color="primary" density="comfortable">
                 <v-radio label="不去动它" value="keep" />
                 <v-radio label="把它锁上" value="lock" />

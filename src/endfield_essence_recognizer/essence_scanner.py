@@ -103,7 +103,7 @@ def judge_essence_quality(stats: list[str | None]) -> Literal["treasure", "trash
             # 匹配到已实装武器
             if weapon_id in config.trash_weapon_ids:
                 logger.opt(colors=True).warning(
-                    f"这个基质虽然匹配武器<bold>{get_item_name(weapon_id, 'CN')}（{weapon_basic_table[weapon_id]['rarity']}★ {get_translation(weapon_type_int_to_translation_key[weapon_id], 'CN')}）</>，但是它被认为是<red><bold><underline>垃圾</></></>。"
+                    f"这个基质虽然匹配武器<bold>{get_item_name(weapon_id, 'CN')}（{weapon_basic_table[weapon_id]['rarity']}★ {get_translation(weapon_type_int_to_translation_key[weapon_id], 'CN')}）</>，但是它被认为是<red><bold><underline>养成材料</></></>。"
                 )
                 return "trash"
             else:
@@ -114,7 +114,7 @@ def judge_essence_quality(stats: list[str | None]) -> Literal["treasure", "trash
     else:
         # 未匹配到任何已实装武器
         logger.opt(colors=True).success(
-            "这个基质是<red><bold><underline>垃圾</></></>，它不匹配任何已实装武器。"
+            "这个基质是<red><bold><underline>养成材料</></></>，它不匹配任何已实装武器。"
         )
         return "trash"
 
