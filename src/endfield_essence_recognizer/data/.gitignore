@@ -1,0 +1,5 @@
+# src/endfield_essence_recognizer/data 文件夹需放置游戏数据
+# 游戏数据体积较大，不包含在代码仓库中
+# 如需参与开发，请从任一发行版中拷贝游戏数据至此文件夹
+*
+!.gitignore
