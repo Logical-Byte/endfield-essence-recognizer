@@ -7,6 +7,7 @@ from typing import Literal
 import cv2
 import numpy as np
 import pygetwindow
+from cv2.typing import MatLike
 
 from endfield_essence_recognizer.config import config
 from endfield_essence_recognizer.game_data import get_translation, weapon_basic_table
@@ -55,6 +56,91 @@ STATS_1_ROI = ((1508, 416), (1700, 448))
 STATS_2_ROI = ((1508, 468), (1700, 500))
 """属性 2 截图区域"""
 
+STATS_0_LEVEL_ICONS = [
+    (1503, 395),  # +1
+    (1520, 395),  # +2
+    (1538, 395),  # +3
+    (1554, 395),  # +4
+]
+"""属性 0 等级图标坐标"""
+STATS_1_LEVEL_ICONS = [
+    (1503, 452),  # +1
+    (1520, 452),  # +2
+    (1538, 452),  # +3
+    (1554, 452),  # +4
+]
+"""属性 1 等级图标坐标"""
+STATS_2_LEVEL_ICONS = [
+    (1503, 507),  # +1
+    (1520, 507),  # +2
+    (1538, 507),  # +3
+    (1554, 507),  # +4
+]
+"""属性 2 等级图标坐标"""
+LEVEL_ICON_SAMPLE_RADIUS = 2
+"""等级图标状态采样半径"""
+
+
+def detect_icon_state_at_point(image: MatLike, x: int, y: int, radius: int = 3) -> bool:
+    """
+    检测指定坐标点的图标状态。
+    
+    Args:
+        image: 全局灰度图像（客户区截图）
+        x: 图标中心 x 坐标（客户区像素坐标）
+        y: 图标中心 y 坐标（客户区像素坐标）
+        radius: 采样半径
+    
+    Returns:
+        True 表示白色/亮色（激活），False 表示黑色/暗色（未激活）
+    """
+    height, width = image.shape[:2]
+    if x < radius or x >= width - radius or y < radius or y >= height - radius:
+        logger.warning(f"坐标点 ({x}, {y}) 超出图像范围")
+        return False
+    
+    # 提取坐标点周围区域的平均亮度
+    region = image[y - radius:y + radius + 1, x - radius:x + radius + 1]
+    avg_brightness = np.mean(region)
+    
+    # 阈值：大于 128 认为是白色/亮色（激活）
+    is_active = avg_brightness > 200
+    logger.trace(f"坐标点 ({x}, {y}) 亮度={avg_brightness:.1f}, 状态={'\u767d\u8272' if is_active else '\u7070\u8272'}")
+    return is_active
+
+
+def recognize_level_from_icon_points(image: MatLike, icon_points: list[tuple[int, int]]) -> int | None:
+    """
+    根据坐标点列表识别等级。
+    
+    Args:
+        image: 全局灰度图像（客户区截图）
+        icon_points: 4个图标的坐标点列表 [(x1,y1), (x2,y2), (x3,y3), (x4,y4)]
+    
+    Returns:
+        等级 (1-4) 或 None（识别失败）
+    """
+    from endfield_essence_recognizer.image import to_gray_image
+    
+    gray = to_gray_image(image)
+    
+    # 检测每个图标的状态
+    active_count = 0
+    for i, (x, y) in enumerate(icon_points):
+        is_active = detect_icon_state_at_point(gray, x, y, LEVEL_ICON_SAMPLE_RADIUS)
+        logger.trace(f"图标 {i + 1} ({x},{y}) 状态: {'\u767d\u8272' if is_active else '\u9ed1\u8272'}")
+        if is_active:
+            active_count += 1
+        else:
+            # 假设白色图标是连续的，遇到黑色后不再计数
+            break
+    
+    # 根据激活图标数量返回等级
+    if 1 <= active_count <= 4:
+        return active_count
+    else:
+        return None
+
 
 def check_scene(window: pygetwindow.Window) -> bool:
     width, height = get_client_size(window)
@@ -77,8 +163,22 @@ def check_scene(window: pygetwindow.Window) -> bool:
     return True
 
 
-def judge_essence_quality(stats: list[str | None]) -> Literal["treasure", "trash"]:
+def judge_essence_quality(stats: list[str | None], levels: list[int | None] | None = None) -> Literal["treasure", "trash"]:
     """根据识别到的属性判断基质品质，并输出日志提示。"""
+    
+    # 检查属性等级：如果启用了高等级判定，记录是否为高等级宝藏
+    is_high_level_treasure = False
+    high_level_info = ""
+    if config.high_level_treasure_enabled and levels is not None:
+        from endfield_essence_recognizer.game_data import gem_table
+        for i, (stat, level) in enumerate(zip(stats, levels)):
+            if stat is not None and level is not None and level >= config.high_level_treasure_threshold:
+                # 检查该词条是否为属性词条 (termType == 1)
+                gem = gem_table.get(stat)
+                if gem is not None and gem.get("termType") == 1:
+                    is_high_level_treasure = True
+                    high_level_info = f"（含高等级属性词条：{get_gem_tag_name(stat, 'CN')}+{level}）"
+                    break
 
     # 尝试匹配用户自定义的宝藏基质条件
     for treasure_stat in config.treasure_essence_stats:
@@ -88,7 +188,7 @@ def judge_essence_quality(stats: list[str | None]) -> Literal["treasure", "trash
             and treasure_stat.skill in stats
         ):
             logger.opt(colors=True).success(
-                "这个基质是<green><bold><underline>宝藏</></></>，因为它符合你设定的宝藏基质条件。"
+                f"这个基质是<green><bold><underline>宝藏</></></>，因为它符合你设定的宝藏基质条件{high_level_info}。"
             )
             return "treasure"
 
@@ -102,33 +202,59 @@ def judge_essence_quality(stats: list[str | None]) -> Literal["treasure", "trash
         ):
             # 匹配到已实装武器
             if weapon_id in config.trash_weapon_ids:
-                logger.opt(colors=True).warning(
-                    f"这个基质虽然匹配武器<bold>{get_item_name(weapon_id, 'CN')}（{weapon_basic_table[weapon_id]['rarity']}★ {get_translation(weapon_type_int_to_translation_key[weapon_id], 'CN')}）</>，但是它被认为是<red><bold><underline>养成材料</></></>。"
-                )
-                return "trash"
+                if is_high_level_treasure:
+                    logger.opt(colors=True).success(
+                        f"这个基质是<green><bold><underline>宝藏</></></>，因为它有高等级属性词条{high_level_info}。<yellow>即使它匹配的武器<bold>{get_item_name(weapon_id, 'CN')}（{weapon_basic_table[weapon_id]['rarity']}★ {get_translation(weapon_type_int_to_translation_key[weapon_id], 'CN')}）</>已被标记为养成材料。</>"
+                    )
+                    return "treasure"
+                else:
+                    logger.opt(colors=True).warning(
+                        f"这个基质虽然匹配武器<bold>{get_item_name(weapon_id, 'CN')}（{weapon_basic_table[weapon_id]['rarity']}★ {get_translation(weapon_type_int_to_translation_key[weapon_id], 'CN')}）</>，但是它被认为是<red><bold><underline>养成材料</></></>。"
+                    )
+                    return "trash"
             else:
                 logger.opt(colors=True).success(
-                    f"这个基质是<green><bold><underline>宝藏</></></>，它完美契合武器<bold>{get_item_name(weapon_id, 'CN')}（{weapon_basic_table[weapon_id]['rarity']}★ {get_translation(weapon_type_int_to_translation_key[weapon_id], 'CN')}）</>。"
+                    f"这个基质是<green><bold><underline>宝藏</></></>，它完美契合武器<bold>{get_item_name(weapon_id, 'CN')}（{weapon_basic_table[weapon_id]['rarity']}★ {get_translation(weapon_type_int_to_translation_key[weapon_id], 'CN')}）</>{high_level_info}。"
                 )
                 return "treasure"
     else:
         # 未匹配到任何已实装武器
-        logger.opt(colors=True).success(
-            "这个基质是<red><bold><underline>养成材料</></></>，它不匹配任何已实装武器。"
-        )
-        return "trash"
+        if is_high_level_treasure:
+            logger.opt(colors=True).success(
+                f"这个基质是<green><bold><underline>宝藏</></></>，因为它有高等级属性词条{high_level_info}。<dim>（但不匹配任何已实装武器）</>"
+            )
+            return "treasure"
+        else:
+            logger.opt(colors=True).success(
+                "这个基质是<red><bold><underline>养成材料</></></>，它不匹配任何已实装武器。"
+            )
+            return "trash"
 
 
 def recognize_essence(
     window: pygetwindow.Window, text_recognizer: Recognizer, icon_recognizer: Recognizer
-) -> tuple[list[str | None], str | None, str | None]:
+) -> tuple[list[str | None], list[int | None], str | None, str | None]:
     stats: list[str | None] = []
+    levels: list[int | None] = []
+
+    # 截取客户区全局截图用于等级检测
+    full_screenshot = screenshot_window(window)
 
     for k, roi in enumerate([STATS_0_ROI, STATS_1_ROI, STATS_2_ROI]):
         screenshot_image = screenshot_window(window, roi)
         result, max_val = text_recognizer.recognize_roi(screenshot_image)
         stats.append(result)
         logger.debug(f"属性 {k} 识别结果: {result} (分数: {max_val:.3f})")
+        
+        # 识别等级（通过检测坐标点状态）
+        icon_points = [STATS_0_LEVEL_ICONS, STATS_1_LEVEL_ICONS, STATS_2_LEVEL_ICONS][k]
+        level_value = recognize_level_from_icon_points(full_screenshot, icon_points)
+        levels.append(level_value)
+        
+        if level_value is not None:
+            logger.debug(f"属性 {k} 等级识别结果: +{level_value}")
+        else:
+            logger.debug(f"属性 {k} 等级识别结果: 无法识别")
 
     screenshot_image = screenshot_window(window, DEPRECATE_BUTTON_ROI)
     deprecated_str, max_val = icon_recognizer.recognize_roi(screenshot_image)
@@ -142,15 +268,23 @@ def recognize_essence(
     locked_text = locked_str if locked_str is not None else "不知道是否已锁定"
     logger.debug(f"锁定按钮识别结果: {locked_str} (分数: {max_val:.3f})")
 
-    stats_name = "、".join(
-        "无" if stat is None else get_gem_tag_name(stat, "CN") for stat in stats
-    )
+    stats_name_parts = []
+    for i, stat in enumerate(stats):
+        if stat is None:
+            stats_name_parts.append("无")
+        else:
+            stat_name = get_gem_tag_name(stat, "CN")
+            if i < len(levels) and levels[i] is not None:
+                stats_name_parts.append(f"{stat_name}+{levels[i]}")
+            else:
+                stats_name_parts.append(stat_name)
+    stats_name = "、".join(stats_name_parts)
 
     logger.opt(colors=True).info(
         f"已识别当前基质，属性: <magenta>{stats_name}</>, <magenta>{deprecated_text}</>, <magenta>{locked_text}</>"
     )
 
-    return stats, deprecated_str, locked_str
+    return stats, levels, deprecated_str, locked_str
 
 
 def recognize_once(
@@ -160,14 +294,14 @@ def recognize_once(
     if not check_scene_result:
         return
 
-    stats, deprecated_str, locked_str = recognize_essence(
+    stats, levels, deprecated_str, locked_str = recognize_essence(
         window, text_recognizer, icon_recognizer
     )
 
     if deprecated_str is None or locked_str is None:
         return
 
-    judge_essence_quality(stats)
+    judge_essence_quality(stats, levels)
 
 
 class EssenceScanner(threading.Thread):
@@ -233,14 +367,14 @@ class EssenceScanner(threading.Thread):
             time.sleep(0.3)
 
             # 识别基质信息
-            stats, deprecated_str, locked_str = recognize_essence(
+            stats, levels, deprecated_str, locked_str = recognize_essence(
                 window, self._text_recognizer, self._icon_recognizer
             )
 
             if deprecated_str is None or locked_str is None:
                 continue
 
-            essence_quality = judge_essence_quality(stats)
+            essence_quality = judge_essence_quality(stats, levels)
             if locked_str == "未锁定" and (
                 (essence_quality == "treasure" and config.treasure_action in "lock")
                 or (essence_quality == "trash" and config.trash_action in "lock")

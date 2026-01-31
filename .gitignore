@@ -14,4 +14,6 @@ logs/
 
 # local app settings
 config.json
-.env
+
+# enfield data table config
+src/endfield_essence_recognizer/data/endfielddata/TableCfg/**.json
