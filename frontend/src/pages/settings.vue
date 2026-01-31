@@ -65,6 +65,37 @@
       <v-expansion-panel :value="1">
         <v-expansion-panel-title>自定义宝藏基质</v-expansion-panel-title>
         <v-expansion-panel-text>
+          <h2>额外将高词条等级的基质视为宝藏</h2>
+          <v-row align="center" class="my-4">
+            <v-col cols="12" md="6">
+              <v-switch
+                v-model="highLevelTreasureEnabled"
+                color="primary"
+                density="comfortable"
+                hide-details
+                label="启用高等级基质属性词条判定"
+              />
+            </v-col>
+            <v-col cols="4" md="6">
+              <v-slider
+                v-model="highLevelTreasureThreshold"
+                :disabled="!highLevelTreasureEnabled"
+                :min="3"
+                :max="4"
+                :step="1"
+                :ticks="{ 3: '+3', 4: '+4' }"
+                show-ticks="always"
+                tick-size="4"
+                color="primary"
+                thumb-label
+              >
+                <template #thumb-label="{ modelValue }">
+                  +{{ modelValue }}
+                </template>
+              </v-slider>
+            </v-col>
+          </v-row>
+          <v-divider class="my-4" />
           <h2>额外将以下属性的基质视为宝藏</h2>
           <v-alert v-if="false" border="start" class="my-4" type="info" variant="tonal">
             请点击右侧（或者下方）的加号按钮添加新的基质属性行，点击删除按钮删除对应行。上下箭头按钮可调整行顺序。
@@ -269,6 +300,8 @@ const selectedWeaponIds = ref<string[]>([])
 const treasureEssenceStats = ref<EssenceStat[]>([])
 const treasureAction = ref('lock')
 const trashAction = ref('unlock')
+const highLevelTreasureEnabled = ref(false)
+const highLevelTreasureThreshold = ref(3)
 
 const notSelectedWeaponIds = computed(() => {
   return Object.keys(weaponBasicTable.value).filter(
@@ -312,16 +345,20 @@ const config = computed(() => {
     treasure_essence_stats: treasureEssenceStats.value,
     treasure_action: treasureAction.value,
     trash_action: trashAction.value,
+    high_level_treasure_enabled: highLevelTreasureEnabled.value,
+    high_level_treasure_threshold: highLevelTreasureThreshold.value,
   }
 })
 
 async function getConfig() {
   const response = await fetch(`/api/config`)
   const result = await response.json()
-  const { trash_weapon_ids, treasure_essence_stats, treasure_action, trash_action } = result
+  const { trash_weapon_ids, treasure_essence_stats, treasure_action, trash_action, high_level_treasure_enabled, high_level_treasure_threshold } = result
   treasureEssenceStats.value = treasure_essence_stats
   treasureAction.value = treasure_action
   trashAction.value = trash_action
+  highLevelTreasureEnabled.value = high_level_treasure_enabled ?? false
+  highLevelTreasureThreshold.value = high_level_treasure_threshold ?? 3
   selectedWeaponIds.value = Object.keys(weaponBasicTable.value).filter(
     (weaponId) => !trash_weapon_ids.includes(weaponId),
   )

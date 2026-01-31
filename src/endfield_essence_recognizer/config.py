@@ -36,6 +36,11 @@ class Config(BaseModel):
 
     treasure_action: Action = "lock"
     trash_action: Action = "unlock"
+    
+    high_level_treasure_enabled: bool = False
+    """是否启用高等级基质属性词条判定为宝藏"""
+    high_level_treasure_threshold: int = 3
+    """高等级基质属性词条的等级阈值 (+3 或 +4)"""
 
     def update_from_model(self, other: Config) -> None:
         for field in self.__class__.model_fields:
