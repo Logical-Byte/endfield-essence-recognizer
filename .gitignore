@@ -14,3 +14,4 @@ logs/
 
 # local app settings
 config.json
+.env
