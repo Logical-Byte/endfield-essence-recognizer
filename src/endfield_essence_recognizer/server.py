@@ -109,7 +109,7 @@ async def get_screenshot(
 
     import cv2
 
-    from endfield_essence_recognizer.window import (
+    from endfield_essence_recognizer.utils.window import (
         get_active_support_window,
         screenshot_window,
     )
