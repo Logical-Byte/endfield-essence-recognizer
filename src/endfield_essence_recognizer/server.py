@@ -210,10 +210,13 @@ app.mount(
     name="data",
 )
 
-cfg: ServerConfig = get_server_config()
-api_host = cfg.api_host
-api_port = cfg.api_port
-config = uvicorn.Config(
-    app=app, host=api_host, port=api_port, log_config=LOGGING_CONFIG
-)
-server = uvicorn.Server(config)
+
+def get_server() -> uvicorn.Server:
+    cfg: ServerConfig = get_server_config()
+    api_host = cfg.api_host
+    api_port = cfg.api_port
+    config = uvicorn.Config(
+        app=app, host=api_host, port=api_port, log_config=LOGGING_CONFIG
+    )
+    server = uvicorn.Server(config)
+    return server
