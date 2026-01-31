@@ -103,7 +103,7 @@ def detect_icon_state_at_point(image: MatLike, x: int, y: int, radius: int = 3) 
     region = image[y - radius:y + radius + 1, x - radius:x + radius + 1]
     avg_brightness = np.mean(region)
     
-    # 阈值：大于 128 认为是白色/亮色（激活）
+    # 阈值：大于 200 认为是白色/亮色（激活）
     is_active = avg_brightness > 200
     logger.trace(f"坐标点 ({x}, {y}) 亮度={avg_brightness:.1f}, 状态={'\u767d\u8272' if is_active else '\u7070\u8272'}")
     return is_active
