@@ -12,8 +12,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from endfield_essence_recognizer import supported_window_titles, toggle_scan
-from endfield_essence_recognizer.log import LOGGING_CONFIG, logger, websocket_handler
 from endfield_essence_recognizer.path import ROOT_DIR
+from endfield_essence_recognizer.utils.log import (
+    LOGGING_CONFIG,
+    logger,
+    websocket_handler,
+)
 from endfield_essence_recognizer.version import __version__
 
 # 加载 .env 文件
@@ -105,7 +109,7 @@ async def get_screenshot(
 
     import cv2
 
-    from endfield_essence_recognizer.window import (
+    from endfield_essence_recognizer.utils.window import (
         get_active_support_window,
         screenshot_window,
     )
@@ -158,7 +162,7 @@ async def start_scanning() -> None:
 async def open_logs_folder() -> None:
     import platform
 
-    from endfield_essence_recognizer.log import logger
+    from endfield_essence_recognizer.utils.log import logger
 
     LOGS_DIR = ROOT_DIR / "logs"
 
