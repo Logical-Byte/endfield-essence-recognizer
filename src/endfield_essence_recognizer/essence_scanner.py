@@ -6,6 +6,7 @@ from typing import Literal
 
 import cv2
 import numpy as np
+import pyautogui
 import pygetwindow
 
 from endfield_essence_recognizer.config import config
@@ -54,6 +55,22 @@ STATS_1_ROI = ((1508, 416), (1700, 448))
 """属性 1 截图区域"""
 STATS_2_ROI = ((1508, 468), (1700, 500))
 """属性 2 截图区域"""
+SCROLL_POSITION = (960, 500)
+"""鼠标滚轮滚动位置（客户区坐标）"""
+SCROLL_TICKS = -100
+"""鼠标滚轮滚动量（负数为向下滚动）"""
+FIRST_ESSENCE_ROI = ((128, 196), (230, 288))
+"""第一个基质截图区域（用于检测滚动是否成功）"""
+ESSENCE_SIMILARITY_THRESHOLD = 0.95
+"""基质相似度阈值（用于检测重复）"""
+MAX_SCROLL_ATTEMPTS = 3
+"""最大滚动尝试次数"""
+SCROLL_SIMILARITY_THRESHOLD = 0.9
+"""滚动成功判定阈值（低于此值认为滚动成功）"""
+BOTTOM_DETECTION_ROI = ((128, 196), (1374, 819))
+"""底部检测区域（基质网格区域）"""
+BOTTOM_SIMILARITY_THRESHOLD = 0.95
+"""底部检测相似度阈值"""
 
 
 def check_scene(window: pygetwindow.Window) -> bool:
@@ -75,6 +92,75 @@ def check_scene(window: pygetwindow.Window) -> bool:
         )
         return False
     return True
+
+
+def scroll_down_window(window: pygetwindow.Window) -> None:
+    from endfield_essence_recognizer.window import _get_client_rect
+
+    (left, top), (_right, _bottom) = _get_client_rect(window)
+    screen_x = left + SCROLL_POSITION[0]
+    screen_y = top + SCROLL_POSITION[1]
+
+    pyautogui.moveTo(screen_x, screen_y)
+    pyautogui.scroll(SCROLL_TICKS)
+
+
+def scroll_to_next_page_robust(window: pygetwindow.Window) -> bool:
+    first_essence_before = screenshot_window(window, FIRST_ESSENCE_ROI)
+
+    for attempt in range(MAX_SCROLL_ATTEMPTS):
+        scroll_down_window(window)
+        time.sleep(0.8)
+
+        first_essence_after = screenshot_window(window, FIRST_ESSENCE_ROI)
+
+        result = cv2.matchTemplate(
+            first_essence_before, first_essence_after, cv2.TM_CCOEFF_NORMED
+        )
+        _, max_val, _, _ = cv2.minMaxLoc(result)
+
+        logger.debug(
+            f"滚动尝试 {attempt + 1}/{MAX_SCROLL_ATTEMPTS}，相似度: {max_val:.3f}"
+        )
+
+        if max_val < SCROLL_SIMILARITY_THRESHOLD:
+            logger.info(f"滚动成功（尝试 {attempt + 1} 次）")
+            return True
+
+        logger.debug("第一个基质未变化，继续滚动...")
+
+    logger.warning(f"滚动失败（{MAX_SCROLL_ATTEMPTS} 次尝试后第一个基质仍相同）")
+    return False
+
+    first_essence_after = screenshot_window(window, FIRST_ESSENCE_ROI)
+
+    result = cv2.matchTemplate(
+        first_essence_before, first_essence_after, cv2.TM_CCOEFF_NORMED
+    )
+    _, max_val, _, _ = cv2.minMaxLoc(result)
+
+    logger.debug(f"第一个基质相似度: {max_val:.3f}")
+
+    if max_val >= ESSENCE_SIMILARITY_THRESHOLD:
+        logger.debug("检测到第一个基质重复，额外滚动一次")
+        scroll_down_window(window)
+        time.sleep(0.5)
+
+
+def is_at_bottom_robust(window: pygetwindow.Window) -> bool:
+    first_essence = screenshot_window(window, FIRST_ESSENCE_ROI)
+
+    scroll_down_window(window)
+    time.sleep(0.8)
+
+    first_essence_after = screenshot_window(window, FIRST_ESSENCE_ROI)
+
+    result = cv2.matchTemplate(first_essence, first_essence_after, cv2.TM_CCOEFF_NORMED)
+    _, max_val, _, _ = cv2.minMaxLoc(result)
+
+    logger.debug(f"底部检测（第一个基质相似度）: {max_val:.3f}")
+
+    return max_val >= BOTTOM_SIMILARITY_THRESHOLD
 
 
 def judge_essence_quality(stats: list[str | None]) -> Literal["treasure", "trash"]:
@@ -211,7 +297,90 @@ class EssenceScanner(threading.Thread):
             self._scanning.clear()
             return
 
-        for i, j in np.ndindex(len(essence_icon_y_list), len(essence_icon_x_list)):
+        page = 0
+        last_essence_stats = None
+        while True:
+            page += 1
+            logger.info(f"开始扫描第 {page} 页...")
+
+            for i, j in np.ndindex(len(essence_icon_y_list), len(essence_icon_x_list)):
+                window = get_active_support_window(self._supported_window_titles)
+                if window is None:
+                    logger.info("终末地窗口不在前台，停止基质扫描。")
+                    self._scanning.clear()
+                    break
+
+                if not self._scanning.is_set():
+                    logger.info("基质扫描被中断。")
+                    break
+
+                logger.info(f"正在扫描第 {i + 1} 行第 {j + 1} 列的基质...")
+
+                # 点击基质图标位置
+                relative_x = essence_icon_x_list[j]
+                relative_y = essence_icon_y_list[i]
+                click_on_window(window, relative_x, relative_y)
+
+                # 等待短暂时间以确保界面更新
+                time.sleep(0.3)
+
+                # 识别基质信息
+                stats, deprecated_str, locked_str = recognize_essence(
+                    window, self._text_recognizer, self._icon_recognizer
+                )
+
+                if deprecated_str is None or locked_str is None:
+                    continue
+
+                last_essence_stats = stats
+
+                essence_quality = judge_essence_quality(stats)
+                if locked_str == "未锁定" and (
+                    (essence_quality == "treasure" and config.treasure_action in "lock")
+                    or (essence_quality == "trash" and config.trash_action in "lock")
+                ):
+                    click_on_window(window, *LOCK_BUTTON_POS)
+                    logger.success("给你自动锁上了，记得保管好哦！(*/ω＼*)")
+                elif locked_str == "已锁定" and (
+                    (
+                        essence_quality == "treasure"
+                        and config.treasure_action
+                        in ["unlock", "unlock_and_undeprecate"]
+                    )
+                    or (
+                        essence_quality == "trash"
+                        and config.trash_action in ["unlock", "unlock_and_undeprecate"]
+                    )
+                ):
+                    click_on_window(window, *LOCK_BUTTON_POS)
+                    logger.success("给你自动解锁了！ヾ(≧▽≦*)o")
+                if deprecated_str == "未弃用" and (
+                    (
+                        essence_quality == "treasure"
+                        and config.treasure_action == "deprecate"
+                    )
+                    or (
+                        essence_quality == "trash"
+                        and config.trash_action == "deprecate"
+                    )
+                ):
+                    click_on_window(window, *DEPRECATE_BUTTON_POS)
+                    logger.success("给你自动标记为弃用了！(￣︶￣)>")
+                elif deprecated_str == "已弃用" and (
+                    (
+                        essence_quality == "treasure"
+                        and config.treasure_action
+                        in ["undeprecate", "unlock_and_undeprecate"]
+                    )
+                    or (
+                        essence_quality == "trash"
+                        and config.trash_action
+                        in ["undeprecate", "unlock_and_undeprecate"]
+                    )
+                ):
+                    click_on_window(window, *DEPRECATE_BUTTON_POS)
+                    logger.success("给你自动取消弃用啦！(＾Ｕ＾)ノ~ＹＯ")
+
             window = get_active_support_window(self._supported_window_titles)
             if window is None:
                 logger.info("终末地窗口不在前台，停止基质扫描。")
@@ -222,69 +391,11 @@ class EssenceScanner(threading.Thread):
                 logger.info("基质扫描被中断。")
                 break
 
-            logger.info(f"正在扫描第 {i + 1} 行第 {j + 1} 列的基质...")
+            scroll_to_next_page_robust(window)
 
-            # 点击基质图标位置
-            relative_x = essence_icon_x_list[j]
-            relative_y = essence_icon_y_list[i]
-            click_on_window(window, relative_x, relative_y)
-
-            # 等待短暂时间以确保界面更新
-            time.sleep(0.3)
-
-            # 识别基质信息
-            stats, deprecated_str, locked_str = recognize_essence(
-                window, self._text_recognizer, self._icon_recognizer
-            )
-
-            if deprecated_str is None or locked_str is None:
-                continue
-
-            essence_quality = judge_essence_quality(stats)
-            if locked_str == "未锁定" and (
-                (essence_quality == "treasure" and config.treasure_action in "lock")
-                or (essence_quality == "trash" and config.trash_action in "lock")
-            ):
-                click_on_window(window, *LOCK_BUTTON_POS)
-                logger.success("给你自动锁上了，记得保管好哦！(*/ω＼*)")
-            elif locked_str == "已锁定" and (
-                (
-                    essence_quality == "treasure"
-                    and config.treasure_action in ["unlock", "unlock_and_undeprecate"]
-                )
-                or (
-                    essence_quality == "trash"
-                    and config.trash_action in ["unlock", "unlock_and_undeprecate"]
-                )
-            ):
-                click_on_window(window, *LOCK_BUTTON_POS)
-                logger.success("给你自动解锁了！ヾ(≧▽≦*)o")
-            if deprecated_str == "未弃用" and (
-                (
-                    essence_quality == "treasure"
-                    and config.treasure_action == "deprecate"
-                )
-                or (essence_quality == "trash" and config.trash_action == "deprecate")
-            ):
-                click_on_window(window, *DEPRECATE_BUTTON_POS)
-                logger.success("给你自动标记为弃用了！(￣︶￣)>")
-            elif deprecated_str == "已弃用" and (
-                (
-                    essence_quality == "treasure"
-                    and config.treasure_action
-                    in ["undeprecate", "unlock_and_undeprecate"]
-                )
-                or (
-                    essence_quality == "trash"
-                    and config.trash_action in ["undeprecate", "unlock_and_undeprecate"]
-                )
-            ):
-                click_on_window(window, *DEPRECATE_BUTTON_POS)
-                logger.success("给你自动取消弃用啦！(＾Ｕ＾)ノ~ＹＯ")
-
-        else:
-            # 扫描完成
-            logger.info("基质扫描完成。")
+            if is_at_bottom_robust(window):
+                logger.info("基质扫描完成。")
+                break
 
     def stop(self) -> None:
         logger.info("停止基质扫描线程...")

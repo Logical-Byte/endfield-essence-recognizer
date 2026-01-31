@@ -1,10 +1,46 @@
 # Python-generated files
 __pycache__/
 *.py[oc]
-build/
-dist/
-wheels/
+*.py[cod]
+*.so
+.Python
 *.egg-info
+dist/
+build/
+wheels/
 
 # Virtual environments
 .venv
+venv/
+ENV/
+env/
+*.lock
+
+# IDE
+.idea/
+.vscode/
+.opencode/
+*.swp
+*.swo
+
+# Environment and config
+.env
+.env.local
+config.json
+logs/
+*.log
+
+# OpenSpec
+.opencode/
+
+# Generated data files (should be from release package)
+src/endfield_essence_recognizer/data/
+
+# Temporary files
+nul
+*.tmp
+*.bak
+
+# OS
+.DS_Store
+Thumbs.db
