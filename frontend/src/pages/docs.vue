@@ -30,7 +30,8 @@
           >运行本工具，否则无法捕获全局热键
         </li>
         <li>
-          请在终末地的设置中将分辨率调整为 <strong class="text-primary">1920×1080 窗口</strong>
+          请在终末地的设置中将界面语言调整为<strong class="text-primary">简体中文</strong
+          >，将分辨率调整为 <strong class="text-primary">1920×1080</strong>
         </li>
         <li>
           请按 <v-hotkey keys="N" inline variant="flat" /> 键打开终末地<strong class="text-primary"
