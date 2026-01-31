@@ -179,8 +179,9 @@ def main():
     # 启动 web 后端
     import threading
 
-    from endfield_essence_recognizer.server import server
+    from endfield_essence_recognizer.server import get_server
 
+    server = get_server()
     server_thread = threading.Thread(
         target=server.run,
         daemon=True,

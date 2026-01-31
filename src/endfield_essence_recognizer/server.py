@@ -6,12 +6,12 @@ from pathlib import Path
 from typing import Any, Literal
 
 import uvicorn
-from dotenv import load_dotenv
 from fastapi import Body, FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from endfield_essence_recognizer import supported_window_titles, toggle_scan
+from endfield_essence_recognizer.core.config import ServerConfig, get_server_config
 from endfield_essence_recognizer.path import ROOT_DIR
 from endfield_essence_recognizer.utils.log import (
     LOGGING_CONFIG,
@@ -19,22 +19,6 @@ from endfield_essence_recognizer.utils.log import (
     websocket_handler,
 )
 from endfield_essence_recognizer.version import __version__
-
-# 加载 .env 文件
-load_dotenv()
-
-# 从环境变量读取配置
-is_dev = os.getenv("EER_DEV_MODE", "false").lower() in ("true", "1", "yes")
-dist_dir_str = os.getenv("EER_DIST_DIR", "")
-dev_url = os.getenv("EER_DEV_URL", "http://localhost:3000")
-api_host = os.getenv("EER_API_HOST", "localhost")
-api_port = int(os.getenv("EER_API_PORT", "8000"))
-prod_url = f"http://localhost:{api_port}"
-webview_url = dev_url if is_dev else prod_url
-
-logger.success(
-    f"Loaded env: {is_dev=}, {dist_dir_str=}, {api_host=}, {api_port=}, {webview_url=}"
-)
 
 
 async def broadcast_logs():
@@ -57,6 +41,29 @@ async def broadcast_logs():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    server_config = get_server_config()
+    logger.success(f"Server configuration: {server_config.model_dump()}")
+
+    if not server_config.dev_mode:
+        if not server_config.dist_dir:
+            # use the default shipped build directory
+            dist_dir = (
+                Path(importlib.resources.files("endfield_essence_recognizer"))
+                / "webui_dist"
+            )
+        else:
+            # use the specified directory
+            dist_dir = Path(server_config.dist_dir)
+        # 挂载静态文件目录（生产环境）
+        if dist_dir.exists():
+            app.mount(
+                "/",
+                StaticFiles(directory=dist_dir, html=True),
+                name="dist",
+            )
+        else:
+            logger.error("未找到前端构建文件夹，请先执行前端构建！")
+
     global task
     task = asyncio.create_task(broadcast_logs())
     yield
@@ -203,24 +210,13 @@ app.mount(
     name="data",
 )
 
-if not is_dev:
-    if not dist_dir_str:
-        dist_dir = Path(
-            str(importlib.resources.files("endfield_essence_recognizer") / "webui_dist")
-        )
-    else:
-        dist_dir = Path(dist_dir_str)
-    # 挂载静态文件目录（生产环境）
-    if dist_dir.exists():
-        app.mount(
-            "/",
-            StaticFiles(directory=dist_dir, html=True),
-            name="dist",
-        )
-    else:
-        logger.error("未找到前端构建文件夹，请先执行前端构建！")
 
-config = uvicorn.Config(
-    app=app, host=api_host, port=api_port, log_config=LOGGING_CONFIG
-)
-server = uvicorn.Server(config)
+def get_server() -> uvicorn.Server:
+    cfg: ServerConfig = get_server_config()
+    api_host = cfg.api_host
+    api_port = cfg.api_port
+    config = uvicorn.Config(
+        app=app, host=api_host, port=api_port, log_config=LOGGING_CONFIG
+    )
+    server = uvicorn.Server(config)
+    return server
