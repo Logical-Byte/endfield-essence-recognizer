@@ -111,7 +111,7 @@ async def post_config(
     user_setting_manager: UserSettingManager = Depends(get_user_setting_manager_dep),
 ) -> UserSetting:
     user_setting_manager.update_from_user_setting(new_config)
-    return user_setting_manager.get_user_setting_ref().model_dump()
+    return user_setting_manager.get_user_setting_ref()
 
 
 @app.get("/api/screenshot")
