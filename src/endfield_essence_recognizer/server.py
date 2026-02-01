@@ -91,14 +91,14 @@ app.add_middleware(
 
 @app.get("/api/config")
 async def get_config() -> dict[str, Any]:
-    from endfield_essence_recognizer.models.config import config
+    from endfield_essence_recognizer.models.user_setting import config
 
     return config.model_dump()
 
 
 @app.post("/api/config")
 async def post_config(new_config: dict[str, Any] = Body()) -> dict[str, Any]:
-    from endfield_essence_recognizer.models.config import config
+    from endfield_essence_recognizer.models.user_setting import config
 
     config.update_from_dict(new_config)
     config.save()

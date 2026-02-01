@@ -144,7 +144,7 @@ def main():
     logger.opt(colors=True).info(message)
 
     # 读取配置
-    from endfield_essence_recognizer.models.config import config
+    from endfield_essence_recognizer.models.user_setting import config
 
     config.load_and_update()
 

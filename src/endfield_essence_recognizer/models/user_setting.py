@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from typing import Any, ClassVar, Literal, Self
+from warnings import deprecated
 
 from pydantic import BaseModel
 
@@ -25,7 +26,7 @@ class EssenceStats(BaseModel):
     skill: str | None
 
 
-class Config(BaseModel):
+class UserSetting(BaseModel):
     _VERSION: ClassVar[int] = 0
 
     version: int = _VERSION
@@ -41,15 +42,16 @@ class Config(BaseModel):
     high_level_treasure_threshold: int = 3
     """高等级基质属性词条的等级阈值 (+3 或 +4)"""
 
-    def update_from_model(self, other: Config) -> None:
+    def update_from_model(self, other: UserSetting) -> None:
         for field in self.__class__.model_fields:
             setattr(self, field, getattr(other, field))
 
     def update_from_dict(self, data: dict[str, Any]) -> None:
-        model = Config.model_validate(data)
+        model = UserSetting.model_validate(data)
         self.update_from_model(model)
 
     @classmethod
+    @deprecated("Use UserSettingManager instead.")
     def load(cls, config_path: Path | None = None) -> Self:
         config_path = config_path or get_config_path()
         if config_path.is_file():
@@ -68,10 +70,12 @@ class Config(BaseModel):
             config.save()
         return config
 
+    @deprecated("Use UserSettingManager instead.")
     def load_and_update(self, config_path: Path | None = None) -> None:
         loaded_config = self.load(config_path=config_path)
         self.update_from_model(loaded_config)
 
+    @deprecated("Use UserSettingManager instead.")
     def save(self, config_path: Path | None = None) -> None:
         config_path = config_path or get_config_path()
         config_path.write_text(
@@ -81,4 +85,4 @@ class Config(BaseModel):
         logger.info(f"配置已保存到文件：{config_path.resolve()}")
 
 
-config = Config()
+config = UserSetting()

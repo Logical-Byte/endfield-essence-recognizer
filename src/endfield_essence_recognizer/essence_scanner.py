@@ -20,7 +20,7 @@ from endfield_essence_recognizer.game_data.weapon import (
     weapon_stats_dict,
     weapon_type_int_to_translation_key,
 )
-from endfield_essence_recognizer.models.config import config
+from endfield_essence_recognizer.models.user_setting import config
 from endfield_essence_recognizer.recognizer import Recognizer
 from endfield_essence_recognizer.utils.image import load_image, to_gray_image
 from endfield_essence_recognizer.utils.log import logger
