@@ -83,6 +83,3 @@ class UserSetting(BaseModel):
             encoding="utf-8",
         )
         logger.info(f"配置已保存到文件：{config_path.resolve()}")
-
-
-config = UserSetting()

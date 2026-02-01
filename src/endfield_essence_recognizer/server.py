@@ -6,13 +6,17 @@ from pathlib import Path
 from typing import Any, Literal
 
 import uvicorn
-from fastapi import Body, FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import Body, Depends, FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from endfield_essence_recognizer import supported_window_titles, toggle_scan
 from endfield_essence_recognizer.core.config import ServerConfig, get_server_config
 from endfield_essence_recognizer.core.path import get_logs_dir
+from endfield_essence_recognizer.deps import get_user_setting_manager
+from endfield_essence_recognizer.services.user_setting_manager import (
+    UserSettingManager,
+)
 from endfield_essence_recognizer.utils.log import (
     LOGGING_CONFIG,
     logger,
@@ -90,19 +94,24 @@ app.add_middleware(
 
 
 @app.get("/api/config")
-async def get_config() -> dict[str, Any]:
-    from endfield_essence_recognizer.models.user_setting import config
-
-    return config.model_dump()
+async def get_config(
+    user_setting_manager: UserSettingManager = Depends(get_user_setting_manager),
+) -> dict[str, Any]:
+    return user_setting_manager.get_user_setting_ref().model_dump()
 
 
 @app.post("/api/config")
-async def post_config(new_config: dict[str, Any] = Body()) -> dict[str, Any]:
-    from endfield_essence_recognizer.models.user_setting import config
+async def post_config(
+    new_config: dict[str, Any] = Body(),
+    user_setting_manager: UserSettingManager = Depends(get_user_setting_manager),
+) -> dict[str, Any]:
+    # from endfield_essence_recognizer.models.user_setting import config
 
-    config.update_from_dict(new_config)
-    config.save()
-    return config.model_dump()
+    # config.update_from_dict(new_config)
+    # config.save()
+    # return config.model_dump()
+    user_setting_manager.update_from_dict(new_config)
+    return user_setting_manager.get_user_setting_ref().model_dump()
 
 
 @app.get("/api/screenshot")
