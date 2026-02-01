@@ -24,13 +24,19 @@ def get_config_path_dep() -> Path:
 
 
 @lru_cache()
+def _get_user_setting_manager_cached(file: Path) -> UserSettingManager:
+    return UserSettingManager(user_setting_file=file)
+
+
 def get_user_setting_manager_singleton(user_setting_file: Path) -> UserSettingManager:
     """
     Get the singleton UserSettingManager instance.
 
     The lru_cache enables testing with different paths in parallel.
     """
-    return UserSettingManager(user_setting_file=user_setting_file)
+    absolute_path = user_setting_file.resolve()
+    # Avoid different path representations of the same file
+    return _get_user_setting_manager_cached(absolute_path)
 
 
 def get_user_setting_manager_dep(
