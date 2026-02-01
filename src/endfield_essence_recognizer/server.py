@@ -13,7 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from endfield_essence_recognizer import supported_window_titles, toggle_scan
 from endfield_essence_recognizer.core.config import ServerConfig, get_server_config
 from endfield_essence_recognizer.core.path import get_logs_dir
-from endfield_essence_recognizer.deps import get_user_setting_manager
+from endfield_essence_recognizer.deps import get_user_setting_manager_dep
 from endfield_essence_recognizer.services.user_setting_manager import (
     UserSettingManager,
 )
@@ -95,7 +95,7 @@ app.add_middleware(
 
 @app.get("/api/config")
 async def get_config(
-    user_setting_manager: UserSettingManager = Depends(get_user_setting_manager),
+    user_setting_manager: UserSettingManager = Depends(get_user_setting_manager_dep),
 ) -> dict[str, Any]:
     return user_setting_manager.get_user_setting_ref().model_dump()
 
@@ -103,7 +103,7 @@ async def get_config(
 @app.post("/api/config")
 async def post_config(
     new_config: dict[str, Any] = Body(),
-    user_setting_manager: UserSettingManager = Depends(get_user_setting_manager),
+    user_setting_manager: UserSettingManager = Depends(get_user_setting_manager_dep),
 ) -> dict[str, Any]:
     user_setting_manager.update_from_dict(new_config)
     return user_setting_manager.get_user_setting_ref().model_dump()
