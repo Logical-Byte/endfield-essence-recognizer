@@ -106,12 +106,12 @@ def detect_icon_state_at_point(image: MatLike, x: int, y: int, radius: int = 3) 
 
     # 提取坐标点周围区域的平均亮度
     region = image[y - radius : y + radius + 1, x - radius : x + radius + 1]
-    avg_brightness = np.mean(region)
+    avg_brightness = np.mean(region)  # type: ignore
 
     # 阈值：大于 200 认为是白色/亮色（激活）
     is_active = avg_brightness > 200
     logger.trace(
-        f"坐标点 ({x}, {y}) 亮度={avg_brightness:.1f}, 状态={'\u767d\u8272' if is_active else '\u7070\u8272'}"
+        f"坐标点 ({x}, {y}) 亮度={avg_brightness:.1f}, 状态={'白色' if is_active else '灰色'}"
     )
     return is_active
 
@@ -135,9 +135,7 @@ def recognize_level_from_icon_points(
     active_count = 0
     for i, (x, y) in enumerate(icon_points):
         is_active = detect_icon_state_at_point(gray, x, y, LEVEL_ICON_SAMPLE_RADIUS)
-        logger.trace(
-            f"图标 {i + 1} ({x},{y}) 状态: {'\u767d\u8272' if is_active else '\u7070\u8272'}"
-        )
+        logger.trace(f"图标 {i + 1} ({x},{y}) 状态: {'白色' if is_active else '灰色'}")
         if is_active:
             active_count += 1
         else:
