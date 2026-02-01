@@ -187,9 +187,9 @@ def judge_essence_quality(
                 and level is not None
                 and level >= setting.high_level_treasure_threshold
             ):
-                # 检查该词条是否为属性词条 (termType == 1)
+                # 检查该词条是否为有效词条 (termType == 0/1/2，即基础属性、附加属性或技能属性)
                 gem = gem_table.get(stat)
-                if gem is not None and gem.get("termType") == 1:
+                if gem is not None and gem.get("termType") in (0, 1, 2):
                     is_high_level_treasure = True
                     high_level_info = (
                         f"（含高等级属性词条：{get_gem_tag_name(stat, 'CN')}+{level}）"
