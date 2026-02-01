@@ -143,10 +143,10 @@ def main():
 """
     logger.opt(colors=True).info(message)
 
-    # 读取配置
-    from endfield_essence_recognizer.config import config
+    from endfield_essence_recognizer.deps import default_user_setting_manager
 
-    config.load_and_update()
+    user_setting_manager = default_user_setting_manager()
+    user_setting_manager.load_user_setting()
 
     # 构造识别器实例
     from endfield_essence_recognizer.game_data.weapon import (

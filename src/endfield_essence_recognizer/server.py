@@ -3,16 +3,21 @@ import importlib.resources
 import os
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any, Literal
+from typing import Literal
 
 import uvicorn
-from fastapi import Body, FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import Body, Depends, FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from endfield_essence_recognizer import supported_window_titles, toggle_scan
 from endfield_essence_recognizer.core.config import ServerConfig, get_server_config
 from endfield_essence_recognizer.core.path import get_logs_dir
+from endfield_essence_recognizer.deps import get_user_setting_manager_dep
+from endfield_essence_recognizer.models.user_setting import UserSetting
+from endfield_essence_recognizer.services.user_setting_manager import (
+    UserSettingManager,
+)
 from endfield_essence_recognizer.utils.log import (
     LOGGING_CONFIG,
     logger,
@@ -41,6 +46,9 @@ async def broadcast_logs():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    global connection_event
+    connection_event = asyncio.Event()
+
     server_config = get_server_config()
     logger.success(f"Server configuration: {server_config.model_dump()}")
 
@@ -77,7 +85,8 @@ async def lifespan(app: FastAPI):
 
 websocket_connections: set[WebSocket] = set()
 task: asyncio.Task | None = None
-connection_event = asyncio.Event()
+connection_event: asyncio.Event
+
 
 app = FastAPI(lifespan=lifespan)
 app.add_middleware(
@@ -90,19 +99,19 @@ app.add_middleware(
 
 
 @app.get("/api/config")
-async def get_config() -> dict[str, Any]:
-    from endfield_essence_recognizer.config import config
-
-    return config.model_dump()
+async def get_config(
+    user_setting_manager: UserSettingManager = Depends(get_user_setting_manager_dep),
+) -> UserSetting:
+    return user_setting_manager.get_user_setting_ref()
 
 
 @app.post("/api/config")
-async def post_config(new_config: dict[str, Any] = Body()) -> dict[str, Any]:
-    from endfield_essence_recognizer.config import config
-
-    config.update_from_dict(new_config)
-    config.save()
-    return config.model_dump()
+async def post_config(
+    new_config: UserSetting = Body(),
+    user_setting_manager: UserSettingManager = Depends(get_user_setting_manager_dep),
+) -> UserSetting:
+    user_setting_manager.update_from_user_setting(new_config)
+    return user_setting_manager.get_user_setting_ref()
 
 
 @app.get("/api/screenshot")

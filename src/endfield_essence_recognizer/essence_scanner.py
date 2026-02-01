@@ -9,7 +9,6 @@ import numpy as np
 import pygetwindow
 from cv2.typing import MatLike
 
-from endfield_essence_recognizer.config import config
 from endfield_essence_recognizer.game_data import (
     gem_table,
     get_translation,
@@ -21,7 +20,9 @@ from endfield_essence_recognizer.game_data.weapon import (
     weapon_stats_dict,
     weapon_type_int_to_translation_key,
 )
+from endfield_essence_recognizer.models.user_setting import Action, UserSetting
 from endfield_essence_recognizer.recognizer import Recognizer
+from endfield_essence_recognizer.services.user_setting_manager import UserSettingManager
 from endfield_essence_recognizer.utils.image import load_image, to_gray_image
 from endfield_essence_recognizer.utils.log import logger
 from endfield_essence_recognizer.utils.window import (
@@ -172,19 +173,21 @@ def check_scene(window: pygetwindow.Window) -> bool:
 
 
 def judge_essence_quality(
-    stats: list[str | None], levels: list[int | None] | None = None
+    setting: UserSetting,
+    stats: list[str | None],
+    levels: list[int | None] | None = None,
 ) -> Literal["treasure", "trash"]:
     """根据识别到的属性判断基质品质，并输出日志提示。"""
 
     # 检查属性等级：如果启用了高等级判定，记录是否为高等级宝藏
     is_high_level_treasure = False
     high_level_info = ""
-    if config.high_level_treasure_enabled and levels is not None:
+    if setting.high_level_treasure_enabled and levels is not None:
         for i, (stat, level) in enumerate(zip(stats, levels)):
             if (
                 stat is not None
                 and level is not None
-                and level >= config.high_level_treasure_threshold
+                and level >= setting.high_level_treasure_threshold
             ):
                 # 检查该词条是否为属性词条 (termType == 1)
                 gem = gem_table.get(stat)
@@ -196,7 +199,7 @@ def judge_essence_quality(
                     break
 
     # 尝试匹配用户自定义的宝藏基质条件
-    for treasure_stat in config.treasure_essence_stats:
+    for treasure_stat in setting.treasure_essence_stats:
         if (
             treasure_stat.attribute in stats
             and treasure_stat.secondary in stats
@@ -232,7 +235,7 @@ def judge_essence_quality(
             )
             return "trash"
     # 检查匹配到的武器中，是否有不在 trash_weapon_ids 中的
-    non_trash_weapon_ids = matched_weapon_ids - set(config.trash_weapon_ids)
+    non_trash_weapon_ids = matched_weapon_ids - set(setting.trash_weapon_ids)
 
     def format_weapon_description(weapon_id: str) -> str:
         """格式化武器描述，如`名称（稀有度★ 类型）`"""
@@ -336,7 +339,10 @@ def recognize_essence(
 
 
 def recognize_once(
-    window: pygetwindow.Window, text_recognizer: Recognizer, icon_recognizer: Recognizer
+    window: pygetwindow.Window,
+    text_recognizer: Recognizer,
+    icon_recognizer: Recognizer,
+    user_setting: UserSetting,
 ) -> None:
     check_scene_result = check_scene(window)
     if not check_scene_result:
@@ -349,7 +355,7 @@ def recognize_once(
     if deprecated_str is None or locked_str is None:
         return
 
-    judge_essence_quality(stats, levels)
+    judge_essence_quality(user_setting, stats, levels)
 
 
 class EssenceScanner(threading.Thread):
@@ -365,12 +371,14 @@ class EssenceScanner(threading.Thread):
         text_recognizer: Recognizer,
         icon_recognizer: Recognizer,
         supported_window_titles: Collection[str],
+        user_setting_manager: UserSettingManager,
     ) -> None:
         super().__init__(daemon=True)
         self._scanning = threading.Event()
         self._text_recognizer: Recognizer = text_recognizer
         self._icon_recognizer: Recognizer = icon_recognizer
         self._supported_window_titles: Collection[str] = supported_window_titles
+        self._user_setting_manager: UserSettingManager = user_setting_manager
 
     def run(self) -> None:
         logger.info("开始基质扫描线程...")
@@ -392,6 +400,9 @@ class EssenceScanner(threading.Thread):
         if not check_scene_result:
             self._scanning.clear()
             return
+
+        # 获取当前用户设置的快照，用于接下来的判断
+        user_setting = self._user_setting_manager.get_user_setting()
 
         for i, j in np.ndindex(len(essence_icon_y_list), len(essence_icon_x_list)):
             window = get_active_support_window(self._supported_window_titles)
@@ -422,21 +433,29 @@ class EssenceScanner(threading.Thread):
             if deprecated_str is None or locked_str is None:
                 continue
 
-            essence_quality = judge_essence_quality(stats, levels)
+            essence_quality = judge_essence_quality(user_setting, stats, levels)
             if locked_str == "未锁定" and (
-                (essence_quality == "treasure" and config.treasure_action in "lock")
-                or (essence_quality == "trash" and config.trash_action in "lock")
+                (
+                    essence_quality == "treasure"
+                    and user_setting.treasure_action == Action.LOCK
+                )
+                or (
+                    essence_quality == "trash"
+                    and user_setting.trash_action == Action.LOCK
+                )
             ):
                 click_on_window(window, *LOCK_BUTTON_POS)
                 logger.success("给你自动锁上了，记得保管好哦！(*/ω＼*)")
             elif locked_str == "已锁定" and (
                 (
                     essence_quality == "treasure"
-                    and config.treasure_action in ["unlock", "unlock_and_undeprecate"]
+                    and user_setting.treasure_action
+                    in [Action.UNLOCK, Action.UNLOCK_AND_UNDEPRECATE]
                 )
                 or (
                     essence_quality == "trash"
-                    and config.trash_action in ["unlock", "unlock_and_undeprecate"]
+                    and user_setting.trash_action
+                    in [Action.UNLOCK, Action.UNLOCK_AND_UNDEPRECATE]
                 )
             ):
                 click_on_window(window, *LOCK_BUTTON_POS)
@@ -444,21 +463,25 @@ class EssenceScanner(threading.Thread):
             if deprecated_str == "未弃用" and (
                 (
                     essence_quality == "treasure"
-                    and config.treasure_action == "deprecate"
+                    and user_setting.treasure_action == Action.DEPRECATE
                 )
-                or (essence_quality == "trash" and config.trash_action == "deprecate")
+                or (
+                    essence_quality == "trash"
+                    and user_setting.trash_action == Action.DEPRECATE
+                )
             ):
                 click_on_window(window, *DEPRECATE_BUTTON_POS)
                 logger.success("给你自动标记为弃用了！(￣︶￣)>")
             elif deprecated_str == "已弃用" and (
                 (
                     essence_quality == "treasure"
-                    and config.treasure_action
-                    in ["undeprecate", "unlock_and_undeprecate"]
+                    and user_setting.treasure_action
+                    in [Action.UNDEPRECATE, Action.UNLOCK_AND_UNDEPRECATE]
                 )
                 or (
                     essence_quality == "trash"
-                    and config.trash_action in ["undeprecate", "unlock_and_undeprecate"]
+                    and user_setting.trash_action
+                    in [Action.UNDEPRECATE, Action.UNLOCK_AND_UNDEPRECATE]
                 )
             ):
                 click_on_window(window, *DEPRECATE_BUTTON_POS)
