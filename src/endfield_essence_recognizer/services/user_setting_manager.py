@@ -67,6 +67,12 @@ class UserSettingManager:
         """
         return self._user_setting.model_copy(deep=True)
 
+    def get_user_setting_ref(self) -> UserSetting:
+        """
+        Get a reference to the current in-memory UserSetting.
+        """
+        return self._user_setting
+
     def load_user_setting(self, path: Path | None = None) -> None:
         """
         Load UserSetting from disk into memory.
@@ -74,6 +80,8 @@ class UserSettingManager:
         If the file does not exist or model validation fails, use default settings.
         If the file do exist but model validation fails, first back up the invalid
         file and then use a default setting.
+
+        If a fresh default setting is used, it will be saved to disk.
         """
         target_path = path or self._user_setting_file
         logger.info("正在尝试加载配置文件：{}", target_path.resolve())
