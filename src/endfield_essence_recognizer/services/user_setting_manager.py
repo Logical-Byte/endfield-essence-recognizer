@@ -7,6 +7,8 @@ from typing import Any
 from endfield_essence_recognizer.models.user_setting import UserSetting
 from endfield_essence_recognizer.utils.log import logger
 
+__all__ = ["UserSettingManager"]
+
 
 def _load_user_setting_from_file(
     model_cls: type[UserSetting], path: Path
