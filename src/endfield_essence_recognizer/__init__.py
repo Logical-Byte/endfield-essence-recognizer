@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib.resources
 from typing import TYPE_CHECKING, cast
 
+from endfield_essence_recognizer.deps import default_user_setting_manager
 from endfield_essence_recognizer.utils.log import logger
 from endfield_essence_recognizer.version import __version__ as __version__
 
@@ -69,6 +70,7 @@ def toggle_scan():
             text_recognizer=cast("Recognizer", text_recognizer),
             icon_recognizer=cast("Recognizer", icon_recognizer),
             supported_window_titles=supported_window_titles,
+            user_setting_manager=default_user_setting_manager(),
         )
         essence_scanner_thread.start()
         with importlib.resources.as_file(
