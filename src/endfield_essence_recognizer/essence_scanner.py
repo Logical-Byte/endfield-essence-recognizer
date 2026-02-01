@@ -92,7 +92,8 @@ def judge_essence_quality(stats: list[str | None]) -> Literal["treasure", "trash
             )
             return "treasure"
 
-    # 尝试匹配已实装武器
+    # 尝试匹配已实装武器，获取所有匹配的武器 ID
+    matched_weapon_ids = set()
     for weapon_id, weapon_basic in weapon_basic_table.items():
         weapon_stats = weapon_stats_dict[weapon_id]
         if (
@@ -100,21 +101,34 @@ def judge_essence_quality(stats: list[str | None]) -> Literal["treasure", "trash
             and weapon_stats["secondary"] == stats[1]
             and weapon_stats["skill"] == stats[2]
         ):
-            # 匹配到已实装武器
-            if weapon_id in config.trash_weapon_ids:
-                logger.opt(colors=True).warning(
-                    f"这个基质虽然匹配武器<bold>{get_item_name(weapon_id, 'CN')}（{weapon_basic_table[weapon_id]['rarity']}★ {get_translation(weapon_type_int_to_translation_key[weapon_id], 'CN')}）</>，但是它被认为是<red><bold><underline>养成材料</></></>。"
-                )
-                return "trash"
-            else:
-                logger.opt(colors=True).success(
-                    f"这个基质是<green><bold><underline>宝藏</></></>，它完美契合武器<bold>{get_item_name(weapon_id, 'CN')}（{weapon_basic_table[weapon_id]['rarity']}★ {get_translation(weapon_type_int_to_translation_key[weapon_id], 'CN')}）</>。"
-                )
-                return "treasure"
-    else:
-        # 未匹配到任何已实装武器
+            matched_weapon_ids.add(weapon_id)
+
+    # 未匹配到任何已实装武器
+    if not matched_weapon_ids:
         logger.opt(colors=True).success(
             "这个基质是<red><bold><underline>养成材料</></></>，它不匹配任何已实装武器。"
+        )
+        return "trash"
+
+    # 格式化武器名称
+    def get_weapon_name(weapon_id: str) -> str:
+        return f"{get_item_name(weapon_id, 'CN')}（{weapon_basic_table[weapon_id]['rarity']}★ {get_translation(weapon_type_int_to_translation_key[weapon_id], 'CN')}）"
+
+    # 基质需要保留
+    retained_weapon_ids = matched_weapon_ids - set(config.trash_weapon_ids)
+    if retained_weapon_ids:
+        weapon_names = "、".join([get_weapon_name(weapon_id) for weapon_id in retained_weapon_ids])
+        logger.opt(colors=True).success(
+            f"这个基质是<green><bold><underline>宝藏</></></>，它完美契合武器<bold>{weapon_names}</>。"
+        )
+        return "treasure"
+
+    # 匹配已实装武器但并不保留
+    trashed_weapon_ids = matched_weapon_ids & set(config.trash_weapon_ids)
+    if trashed_weapon_ids:
+        weapon_names = "、".join([get_weapon_name(weapon_id) for weapon_id in trashed_weapon_ids])
+        logger.opt(colors=True).warning(
+            f"这个基质虽然匹配武器<bold>{weapon_names}</>，但是它被认为是<red><bold><underline>养成材料</></></>。"
         )
         return "trash"
 
