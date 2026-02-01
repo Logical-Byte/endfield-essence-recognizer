@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from typing import Any, ClassVar, Literal, Self
 
 from pydantic import BaseModel
 
-from endfield_essence_recognizer.path import ROOT_DIR
+from endfield_essence_recognizer.core.path import get_config_path
 from endfield_essence_recognizer.utils.log import logger
 
 type Action = Literal[
@@ -16,8 +17,6 @@ type Action = Literal[
     "undeprecate",
     "unlock_and_undeprecate",
 ]
-
-config_path = ROOT_DIR / "config.json"
 
 
 class EssenceStats(BaseModel):
@@ -51,7 +50,8 @@ class Config(BaseModel):
         self.update_from_model(model)
 
     @classmethod
-    def load(cls) -> Self:
+    def load(cls, config_path: Path | None = None) -> Self:
+        config_path = config_path or get_config_path()
         if config_path.is_file():
             logger.info(f"正在加载配置文件：{config_path.resolve()}")
             obj = json.loads(config_path.read_text(encoding="utf-8"))
@@ -68,11 +68,12 @@ class Config(BaseModel):
             config.save()
         return config
 
-    def load_and_update(self) -> None:
-        loaded_config = self.load()
+    def load_and_update(self, config_path: Path | None = None) -> None:
+        loaded_config = self.load(config_path=config_path)
         self.update_from_model(loaded_config)
 
-    def save(self) -> None:
+    def save(self, config_path: Path | None = None) -> None:
+        config_path = config_path or get_config_path()
         config_path.write_text(
             self.model_dump_json(indent=4, ensure_ascii=False),
             encoding="utf-8",

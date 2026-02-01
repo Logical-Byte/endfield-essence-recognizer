@@ -12,7 +12,7 @@ from fastapi.staticfiles import StaticFiles
 
 from endfield_essence_recognizer import supported_window_titles, toggle_scan
 from endfield_essence_recognizer.core.config import ServerConfig, get_server_config
-from endfield_essence_recognizer.path import ROOT_DIR
+from endfield_essence_recognizer.core.path import get_logs_dir
 from endfield_essence_recognizer.utils.log import (
     LOGGING_CONFIG,
     logger,
@@ -171,7 +171,7 @@ async def open_logs_folder() -> None:
 
     from endfield_essence_recognizer.utils.log import logger
 
-    LOGS_DIR = ROOT_DIR / "logs"
+    LOGS_DIR = get_logs_dir()
 
     try:
         if platform.system() == "Windows":  # Windows

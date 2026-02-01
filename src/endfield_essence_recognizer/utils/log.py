@@ -13,7 +13,7 @@ import sys
 
 from loguru import logger
 
-from endfield_essence_recognizer.path import ROOT_DIR
+from endfield_essence_recognizer.core.path import get_logs_dir
 
 file_log_format = (
     '<dim>File <cyan>"{file.path}"</>, line <cyan>{line}</>, in <cyan>{function}</></>\n'
@@ -92,7 +92,7 @@ if sys.stderr:  # 打包后可能没有 stderr
         diagnose=True,
     )
 logger.add(
-    ROOT_DIR / "logs" / "log_{time:YYYY-MM-DD}.log",
+    get_logs_dir() / "log_{time:YYYY-MM-DD}.log",
     level="TRACE",
     format=file_log_format,
     diagnose=True,
