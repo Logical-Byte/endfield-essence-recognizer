@@ -3,7 +3,7 @@ import importlib.resources
 import os
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any, Literal
+from typing import Literal
 
 import uvicorn
 from fastapi import Body, Depends, FastAPI, WebSocket, WebSocketDisconnect
@@ -46,6 +46,9 @@ async def broadcast_logs():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    global connection_event
+    connection_event = asyncio.Event()
+
     server_config = get_server_config()
     logger.success(f"Server configuration: {server_config.model_dump()}")
 
@@ -82,7 +85,8 @@ async def lifespan(app: FastAPI):
 
 websocket_connections: set[WebSocket] = set()
 task: asyncio.Task | None = None
-connection_event = asyncio.Event()
+connection_event: asyncio.Event
+
 
 app = FastAPI(lifespan=lifespan)
 app.add_middleware(
