@@ -7,6 +7,7 @@ is primarily set by the `.env` file.
 
 from __future__ import annotations
 
+from enum import StrEnum
 from functools import lru_cache
 from typing import TYPE_CHECKING
 
@@ -15,6 +16,18 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+
+class LogLevel(StrEnum):
+    """Logging level enumeration."""
+
+    TRACE = "TRACE"
+    DEBUG = "DEBUG"
+    INFO = "INFO"
+    SUCCESS = "SUCCESS"
+    WARNING = "WARNING"
+    ERROR = "ERROR"
+    CRITICAL = "CRITICAL"
 
 
 class ServerConfig(BaseSettings):
@@ -27,7 +40,15 @@ class ServerConfig(BaseSettings):
         env_prefix="EER_",
         env_file_encoding="utf-8",
         case_sensitive=False,
+        use_enum_values=True,
     )
+
+    log_level: LogLevel = Field(
+        default=LogLevel.INFO,
+    )
+    """
+    EER_LOG_LEVEL: 控制台和 WebSocket 的日志输出等级。
+    """
 
     dev_mode: bool = Field(
         default=False,

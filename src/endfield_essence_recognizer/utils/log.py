@@ -13,6 +13,7 @@ import sys
 
 from loguru import logger
 
+from endfield_essence_recognizer.core.config import get_server_config
 from endfield_essence_recognizer.core.path import get_logs_dir
 
 file_log_format = (
@@ -57,6 +58,8 @@ class LoguruHandler(logging.Handler):
         ).log(level, message)
 
 
+_config = get_server_config()
+
 LOGGING_CONFIG = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -87,7 +90,7 @@ logger.remove()
 if sys.stderr:  # 打包后可能没有 stderr
     logger.add(
         sys.stderr,
-        level="INFO",
+        level=str(_config.log_level),
         format=console_log_format,
         diagnose=True,
     )
@@ -99,9 +102,11 @@ logger.add(
 )
 logger.add(
     websocket_handler,
-    level="INFO",
+    level=str(_config.log_level),
     format=console_log_format,
     colorize=True,
     diagnose=True,
     filter=lambda record: record["extra"].get("module") != "uvicorn",
 )
+
+logger.debug("Logger initialized with level: {}", _config.log_level)
