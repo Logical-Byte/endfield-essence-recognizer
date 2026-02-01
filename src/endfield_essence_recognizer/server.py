@@ -14,6 +14,7 @@ from endfield_essence_recognizer import supported_window_titles, toggle_scan
 from endfield_essence_recognizer.core.config import ServerConfig, get_server_config
 from endfield_essence_recognizer.core.path import get_logs_dir
 from endfield_essence_recognizer.deps import get_user_setting_manager_dep
+from endfield_essence_recognizer.models.user_setting import UserSetting
 from endfield_essence_recognizer.services.user_setting_manager import (
     UserSettingManager,
 )
@@ -96,16 +97,16 @@ app.add_middleware(
 @app.get("/api/config")
 async def get_config(
     user_setting_manager: UserSettingManager = Depends(get_user_setting_manager_dep),
-) -> dict[str, Any]:
-    return user_setting_manager.get_user_setting_ref().model_dump()
+) -> UserSetting:
+    return user_setting_manager.get_user_setting_ref()
 
 
 @app.post("/api/config")
 async def post_config(
-    new_config: dict[str, Any] = Body(),
+    new_config: UserSetting = Body(),
     user_setting_manager: UserSettingManager = Depends(get_user_setting_manager_dep),
-) -> dict[str, Any]:
-    user_setting_manager.update_from_dict(new_config)
+) -> UserSetting:
+    user_setting_manager.update_from_user_setting(new_config)
     return user_setting_manager.get_user_setting_ref().model_dump()
 
 
