@@ -54,7 +54,6 @@ class UserSettingManager:
     - Holds a UserSetting instance in memory.
     - Provides interfaces to get and update settings.
     - Loads settings from disk and preserves them to disk when changed.
-    - Use async methods and proper locking.
     """
 
     def __init__(self, user_setting_file: Path) -> None:
