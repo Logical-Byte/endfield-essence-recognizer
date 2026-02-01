@@ -9,12 +9,12 @@ from cv2.typing import MatLike
 
 from endfield_essence_recognizer.game_data import gem_table
 from endfield_essence_recognizer.game_data.weapon import get_gem_tag_name
-from endfield_essence_recognizer.image import (
+from endfield_essence_recognizer.utils.image import (
     linear_operation,
     load_image,
     to_gray_image,
 )
-from endfield_essence_recognizer.log import logger
+from endfield_essence_recognizer.utils.log import logger
 
 # 识别阈值（默认值，可在 Recognizer 中覆盖）
 HIGH_THRESH = 0.75  # 高分数阈值：超过此值直接判定

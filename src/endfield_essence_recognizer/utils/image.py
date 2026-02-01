@@ -1,3 +1,7 @@
+"""
+Utils for image processing.
+"""
+
 from collections.abc import Sequence
 from pathlib import Path
 

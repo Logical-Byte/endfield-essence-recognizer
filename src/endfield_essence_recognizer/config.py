@@ -5,8 +5,8 @@ from typing import Any, ClassVar, Literal, Self
 
 from pydantic import BaseModel
 
-from endfield_essence_recognizer.log import logger
 from endfield_essence_recognizer.path import ROOT_DIR
+from endfield_essence_recognizer.utils.log import logger
 
 type Action = Literal[
     "keep",

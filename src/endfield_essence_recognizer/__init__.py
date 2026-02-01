@@ -3,7 +3,7 @@ from __future__ import annotations
 import importlib.resources
 from typing import TYPE_CHECKING, cast
 
-from endfield_essence_recognizer.log import logger
+from endfield_essence_recognizer.utils.log import logger
 from endfield_essence_recognizer.version import __version__ as __version__
 
 if TYPE_CHECKING:
@@ -44,7 +44,7 @@ icon_recognizer: Recognizer | None = None
 def on_bracket_left():
     """处理 "[" 键按下事件 - 仅识别不操作"""
     from endfield_essence_recognizer.essence_scanner import recognize_once
-    from endfield_essence_recognizer.window import get_active_support_window
+    from endfield_essence_recognizer.utils.window import get_active_support_window
 
     window = get_active_support_window(supported_window_titles)
     if window is None:
@@ -93,7 +93,7 @@ def toggle_scan():
 
 def on_bracket_right():
     """处理 "]" 键按下事件 - 切换自动点击"""
-    from endfield_essence_recognizer.window import get_active_support_window
+    from endfield_essence_recognizer.utils.window import get_active_support_window
 
     global essence_scanner_thread
 
@@ -134,7 +134,7 @@ def main():
 
 <green><bold>功能介绍：</></>
   - 按 "<green><bold>[</></>" 键识别当前基质，仅识别不操作
-  - 按 "<green><bold>]</></>" 键扫描所有基质，并自动锁定宝藏基质，解锁其他基质
+  - 按 "<green><bold>]</></>" 键扫描所有基质，并根据设置，自动锁定或者解锁基质
     基质扫描过程中再次按 "<green><bold>]</></>" 键中断扫描
   - 按 "<green><bold>Alt+Delete</></>" 退出程序
 
@@ -179,8 +179,9 @@ def main():
     # 启动 web 后端
     import threading
 
-    from endfield_essence_recognizer.server import server
+    from endfield_essence_recognizer.server import get_server
 
+    server = get_server()
     server_thread = threading.Thread(
         target=server.run,
         daemon=True,
