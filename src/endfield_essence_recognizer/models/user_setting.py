@@ -1,17 +1,18 @@
 from __future__ import annotations
 
-from typing import Any, ClassVar, Literal
+from enum import StrEnum
+from typing import Any, ClassVar
 
 from pydantic import BaseModel
 
-type Action = Literal[
-    "keep",
-    "lock",
-    "deprecate",
-    "unlock",
-    "undeprecate",
-    "unlock_and_undeprecate",
-]
+
+class Action(StrEnum):
+    KEEP = "keep"
+    LOCK = "lock"
+    DEPRECATE = "deprecate"
+    UNLOCK = "unlock"
+    UNDEPRECATE = "undeprecate"
+    UNLOCK_AND_UNDEPRECATE = "unlock_and_undeprecate"
 
 
 class EssenceStats(BaseModel):
@@ -28,8 +29,8 @@ class UserSetting(BaseModel):
     trash_weapon_ids: list[str] = []
     treasure_essence_stats: list[EssenceStats] = []
 
-    treasure_action: Action = "lock"
-    trash_action: Action = "unlock"
+    treasure_action: Action = Action.LOCK
+    trash_action: Action = Action.UNLOCK
 
     high_level_treasure_enabled: bool = False
     """是否启用高等级基质属性词条判定为宝藏"""

@@ -20,7 +20,7 @@ from endfield_essence_recognizer.game_data.weapon import (
     weapon_stats_dict,
     weapon_type_int_to_translation_key,
 )
-from endfield_essence_recognizer.models.user_setting import UserSetting
+from endfield_essence_recognizer.models.user_setting import Action, UserSetting
 from endfield_essence_recognizer.recognizer import Recognizer
 from endfield_essence_recognizer.services.user_setting_manager import UserSettingManager
 from endfield_essence_recognizer.utils.image import load_image, to_gray_image
@@ -437,9 +437,12 @@ class EssenceScanner(threading.Thread):
             if locked_str == "未锁定" and (
                 (
                     essence_quality == "treasure"
-                    and user_setting.treasure_action in "lock"
+                    and user_setting.treasure_action == Action.LOCK
                 )
-                or (essence_quality == "trash" and user_setting.trash_action in "lock")
+                or (
+                    essence_quality == "trash"
+                    and user_setting.trash_action == Action.LOCK
+                )
             ):
                 click_on_window(window, *LOCK_BUTTON_POS)
                 logger.success("给你自动锁上了，记得保管好哦！(*/ω＼*)")
@@ -447,12 +450,12 @@ class EssenceScanner(threading.Thread):
                 (
                     essence_quality == "treasure"
                     and user_setting.treasure_action
-                    in ["unlock", "unlock_and_undeprecate"]
+                    in [Action.UNLOCK, Action.UNLOCK_AND_UNDEPRECATE]
                 )
                 or (
                     essence_quality == "trash"
                     and user_setting.trash_action
-                    in ["unlock", "unlock_and_undeprecate"]
+                    in [Action.UNLOCK, Action.UNLOCK_AND_UNDEPRECATE]
                 )
             ):
                 click_on_window(window, *LOCK_BUTTON_POS)
@@ -460,11 +463,11 @@ class EssenceScanner(threading.Thread):
             if deprecated_str == "未弃用" and (
                 (
                     essence_quality == "treasure"
-                    and user_setting.treasure_action == "deprecate"
+                    and user_setting.treasure_action == Action.DEPRECATE
                 )
                 or (
                     essence_quality == "trash"
-                    and user_setting.trash_action == "deprecate"
+                    and user_setting.trash_action == Action.DEPRECATE
                 )
             ):
                 click_on_window(window, *DEPRECATE_BUTTON_POS)
@@ -473,12 +476,12 @@ class EssenceScanner(threading.Thread):
                 (
                     essence_quality == "treasure"
                     and user_setting.treasure_action
-                    in ["undeprecate", "unlock_and_undeprecate"]
+                    in [Action.UNDEPRECATE, Action.UNLOCK_AND_UNDEPRECATE]
                 )
                 or (
                     essence_quality == "trash"
                     and user_setting.trash_action
-                    in ["undeprecate", "unlock_and_undeprecate"]
+                    in [Action.UNDEPRECATE, Action.UNLOCK_AND_UNDEPRECATE]
                 )
             ):
                 click_on_window(window, *DEPRECATE_BUTTON_POS)
