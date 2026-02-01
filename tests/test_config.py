@@ -18,12 +18,22 @@ def test_server_config_defaults():
     """Test that ServerConfig has correct default values."""
     # We use a clean environment for this test to avoid local .env interference
     config = ServerConfig(_env_file=None)
+    assert config.log_level == "INFO"
     assert config.dev_mode is False
     assert config.api_host == "localhost"
     assert config.api_port == 325
     assert config.dev_url == "http://localhost:3000"
     assert config._get_webview_prod_url() == "http://localhost:325"
     assert config.webview_url == "http://localhost:325"
+
+
+def test_server_config_model_dump_does_not_contain_angle_brackets():
+    """Test that model_dump does not contain angle brackets in its string representation."""
+    config = ServerConfig(_env_file=None)
+    dump_str = str(config.model_dump())
+    assert "<" not in dump_str and ">" not in dump_str, (
+        "model_dump contains angle brackets"
+    )
 
 
 def test_server_config_computed_properties():
@@ -50,12 +60,14 @@ def test_server_config_computed_properties():
 
 def test_server_config_env_override(monkeypatch):
     """Test that environment variables override default values."""
+    monkeypatch.setenv("EER_LOG_LEVEL", "DEBUG")
     monkeypatch.setenv("EER_DEV_MODE", "true")
     monkeypatch.setenv("EER_API_PORT", "9999")
     monkeypatch.setenv("EER_DIST_DIR", "/tmp/dist")
 
     # Passing _env_file=None to ignore any existing .env files
     config = ServerConfig(_env_file=None)
+    assert config.log_level == "DEBUG"
     assert config.dev_mode is True
     assert config.api_port == 9999
     assert config.dist_dir == "/tmp/dist"
