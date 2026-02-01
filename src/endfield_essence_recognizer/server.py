@@ -105,11 +105,6 @@ async def post_config(
     new_config: dict[str, Any] = Body(),
     user_setting_manager: UserSettingManager = Depends(get_user_setting_manager),
 ) -> dict[str, Any]:
-    # from endfield_essence_recognizer.models.user_setting import config
-
-    # config.update_from_dict(new_config)
-    # config.save()
-    # return config.model_dump()
     user_setting_manager.update_from_dict(new_config)
     return user_setting_manager.get_user_setting_ref().model_dump()
 

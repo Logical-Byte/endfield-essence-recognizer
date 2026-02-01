@@ -173,7 +173,7 @@ def check_scene(window: pygetwindow.Window) -> bool:
 
 
 def judge_essence_quality(
-    config: UserSetting,
+    setting: UserSetting,
     stats: list[str | None],
     levels: list[int | None] | None = None,
 ) -> Literal["treasure", "trash"]:
@@ -182,12 +182,12 @@ def judge_essence_quality(
     # 检查属性等级：如果启用了高等级判定，记录是否为高等级宝藏
     is_high_level_treasure = False
     high_level_info = ""
-    if config.high_level_treasure_enabled and levels is not None:
+    if setting.high_level_treasure_enabled and levels is not None:
         for i, (stat, level) in enumerate(zip(stats, levels)):
             if (
                 stat is not None
                 and level is not None
-                and level >= config.high_level_treasure_threshold
+                and level >= setting.high_level_treasure_threshold
             ):
                 # 检查该词条是否为属性词条 (termType == 1)
                 gem = gem_table.get(stat)
@@ -199,7 +199,7 @@ def judge_essence_quality(
                     break
 
     # 尝试匹配用户自定义的宝藏基质条件
-    for treasure_stat in config.treasure_essence_stats:
+    for treasure_stat in setting.treasure_essence_stats:
         if (
             treasure_stat.attribute in stats
             and treasure_stat.secondary in stats
@@ -235,7 +235,7 @@ def judge_essence_quality(
             )
             return "trash"
     # 检查匹配到的武器中，是否有不在 trash_weapon_ids 中的
-    non_trash_weapon_ids = matched_weapon_ids - set(config.trash_weapon_ids)
+    non_trash_weapon_ids = matched_weapon_ids - set(setting.trash_weapon_ids)
 
     def format_weapon_description(weapon_id: str) -> str:
         """格式化武器描述，如`名称（稀有度★ 类型）`"""
