@@ -65,7 +65,7 @@
       <v-expansion-panel :value="1">
         <v-expansion-panel-title>自定义宝藏基质</v-expansion-panel-title>
         <v-expansion-panel-text>
-          <h2>额外将高词条等级的基质视为宝藏</h2>
+          <h2>如果基质的某个词条初始属性较高，也将其视为宝藏</h2>
           <v-row align="center" class="my-4">
             <v-col cols="12" md="6">
               <v-switch
@@ -93,6 +93,13 @@
                   +{{ modelValue }}
                 </template>
               </v-slider>
+              <v-alert
+                v-if="highLevelTreasureEnabled"
+                border="start"
+                class="mt-2"
+                type="info"
+                variant="tonal"
+                >当前效果：如果基质的某个词条初始属性>={{ highLevelTreasureThreshold }}, 就视为宝藏</v-alert>
             </v-col>
           </v-row>
           <v-divider class="my-4" />
