@@ -9,7 +9,6 @@ import numpy as np
 import pygetwindow
 from cv2.typing import MatLike
 
-from endfield_essence_recognizer.config import config
 from endfield_essence_recognizer.game_data import (
     gem_table,
     get_translation,
@@ -21,6 +20,7 @@ from endfield_essence_recognizer.game_data.weapon import (
     weapon_stats_dict,
     weapon_type_int_to_translation_key,
 )
+from endfield_essence_recognizer.models.config import config
 from endfield_essence_recognizer.recognizer import Recognizer
 from endfield_essence_recognizer.utils.image import load_image, to_gray_image
 from endfield_essence_recognizer.utils.log import logger
