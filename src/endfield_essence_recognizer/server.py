@@ -10,7 +10,7 @@ from fastapi import Body, Depends, FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from endfield_essence_recognizer import supported_window_titles, toggle_scan
+from endfield_essence_recognizer import toggle_scan
 from endfield_essence_recognizer.core.config import ServerConfig, get_server_config
 from endfield_essence_recognizer.core.path import get_logs_dir
 from endfield_essence_recognizer.deps import get_user_setting_manager_dep
@@ -125,16 +125,16 @@ async def get_screenshot(
 
     import cv2
 
-    from endfield_essence_recognizer.utils.window import (
-        get_active_support_window,
-        screenshot_window,
+    from endfield_essence_recognizer.deps import (
+        get_window_manager_dep,
     )
 
-    window = get_active_support_window(supported_window_titles)
-    if window is None:
+    window_manager = get_window_manager_dep()
+
+    if not window_manager.target_is_active:
         return None
     else:
-        image = screenshot_window(window)
+        image = window_manager.screenshot()
         image = cv2.resize(image, (width, height))
         logger.success("成功截取终末地窗口截图。")
 
