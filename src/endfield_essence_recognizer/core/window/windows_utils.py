@@ -2,7 +2,7 @@
 Windows OS-specific window utilities.
 """
 
-from collections.abc import Container, Sequence
+from collections.abc import Sequence
 
 import numpy as np
 import pyautogui
@@ -136,16 +136,6 @@ def screenshot_window(
     else:
         scope = client_rect
     return _screenshot_by_win32ui(scope)
-
-
-def get_active_support_window(
-    supported_window_titles: Container[str],
-) -> pygetwindow.Window | None:
-    active_window = pygetwindow.getActiveWindow()
-    if active_window is not None and active_window.title in supported_window_titles:
-        return active_window
-    else:
-        return None
 
 
 def get_support_window(
