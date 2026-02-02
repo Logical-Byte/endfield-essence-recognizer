@@ -3,13 +3,17 @@ from __future__ import annotations
 import importlib.resources
 from typing import TYPE_CHECKING, cast
 
-from endfield_essence_recognizer.deps import default_user_setting_manager
+from endfield_essence_recognizer.deps import (
+    default_user_setting_manager,
+    get_window_manager_singleton,
+)
 from endfield_essence_recognizer.utils.log import logger
 from endfield_essence_recognizer.version import __version__ as __version__
 
 if TYPE_CHECKING:
     import threading
 
+    from endfield_essence_recognizer.core.window import WindowManager
     from endfield_essence_recognizer.essence_scanner import EssenceScanner
     from endfield_essence_recognizer.recognizer import Recognizer
 
@@ -28,9 +32,6 @@ screenshot_template_dir = (
     importlib.resources.files("endfield_essence_recognizer") / "templates/screenshot"
 )
 
-supported_window_titles = ["Endfield"]
-"""支持的窗口标题列表"""
-
 # 全局变量
 essence_scanner_thread: EssenceScanner | None = None
 """基质扫描器线程实例"""
@@ -45,15 +46,19 @@ icon_recognizer: Recognizer | None = None
 def on_bracket_left():
     """处理 "[" 键按下事件 - 仅识别不操作"""
     from endfield_essence_recognizer.essence_scanner import recognize_once
-    from endfield_essence_recognizer.utils.window import get_active_support_window
 
-    window = get_active_support_window(supported_window_titles)
-    if window is None:
+    window_manager: WindowManager = get_window_manager_singleton()
+    if not window_manager.target_is_active:
         logger.debug("终末地窗口不在前台，忽略 '[' 键。")
         return
     else:
         logger.info("检测到 '[' 键，开始识别基质")
-        recognize_once(window, text_recognizer, icon_recognizer)  # type: ignore
+        recognize_once(
+            window_manager,
+            cast("Recognizer", text_recognizer),
+            cast("Recognizer", icon_recognizer),
+            default_user_setting_manager().get_user_setting(),
+        )
 
 
 def toggle_scan():
@@ -69,7 +74,7 @@ def toggle_scan():
         essence_scanner_thread = EssenceScanner(
             text_recognizer=cast("Recognizer", text_recognizer),
             icon_recognizer=cast("Recognizer", icon_recognizer),
-            supported_window_titles=supported_window_titles,
+            window_manager=get_window_manager_singleton(),
             user_setting_manager=default_user_setting_manager(),
         )
         essence_scanner_thread.start()
@@ -95,11 +100,9 @@ def toggle_scan():
 
 def on_bracket_right():
     """处理 "]" 键按下事件 - 切换自动点击"""
-    from endfield_essence_recognizer.utils.window import get_active_support_window
+    window_manager: WindowManager = get_window_manager_singleton()
 
-    global essence_scanner_thread
-
-    if get_active_support_window(supported_window_titles) is None:
+    if not window_manager.target_is_active:
         logger.debug('终末地窗口不在前台，忽略 "]" 键。')
         return
     else:

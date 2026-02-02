@@ -10,10 +10,14 @@ from fastapi import Body, Depends, FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from endfield_essence_recognizer import supported_window_titles, toggle_scan
+from endfield_essence_recognizer import toggle_scan
 from endfield_essence_recognizer.core.config import ServerConfig, get_server_config
 from endfield_essence_recognizer.core.path import get_logs_dir
-from endfield_essence_recognizer.deps import get_user_setting_manager_dep
+from endfield_essence_recognizer.core.window import WindowManager
+from endfield_essence_recognizer.deps import (
+    get_user_setting_manager_dep,
+    get_window_manager_dep,
+)
 from endfield_essence_recognizer.models.user_setting import UserSetting
 from endfield_essence_recognizer.services.user_setting_manager import (
     UserSettingManager,
@@ -120,21 +124,16 @@ async def get_screenshot(
     height: int = 1080,
     format: Literal["jpg", "jpeg", "png", "webp"] = "jpg",  # noqa: A002
     quality: int = 75,
+    window_manager: WindowManager = Depends(get_window_manager_dep),
 ) -> str | None:
     import base64
 
     import cv2
 
-    from endfield_essence_recognizer.utils.window import (
-        get_active_support_window,
-        screenshot_window,
-    )
-
-    window = get_active_support_window(supported_window_titles)
-    if window is None:
+    if not window_manager.target_is_active:
         return None
     else:
-        image = screenshot_window(window)
+        image = window_manager.screenshot()
         image = cv2.resize(image, (width, height))
         logger.success("成功截取终末地窗口截图。")
 

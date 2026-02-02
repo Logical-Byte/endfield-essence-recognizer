@@ -2,7 +2,7 @@
 Windows OS-specific window utilities.
 """
 
-from collections.abc import Container, Iterable
+from collections.abc import Sequence
 
 import numpy as np
 import pyautogui
@@ -138,23 +138,26 @@ def screenshot_window(
     return _screenshot_by_win32ui(scope)
 
 
-def get_active_support_window(
-    supported_window_titles: Container[str],
-) -> pygetwindow.Window | None:
-    active_window = pygetwindow.getActiveWindow()
-    if active_window is not None and active_window.title in supported_window_titles:
-        return active_window
-    else:
-        return None
-
-
 def get_support_window(
-    supported_window_titles: Iterable[str],
+    supported_window_titles: Sequence[str],
 ) -> pygetwindow.Window | None:
+    """
+    Try to get a window that matches one of the supported titles. The order of
+    titles indicates the priority of selection. Strict string match is performed.
+
+    Args:
+        supported_window_titles: Sequence of supported window titles. The order
+            indicates the priority of selection.
+
+    Returns:
+        A `pygetwindow.Window` object if a matching window is found, otherwise None.
+    """
+    all_windows: list[pygetwindow.Window] = pygetwindow.getAllWindows()
     for title in supported_window_titles:
-        windows = pygetwindow.getWindowsWithTitle(title)
-        if windows:
-            return windows[0]
+        # do strict match
+        strict_matches = [w for w in all_windows if w.title == title]
+        if strict_matches:
+            return strict_matches[0]
     return None
 
 
