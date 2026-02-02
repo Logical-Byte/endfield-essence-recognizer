@@ -443,6 +443,7 @@ class EssenceScanner(threading.Thread):
                 )
             ):
                 click_on_window(window, *LOCK_BUTTON_POS)
+                time.sleep(0.3)
                 logger.success("给你自动锁上了，记得保管好哦！(*/ω＼*)")
             elif locked_str == "已锁定" and (
                 (
@@ -457,6 +458,7 @@ class EssenceScanner(threading.Thread):
                 )
             ):
                 click_on_window(window, *LOCK_BUTTON_POS)
+                time.sleep(0.3)
                 logger.success("给你自动解锁了！ヾ(≧▽≦*)o")
             if deprecated_str == "未弃用" and (
                 (
@@ -469,6 +471,7 @@ class EssenceScanner(threading.Thread):
                 )
             ):
                 click_on_window(window, *DEPRECATE_BUTTON_POS)
+                time.sleep(0.3)
                 logger.success("给你自动标记为弃用了！(￣︶￣)>")
             elif deprecated_str == "已弃用" and (
                 (
@@ -483,6 +486,7 @@ class EssenceScanner(threading.Thread):
                 )
             ):
                 click_on_window(window, *DEPRECATE_BUTTON_POS)
+                time.sleep(0.3)
                 logger.success("给你自动取消弃用啦！(＾Ｕ＾)ノ~ＹＯ")
 
         else:
