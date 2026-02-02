@@ -3,16 +3,13 @@ from collections.abc import Sequence
 import pygetwindow
 from cv2.typing import MatLike
 
-from endfield_essence_recognizer.utils.image import Scope
-from endfield_essence_recognizer.utils.window import (
+from endfield_essence_recognizer.core.window.windows_utils import (
     click_on_window,
     get_client_size,
     get_support_window,
     screenshot_window,
 )
-
-SUPPORTED_WINDOW_TITLES = ["Endfield"]
-"""List of window titles that the application supports interacting with."""
+from endfield_essence_recognizer.utils.image import Scope
 
 
 class WindowManager:

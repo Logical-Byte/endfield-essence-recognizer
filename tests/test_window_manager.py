@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import pytest
 
-from endfield_essence_recognizer.core.window import WindowManager
+from endfield_essence_recognizer.core.window.manager import WindowManager
 
 
 @pytest.fixture
@@ -21,7 +21,7 @@ def mock_window():
 
 def test_window_target_exists(window_manager, mock_window):
     with patch(
-        "endfield_essence_recognizer.core.window.get_support_window"
+        "endfield_essence_recognizer.core.window.manager.get_support_window"
     ) as mock_get_support:
         mock_get_support.return_value = mock_window
         assert window_manager.target_exists is True
@@ -34,7 +34,7 @@ def test_window_target_exists(window_manager, mock_window):
 
 def test_window_not_target_exists(window_manager):
     with patch(
-        "endfield_essence_recognizer.core.window.get_support_window"
+        "endfield_essence_recognizer.core.window.manager.get_support_window"
     ) as mock_get_support:
         mock_get_support.return_value = None
         assert window_manager.target_exists is False
@@ -42,7 +42,7 @@ def test_window_not_target_exists(window_manager):
 
 def test_window_target_is_active(window_manager, mock_window):
     with patch(
-        "endfield_essence_recognizer.core.window.get_support_window"
+        "endfield_essence_recognizer.core.window.manager.get_support_window"
     ) as mock_get_support:
         mock_get_support.return_value = mock_window
         mock_window.isActive = True
@@ -53,7 +53,7 @@ def test_window_target_is_active(window_manager, mock_window):
 
 def test_window_is_not_active_no_window(window_manager):
     with patch(
-        "endfield_essence_recognizer.core.window.get_support_window"
+        "endfield_essence_recognizer.core.window.manager.get_support_window"
     ) as mock_get_support:
         mock_get_support.return_value = None
         assert window_manager.target_is_active is False
@@ -61,7 +61,7 @@ def test_window_is_not_active_no_window(window_manager):
 
 def test_restore(window_manager, mock_window):
     with patch(
-        "endfield_essence_recognizer.core.window.get_support_window"
+        "endfield_essence_recognizer.core.window.manager.get_support_window"
     ) as mock_get_support:
         mock_get_support.return_value = mock_window
 
@@ -78,7 +78,7 @@ def test_restore(window_manager, mock_window):
 
 def test_activate(window_manager, mock_window):
     with patch(
-        "endfield_essence_recognizer.core.window.get_support_window"
+        "endfield_essence_recognizer.core.window.manager.get_support_window"
     ) as mock_get_support:
         mock_get_support.return_value = mock_window
 
@@ -95,7 +95,7 @@ def test_activate(window_manager, mock_window):
 
 def test_clear(window_manager, mock_window):
     with patch(
-        "endfield_essence_recognizer.core.window.get_support_window"
+        "endfield_essence_recognizer.core.window.manager.get_support_window"
     ) as mock_get_support:
         mock_get_support.return_value = mock_window
 
@@ -110,10 +110,10 @@ def test_clear(window_manager, mock_window):
 def test_get_client_size(window_manager, mock_window):
     with (
         patch(
-            "endfield_essence_recognizer.core.window.get_support_window"
+            "endfield_essence_recognizer.core.window.manager.get_support_window"
         ) as mock_get_support,
         patch(
-            "endfield_essence_recognizer.core.window.get_client_size"
+            "endfield_essence_recognizer.core.window.manager.get_client_size"
         ) as mock_utils_get_size,
     ):
         mock_get_support.return_value = mock_window
@@ -126,7 +126,7 @@ def test_get_client_size(window_manager, mock_window):
 
 def test_get_client_size_no_window(window_manager):
     with patch(
-        "endfield_essence_recognizer.core.window.get_support_window"
+        "endfield_essence_recognizer.core.window.manager.get_support_window"
     ) as mock_get_support:
         mock_get_support.return_value = None
         with pytest.raises(RuntimeError, match="No window found"):
@@ -138,10 +138,10 @@ def test_screenshot(window_manager, mock_window):
 
     with (
         patch(
-            "endfield_essence_recognizer.core.window.get_support_window"
+            "endfield_essence_recognizer.core.window.manager.get_support_window"
         ) as mock_get_support,
         patch(
-            "endfield_essence_recognizer.core.window.screenshot_window"
+            "endfield_essence_recognizer.core.window.manager.screenshot_window"
         ) as mock_screenshot,
     ):
         mock_get_support.return_value = mock_window
@@ -160,7 +160,7 @@ def test_screenshot(window_manager, mock_window):
 
 def test_screenshot_no_window(window_manager):
     with patch(
-        "endfield_essence_recognizer.core.window.get_support_window"
+        "endfield_essence_recognizer.core.window.manager.get_support_window"
     ) as mock_get_support:
         mock_get_support.return_value = None
         with pytest.raises(RuntimeError, match="No window found"):
@@ -170,9 +170,11 @@ def test_screenshot_no_window(window_manager):
 def test_click(window_manager, mock_window):
     with (
         patch(
-            "endfield_essence_recognizer.core.window.get_support_window"
+            "endfield_essence_recognizer.core.window.manager.get_support_window"
         ) as mock_get_support,
-        patch("endfield_essence_recognizer.core.window.click_on_window") as mock_click,
+        patch(
+            "endfield_essence_recognizer.core.window.manager.click_on_window"
+        ) as mock_click,
     ):
         mock_get_support.return_value = mock_window
 
@@ -182,7 +184,7 @@ def test_click(window_manager, mock_window):
 
 def test_click_no_window(window_manager):
     with patch(
-        "endfield_essence_recognizer.core.window.get_support_window"
+        "endfield_essence_recognizer.core.window.manager.get_support_window"
     ) as mock_get_support:
         mock_get_support.return_value = None
         with pytest.raises(RuntimeError, match="No window found"):
