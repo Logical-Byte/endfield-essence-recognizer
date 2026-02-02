@@ -8,7 +8,29 @@ from pathlib import Path
 from fastapi import Depends
 
 from endfield_essence_recognizer.core.path import get_config_path
+from endfield_essence_recognizer.core.window import (
+    SUPPORTED_WINDOW_TITLES,
+    WindowManager,
+)
 from endfield_essence_recognizer.services.user_setting_manager import UserSettingManager
+
+# WindowManager dependency
+
+
+@lru_cache()
+def get_window_manager_singleton() -> WindowManager:
+    """
+    Get the singleton WindowManager instance.
+    """
+    return WindowManager(SUPPORTED_WINDOW_TITLES)
+
+
+def get_window_manager_dep() -> WindowManager:
+    """
+    Get the WindowManager dependency.
+    """
+    return get_window_manager_singleton()
+
 
 # Config path dependency
 
