@@ -2,7 +2,7 @@
 Windows OS-specific window utilities.
 """
 
-from collections.abc import Container, Iterable
+from collections.abc import Container, Sequence
 
 import numpy as np
 import pyautogui
@@ -149,12 +149,25 @@ def get_active_support_window(
 
 
 def get_support_window(
-    supported_window_titles: Iterable[str],
+    supported_window_titles: Sequence[str],
 ) -> pygetwindow.Window | None:
+    """
+    Try to get a window that matches one of the supported titles. The order of
+    titles indicates the priority of selection. Strict string match is performed.
+
+    Args:
+        supported_window_titles: Sequence of supported window titles. The order
+            indicates the priority of selection.
+
+    Returns:
+        A `pygetwindow.Window` object if a matching window is found, otherwise None.
+    """
+    all_windows: list[pygetwindow.Window] = pygetwindow.getAllWindows()
     for title in supported_window_titles:
-        windows = pygetwindow.getWindowsWithTitle(title)
-        if windows:
-            return windows[0]
+        # do strict match
+        strict_matches = [w for w in all_windows if w.title == title]
+        if strict_matches:
+            return strict_matches[0]
     return None
 
 

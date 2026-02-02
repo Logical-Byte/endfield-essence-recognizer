@@ -1,4 +1,4 @@
-from typing import Iterable
+from collections.abc import Sequence
 
 import pygetwindow
 from cv2.typing import MatLike
@@ -26,7 +26,7 @@ class WindowManager:
     resize, minimize the window at any time. For our use case, this is acceptable.
     """
 
-    def __init__(self, supported_titles: Iterable[str]):
+    def __init__(self, supported_titles: Sequence[str]):
         self._supported_titles = supported_titles
         self._window: pygetwindow.Window | None = None
 
