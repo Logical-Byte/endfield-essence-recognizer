@@ -1,0 +1,61 @@
+name: backend-ci
+
+on:
+  pull_request:
+    branches:
+      - main
+      - dev
+    paths: # Only run on backend-related changes
+      - 'src/**'
+      - 'tests/**'
+      - 'ruff.toml'
+      - 'uv.lock'
+      - '.github/workflows/'
+
+  push:
+    branches:
+      - main
+      - dev
+      # Run on all changes
+
+# Ensure that only one CI run happens per PR/branch at a time
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend-lint:
+    name: Lint and Pre-commit
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Run ruff check and format
+        run: |
+          uvx ruff check
+          uvx ruff format
+
+  backend-test:
+    name: Run tests
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install
+
+      - name: Install dependencies
+        run: uv sync --dev
+
+      - name: Run tests
+        run: uv run pytest tests -v
