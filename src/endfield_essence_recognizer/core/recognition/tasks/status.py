@@ -12,8 +12,10 @@ class StatusLabel(StrEnum):
 
     ABANDONED = "已弃用"
     NOT_ABANDONED = "未弃用"
+    MAYBE_ABANDONED = "不知道是否已弃用"
     LOCKED = "已锁定"
     UNLOCKED = "未锁定"
+    MAYBE_LOCKED = "不知道是否已锁定"
 
 
 def build_status_profile() -> RecognitionProfile[StatusLabel]:

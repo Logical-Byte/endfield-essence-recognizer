@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import importlib.resources
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
 from endfield_essence_recognizer.deps import (
     default_user_setting_manager,
     get_resolution_profile,
     get_window_manager_singleton,
+    prepare_attribute_recognizer,
+    prepare_status_recognizer,
 )
 from endfield_essence_recognizer.utils.log import logger
 from endfield_essence_recognizer.version import __version__ as __version__
@@ -14,9 +16,10 @@ from endfield_essence_recognizer.version import __version__ as __version__
 if TYPE_CHECKING:
     import threading
 
+    # from endfield_essence_recognizer.core.recognition import Recognizer
     from endfield_essence_recognizer.core.window import WindowManager
     from endfield_essence_recognizer.essence_scanner import EssenceScanner
-    from endfield_essence_recognizer.recognizer import Recognizer
+    # from endfield_essence_recognizer.recognizer import Recognizer
 
 
 # 资源路径
@@ -39,10 +42,6 @@ essence_scanner_thread: EssenceScanner | None = None
 server_thread: threading.Thread | None = None
 """后端服务器线程实例"""
 
-# 构造识别器实例
-text_recognizer: Recognizer | None = None
-icon_recognizer: Recognizer | None = None
-
 
 def on_bracket_left():
     """处理 "[" 键按下事件 - 仅识别不操作"""
@@ -56,8 +55,8 @@ def on_bracket_left():
         logger.info("检测到 '[' 键，开始识别基质")
         recognize_once(
             window_manager,
-            cast("Recognizer", text_recognizer),
-            cast("Recognizer", icon_recognizer),
+            prepare_status_recognizer(),
+            prepare_attribute_recognizer(),
             default_user_setting_manager().get_user_setting(),
             get_resolution_profile(),
         )
@@ -74,8 +73,8 @@ def toggle_scan():
     if essence_scanner_thread is None or not essence_scanner_thread.is_alive():
         logger.info("开始扫描基质")
         essence_scanner_thread = EssenceScanner(
-            text_recognizer=cast("Recognizer", text_recognizer),
-            icon_recognizer=cast("Recognizer", icon_recognizer),
+            text_recognizer=prepare_attribute_recognizer(),
+            icon_recognizer=prepare_status_recognizer(),
             window_manager=get_window_manager_singleton(),
             user_setting_manager=default_user_setting_manager(),
             profile=get_resolution_profile(),
@@ -127,7 +126,7 @@ def on_exit():
 def main():
     """主函数"""
 
-    global text_recognizer, icon_recognizer, essence_scanner_thread
+    global essence_scanner_thread
 
     # 打印欢迎信息
     message = """
@@ -156,26 +155,6 @@ def main():
     user_setting_manager = default_user_setting_manager()
     user_setting_manager.load_user_setting()
 
-    # 构造识别器实例
-    from endfield_essence_recognizer.game_data.weapon import (
-        all_attribute_stats,
-        all_secondary_stats,
-        all_skill_stats,
-    )
-    from endfield_essence_recognizer.recognizer import Recognizer
-
-    text_recognizer = Recognizer(
-        labels=all_attribute_stats + all_secondary_stats + all_skill_stats,
-        templates_dir=generated_template_dir,
-        # preprocess_roi=preprocess_text_roi,
-        # preprocess_template=preprocess_text_template,
-    )
-    icon_recognizer = Recognizer(
-        labels=["已弃用", "未弃用", "已锁定", "未锁定"],
-        templates_dir=screenshot_template_dir,
-    )
-
-    # 注册热键
     import keyboard
 
     keyboard.add_hotkey("[", on_bracket_left)

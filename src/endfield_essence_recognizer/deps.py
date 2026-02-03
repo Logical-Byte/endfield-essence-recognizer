@@ -10,6 +10,12 @@ from fastapi import Depends
 from endfield_essence_recognizer.core.layout.base import ResolutionProfile
 from endfield_essence_recognizer.core.layout.res_1080p import Resolution1080p
 from endfield_essence_recognizer.core.path import get_config_path
+from endfield_essence_recognizer.core.recognition import (
+    Recognizer,
+    StatusLabel,
+    prepare_attribute_recognizer,
+    prepare_status_recognizer,
+)
 from endfield_essence_recognizer.core.window import (
     SUPPORTED_WINDOW_TITLES,
     WindowManager,
@@ -86,3 +92,20 @@ def default_user_setting_manager() -> UserSettingManager:
     Get the default singleton UserSettingManager instance.
     """
     return get_user_setting_manager_singleton(get_config_path())
+
+
+# Recognizer dependencies
+
+
+def get_status_recognizer_dep() -> Recognizer[StatusLabel]:
+    """
+    Get the default status Recognizer instance.
+    """
+    return prepare_status_recognizer()
+
+
+def get_attribute_recognizer_dep() -> Recognizer[str]:
+    """
+    Get the default attribute Recognizer instance.
+    """
+    return prepare_attribute_recognizer()

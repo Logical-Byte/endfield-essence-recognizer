@@ -9,6 +9,10 @@ import numpy as np
 from cv2.typing import MatLike
 
 from endfield_essence_recognizer.core.layout.base import Point, ResolutionProfile
+from endfield_essence_recognizer.core.recognition import (
+    Recognizer,
+    StatusLabel,
+)
 from endfield_essence_recognizer.core.window import WindowManager
 from endfield_essence_recognizer.game_data import (
     gem_table,
@@ -22,7 +26,6 @@ from endfield_essence_recognizer.game_data.weapon import (
     weapon_type_int_to_translation_key,
 )
 from endfield_essence_recognizer.models.user_setting import Action, UserSetting
-from endfield_essence_recognizer.recognizer import Recognizer
 from endfield_essence_recognizer.services.user_setting_manager import UserSettingManager
 from endfield_essence_recognizer.utils.image import load_image, to_gray_image
 from endfield_essence_recognizer.utils.log import logger
@@ -235,8 +238,8 @@ def judge_essence_quality(
 
 def recognize_essence(
     window_manager: WindowManager,
-    text_recognizer: Recognizer,
-    icon_recognizer: Recognizer,
+    text_recognizer: Recognizer[str],
+    icon_recognizer: Recognizer[StatusLabel],
     profile: ResolutionProfile,
 ) -> tuple[list[str | None], list[int | None], str | None, str | None]:
     stats: list[str | None] = []
@@ -332,16 +335,16 @@ class EssenceScanner(threading.Thread):
 
     def __init__(
         self,
-        text_recognizer: Recognizer,
-        icon_recognizer: Recognizer,
+        text_recognizer: Recognizer[str],
+        icon_recognizer: Recognizer[StatusLabel],
         window_manager: WindowManager,
         user_setting_manager: UserSettingManager,
         profile: ResolutionProfile,
     ) -> None:
         super().__init__(daemon=True)
         self._scanning = threading.Event()
-        self._text_recognizer: Recognizer = text_recognizer
-        self._icon_recognizer: Recognizer = icon_recognizer
+        self._text_recognizer: Recognizer[str] = text_recognizer
+        self._icon_recognizer: Recognizer[StatusLabel] = icon_recognizer
         self._window_manager: WindowManager = window_manager
         self._user_setting_manager: UserSettingManager = user_setting_manager
         self._profile: ResolutionProfile = profile
