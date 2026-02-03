@@ -10,8 +10,9 @@ from cv2.typing import MatLike
 
 from endfield_essence_recognizer.core.layout.base import Point, ResolutionProfile
 from endfield_essence_recognizer.core.recognition import (
-    Recognizer,
+    AttributeRecognizer,
     StatusLabel,
+    StatusRecognizer,
 )
 from endfield_essence_recognizer.core.window import WindowManager
 from endfield_essence_recognizer.game_data import (
@@ -238,8 +239,8 @@ def judge_essence_quality(
 
 def recognize_essence(
     window_manager: WindowManager,
-    text_recognizer: Recognizer[str],
-    icon_recognizer: Recognizer[StatusLabel],
+    text_recognizer: AttributeRecognizer,
+    icon_recognizer: StatusRecognizer,
     profile: ResolutionProfile,
 ) -> tuple[list[str | None], list[int | None], StatusLabel, StatusLabel]:
     stats: list[str | None] = []
@@ -308,8 +309,8 @@ def recognize_essence(
 
 def recognize_once(
     window_manager: WindowManager,
-    text_recognizer: Recognizer[str],
-    icon_recognizer: Recognizer[StatusLabel],
+    text_recognizer: AttributeRecognizer,
+    icon_recognizer: StatusRecognizer,
     user_setting: UserSetting,
     profile: ResolutionProfile,
 ) -> None:
@@ -343,16 +344,16 @@ class EssenceScanner(threading.Thread):
 
     def __init__(
         self,
-        text_recognizer: Recognizer[str],
-        icon_recognizer: Recognizer[StatusLabel],
+        text_recognizer: AttributeRecognizer,
+        icon_recognizer: StatusRecognizer,
         window_manager: WindowManager,
         user_setting_manager: UserSettingManager,
         profile: ResolutionProfile,
     ) -> None:
         super().__init__(daemon=True)
         self._scanning = threading.Event()
-        self._text_recognizer: Recognizer[str] = text_recognizer
-        self._icon_recognizer: Recognizer[StatusLabel] = icon_recognizer
+        self._text_recognizer: AttributeRecognizer = text_recognizer
+        self._icon_recognizer: StatusRecognizer = icon_recognizer
         self._window_manager: WindowManager = window_manager
         self._user_setting_manager: UserSettingManager = user_setting_manager
         self._profile: ResolutionProfile = profile

@@ -11,8 +11,8 @@ from endfield_essence_recognizer.core.layout.base import ResolutionProfile
 from endfield_essence_recognizer.core.layout.res_1080p import Resolution1080p
 from endfield_essence_recognizer.core.path import get_config_path
 from endfield_essence_recognizer.core.recognition import (
-    Recognizer,
-    StatusLabel,
+    AttributeRecognizer,
+    StatusRecognizer,
     prepare_attribute_recognizer,
     prepare_status_recognizer,
 )
@@ -97,14 +97,14 @@ def default_user_setting_manager() -> UserSettingManager:
 # Recognizer dependencies
 
 
-def get_status_recognizer_dep() -> Recognizer[StatusLabel]:
+def get_status_recognizer_dep() -> StatusRecognizer:
     """
     Get the default status Recognizer instance.
     """
     return prepare_status_recognizer()
 
 
-def get_attribute_recognizer_dep() -> Recognizer[str]:
+def get_attribute_recognizer_dep() -> AttributeRecognizer:
     """
     Get the default attribute Recognizer instance.
     """
