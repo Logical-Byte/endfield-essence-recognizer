@@ -20,7 +20,7 @@ from endfield_essence_recognizer.services.user_setting_manager import UserSettin
 @lru_cache()
 def get_resolution_profile() -> ResolutionProfile:
     """
-    Get the Layout singleton.
+    Get the ResolutionProfile instance.
     """
     return Resolution1080p()
 
