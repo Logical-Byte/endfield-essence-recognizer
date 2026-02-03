@@ -17,10 +17,8 @@ from endfield_essence_recognizer.version import __version__ as __version__
 if TYPE_CHECKING:
     import threading
 
-    # from endfield_essence_recognizer.core.recognition import Recognizer
     from endfield_essence_recognizer.core.window import WindowManager
     from endfield_essence_recognizer.essence_scanner import EssenceScanner
-    # from endfield_essence_recognizer.recognizer import Recognizer
 
 
 # 资源路径
