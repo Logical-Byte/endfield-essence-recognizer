@@ -5,6 +5,45 @@
         <v-expansion-panel-title>武器基质预设</v-expansion-panel-title>
         <v-expansion-panel-text>
           <h2>将以下武器所对应的基质视为宝藏</h2>
+          <v-row class="mb-4" align="center">
+            <v-col cols="12">
+              <h3>按稀有度快捷选择：</h3>
+              <v-btn-toggle :model-value="selectedRarities" multiple color="primary" density="comfortable">
+                <v-btn :value="3" @click="toggleRarity(3)">
+                  <span class="rarity-3">3★</span>
+                </v-btn>
+                <v-btn :value="4" @click="toggleRarity(4)">
+                  <span class="rarity-4">4★</span>
+                </v-btn>
+                <v-btn :value="5" @click="toggleRarity(5)">
+                  <span class="rarity-5">5★</span>
+                </v-btn>
+                <v-btn :value="6" @click="toggleRarity(6)">
+                  <span class="rarity-6">6★</span>
+                </v-btn>
+              </v-btn-toggle>
+              <div class="mt-2">
+                <v-btn
+                  size="small"
+                  variant="outlined"
+                  color="secondary"
+                  @click="applyRaritySelection([3, 4, 5, 6])"
+                  class="me-2"
+                >
+                  全选
+                </v-btn>
+                <v-btn
+                  size="small"
+                  variant="outlined"
+                  color="secondary"
+                  @click="applyRaritySelection([])"
+                >
+                  全不选
+                </v-btn>
+              </div>
+            </v-col>
+          </v-row>
+          <v-divider class="my-4" />
           <template
             v-for="{ groupId, groupName, iconId } in wikiGroupTable['wiki_type_weapon']?.list ?? []"
             :key="groupId"
@@ -310,11 +349,52 @@ const trashAction = ref('unlock')
 const highLevelTreasureEnabled = ref(false)
 const highLevelTreasureThreshold = ref(3)
 
+const selectedRarities = computed(() => {
+  const raritiesSet = new Set<number>()
+  const rarityStats: Record<number, { total: number; selected: number }> = {}
+  
+  Object.entries(weaponBasicTable.value).forEach(([weaponId, weapon]) => {
+    const rarity = weapon.rarity
+    if (!rarityStats[rarity]) {
+      rarityStats[rarity] = { total: 0, selected: 0 }
+    }
+    rarityStats[rarity].total++
+    if (selectedWeaponIds.value.includes(weaponId)) {
+      rarityStats[rarity].selected++
+    }
+  })
+  
+  Object.entries(rarityStats).forEach(([rarity, stats]) => {
+    if (stats.selected === stats.total && stats.total > 0) {
+      raritiesSet.add(Number(rarity))
+    }
+  })
+  
+  return Array.from(raritiesSet).sort()
+})
+
 const notSelectedWeaponIds = computed(() => {
   return Object.keys(weaponBasicTable.value).filter(
     (weaponId) => !selectedWeaponIds.value.includes(weaponId),
   )
 })
+
+function applyRaritySelection(rarities: number[]) {
+  const weaponIdsToSelect = Object.entries(weaponBasicTable.value)
+    .filter(([_, weapon]) => rarities.includes(weapon.rarity))
+    .map(([weaponId]) => weaponId)
+  
+  selectedWeaponIds.value = weaponIdsToSelect
+}
+
+function toggleRarity(rarity: number) {
+  const currentRarities = selectedRarities.value
+  const newRarities = currentRarities.includes(rarity)
+    ? currentRarities.filter(r => r !== rarity)
+    : [...currentRarities, rarity].sort()
+  
+  applyRaritySelection(newRarities)
+}
 
 function selectAllForGroup(groupId: string, select: boolean) {
   const weaponIds =
@@ -409,5 +489,25 @@ $weapon-icon-size: clamp(3rem, 16vw, 6rem);
 .weapon-item {
   width: $weapon-icon-size;
   height: $weapon-icon-size;
+}
+
+.rarity-3 {
+  color: #8ab4f8;
+  font-weight: bold;
+}
+
+.rarity-4 {
+  color: #c58af9;
+  font-weight: bold;
+}
+
+.rarity-5 {
+  color: #fdd663;
+  font-weight: bold;
+}
+
+.rarity-6 {
+  color: #ff6f00;
+  font-weight: bold;
 }
 </style>
