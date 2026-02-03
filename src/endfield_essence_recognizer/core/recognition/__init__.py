@@ -54,6 +54,8 @@ def prepare_lock_status_recognizer() -> LockStatusRecognizer:
 
 __all__ = [
     "LabelT",
+    "AbandonStatusLabel",
+    "LockStatusLabel",
     "AttributeRecognizer",
     "AbandonStatusRecognizer",
     "LockStatusRecognizer",
