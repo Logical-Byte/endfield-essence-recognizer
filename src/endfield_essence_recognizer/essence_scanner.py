@@ -435,6 +435,14 @@ class EssenceScanner(threading.Thread):
             )
 
             essence_quality = judge_essence_quality(user_setting, stats, levels)
+            # judge_essence_quality has side effects of logging the result, so
+            # the early continue on uncertain recognition should be after it.
+            if (
+                abandon_label == AbandonStatusLabel.MAYBE_ABANDONED
+                or lock_label == LockStatusLabel.MAYBE_LOCKED
+            ):
+                # early continue on uncertain recognition
+                continue
             if lock_label == LockStatusLabel.NOT_LOCKED and (
                 (
                     essence_quality == EssenceQuality.TREASURE
