@@ -345,6 +345,12 @@ class EssenceScanner(threading.Thread):
         self._user_setting_manager: UserSettingManager = user_setting_manager
         self._layout: ResolutionProfile = layout
 
+        from endfield_essence_recognizer.utils.log import str_properties_and_attrs
+
+        logger.opt(lazy=True).debug(
+            "Scanner layout configuration: {}", lambda: str_properties_and_attrs(layout)
+        )
+
     def run(self) -> None:
         logger.info("开始基质扫描线程...")
         self._scanning.set()
