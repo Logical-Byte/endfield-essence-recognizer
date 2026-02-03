@@ -10,9 +10,11 @@ from cv2.typing import MatLike
 
 from endfield_essence_recognizer.core.layout.base import Point, ResolutionProfile
 from endfield_essence_recognizer.core.recognition import (
+    AbandonStatusLabel,
+    AbandonStatusRecognizer,
     AttributeRecognizer,
-    StatusLabel,
-    StatusRecognizer,
+    LockStatusLabel,
+    LockStatusRecognizer,
 )
 from endfield_essence_recognizer.core.window import WindowManager
 from endfield_essence_recognizer.game_data import (
@@ -240,9 +242,10 @@ def judge_essence_quality(
 def recognize_essence(
     window_manager: WindowManager,
     text_recognizer: AttributeRecognizer,
-    icon_recognizer: StatusRecognizer,
+    abandon_status_recognizer: AbandonStatusRecognizer,
+    lock_status_recognizer: LockStatusRecognizer,
     profile: ResolutionProfile,
-) -> tuple[list[str | None], list[int | None], StatusLabel, StatusLabel]:
+) -> tuple[list[str | None], list[int | None], AbandonStatusLabel, LockStatusLabel]:
     stats: list[str | None] = []
     levels: list[int | None] = []
 
@@ -275,16 +278,16 @@ def recognize_essence(
             logger.debug(f"属性 {k} 等级识别结果: 无法识别")
 
     screenshot_image = window_manager.screenshot(profile.DEPRECATE_BUTTON_ROI)
-    deprecated_str, max_val = icon_recognizer.recognize_roi_fallback(
+    deprecated_str, max_val = abandon_status_recognizer.recognize_roi_fallback(
         screenshot_image,
-        fallback_label=StatusLabel.MAYBE_ABANDONED,
+        fallback_label=AbandonStatusLabel.MAYBE_ABANDONED,
     )
     logger.debug(f"弃用按钮识别结果: {deprecated_str.value} (分数: {max_val:.3f})")
 
     screenshot_image = window_manager.screenshot(profile.LOCK_BUTTON_ROI)
-    locked_str, max_val = icon_recognizer.recognize_roi_fallback(
+    locked_str, max_val = lock_status_recognizer.recognize_roi_fallback(
         screenshot_image,
-        fallback_label=StatusLabel.MAYBE_LOCKED,
+        fallback_label=LockStatusLabel.MAYBE_LOCKED,
     )
     logger.debug(f"锁定按钮识别结果: {locked_str.value} (分数: {max_val:.3f})")
 
@@ -310,7 +313,8 @@ def recognize_essence(
 def recognize_once(
     window_manager: WindowManager,
     text_recognizer: AttributeRecognizer,
-    icon_recognizer: StatusRecognizer,
+    abandon_status_recognizer: AbandonStatusRecognizer,
+    lock_status_recognizer: LockStatusRecognizer,
     user_setting: UserSetting,
     profile: ResolutionProfile,
 ) -> None:
@@ -319,15 +323,19 @@ def recognize_once(
         return
 
     stats, levels, deprecated_str, locked_str = recognize_essence(
-        window_manager, text_recognizer, icon_recognizer, profile
+        window_manager,
+        text_recognizer,
+        abandon_status_recognizer,
+        lock_status_recognizer,
+        profile,
     )
 
     if deprecated_str not in (
-        StatusLabel.ABANDONED,
-        StatusLabel.NOT_ABANDONED,
+        AbandonStatusLabel.ABANDONED,
+        AbandonStatusLabel.NOT_ABANDONED,
     ) or locked_str not in (
-        StatusLabel.LOCKED,
-        StatusLabel.UNLOCKED,
+        LockStatusLabel.LOCKED,
+        LockStatusLabel.NOT_LOCKED,
     ):
         return
 
@@ -345,7 +353,8 @@ class EssenceScanner(threading.Thread):
     def __init__(
         self,
         text_recognizer: AttributeRecognizer,
-        icon_recognizer: StatusRecognizer,
+        abandon_status_recognizer: AbandonStatusRecognizer,
+        lock_status_recognizer: LockStatusRecognizer,
         window_manager: WindowManager,
         user_setting_manager: UserSettingManager,
         profile: ResolutionProfile,
@@ -353,7 +362,10 @@ class EssenceScanner(threading.Thread):
         super().__init__(daemon=True)
         self._scanning = threading.Event()
         self._text_recognizer: AttributeRecognizer = text_recognizer
-        self._icon_recognizer: StatusRecognizer = icon_recognizer
+        self._abandon_status_recognizer: AbandonStatusRecognizer = (
+            abandon_status_recognizer
+        )
+        self._lock_status_recognizer: LockStatusRecognizer = lock_status_recognizer
         self._window_manager: WindowManager = window_manager
         self._user_setting_manager: UserSettingManager = user_setting_manager
         self._profile: ResolutionProfile = profile
@@ -415,7 +427,8 @@ class EssenceScanner(threading.Thread):
             stats, levels, deprecated_str, locked_str = recognize_essence(
                 self._window_manager,
                 self._text_recognizer,
-                self._icon_recognizer,
+                self._abandon_status_recognizer,
+                self._lock_status_recognizer,
                 self._profile,
             )
 
