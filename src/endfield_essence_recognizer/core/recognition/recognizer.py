@@ -83,3 +83,16 @@ class Recognizer(Generic[LabelT]):
         else:
             logger.warning(f"匹配分数很低: 最佳匹配={best_label} 分数={best_score:.3f}")
             return None, best_score
+
+    def recognize_roi_fallback(
+        self, roi_image: MatLike, fallback_label: LabelT
+    ) -> tuple[LabelT, float]:
+        """
+        识别 ROI 图像中的目标，若无匹配则返回 fallback_label。
+
+        返回 (标签, 分数)。
+        """
+        label, score = self.recognize_roi(roi_image)
+        if label is None:
+            return fallback_label, score
+        return label, score
