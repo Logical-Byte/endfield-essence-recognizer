@@ -78,7 +78,7 @@ def toggle_scan():
             icon_recognizer=cast("Recognizer", icon_recognizer),
             window_manager=get_window_manager_singleton(),
             user_setting_manager=default_user_setting_manager(),
-            layout=get_resolution_profile(),
+            profile=get_resolution_profile(),
         )
         essence_scanner_thread.start()
         with importlib.resources.as_file(

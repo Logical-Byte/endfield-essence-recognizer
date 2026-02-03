@@ -101,15 +101,15 @@ def recognize_level_from_icon_points(
         return None
 
 
-def check_scene(window_manager: WindowManager, layout: ResolutionProfile) -> bool:
+def check_scene(window_manager: WindowManager, profile: ResolutionProfile) -> bool:
     width, height = window_manager.get_client_size()
-    if (width, height) != layout.RESOLUTION:
+    if (width, height) != profile.RESOLUTION:
         logger.warning(
-            f"检测到终末地窗口的客户区尺寸为 {width}x{height}，请将终末地分辨率调整为 {layout.RESOLUTION[0]}x{layout.RESOLUTION[1]} 窗口。"
+            f"检测到终末地窗口的客户区尺寸为 {width}x{height}，请将终末地分辨率调整为 {profile.RESOLUTION[0]}x{profile.RESOLUTION[1]} 窗口。"
         )
         return False
 
-    screenshot = window_manager.screenshot(layout.ESSENCE_UI_ROI)
+    screenshot = window_manager.screenshot(profile.ESSENCE_UI_ROI)
     template = load_image(ESSENCE_UI_TEMPLATE_PATH.read_bytes())
     res = cv2.matchTemplate(screenshot, template, cv2.TM_CCOEFF_NORMED)
     _, max_val, _, _ = cv2.minMaxLoc(res)
@@ -236,7 +236,7 @@ def recognize_essence(
     window_manager: WindowManager,
     text_recognizer: Recognizer,
     icon_recognizer: Recognizer,
-    layout: ResolutionProfile,
+    profile: ResolutionProfile,
 ) -> tuple[list[str | None], list[int | None], str | None, str | None]:
     stats: list[str | None] = []
     levels: list[int | None] = []
@@ -244,11 +244,11 @@ def recognize_essence(
     # 截取客户区全局截图用于等级检测
     full_screenshot = window_manager.screenshot()
 
-    rois = [layout.STATS_0_ROI, layout.STATS_1_ROI, layout.STATS_2_ROI]
+    rois = [profile.STATS_0_ROI, profile.STATS_1_ROI, profile.STATS_2_ROI]
     level_icons = [
-        layout.STATS_0_LEVEL_ICONS,
-        layout.STATS_1_LEVEL_ICONS,
-        layout.STATS_2_LEVEL_ICONS,
+        profile.STATS_0_LEVEL_ICONS,
+        profile.STATS_1_LEVEL_ICONS,
+        profile.STATS_2_LEVEL_ICONS,
     ]
 
     for k, roi in enumerate(rois):
@@ -260,7 +260,7 @@ def recognize_essence(
         # 识别等级（通过检测坐标点状态）
         icon_points = level_icons[k]
         level_value = recognize_level_from_icon_points(
-            full_screenshot, icon_points, layout.LEVEL_ICON_SAMPLE_RADIUS
+            full_screenshot, icon_points, profile.LEVEL_ICON_SAMPLE_RADIUS
         )
         levels.append(level_value)
 
@@ -269,14 +269,14 @@ def recognize_essence(
         else:
             logger.debug(f"属性 {k} 等级识别结果: 无法识别")
 
-    screenshot_image = window_manager.screenshot(layout.DEPRECATE_BUTTON_ROI)
+    screenshot_image = window_manager.screenshot(profile.DEPRECATE_BUTTON_ROI)
     deprecated_str, max_val = icon_recognizer.recognize_roi(screenshot_image)
     deprecated_text = (
         deprecated_str if deprecated_str is not None else "不知道是否已弃用"
     )
     logger.debug(f"弃用按钮识别结果: {deprecated_str} (分数: {max_val:.3f})")
 
-    screenshot_image = window_manager.screenshot(layout.LOCK_BUTTON_ROI)
+    screenshot_image = window_manager.screenshot(profile.LOCK_BUTTON_ROI)
     locked_str, max_val = icon_recognizer.recognize_roi(screenshot_image)
     locked_text = locked_str if locked_str is not None else "不知道是否已锁定"
     logger.debug(f"锁定按钮识别结果: {locked_str} (分数: {max_val:.3f})")
@@ -305,14 +305,14 @@ def recognize_once(
     text_recognizer: Recognizer,
     icon_recognizer: Recognizer,
     user_setting: UserSetting,
-    layout: ResolutionProfile,
+    profile: ResolutionProfile,
 ) -> None:
-    check_scene_result = check_scene(window_manager, layout)
+    check_scene_result = check_scene(window_manager, profile)
     if not check_scene_result:
         return
 
     stats, levels, deprecated_str, locked_str = recognize_essence(
-        window_manager, text_recognizer, icon_recognizer, layout
+        window_manager, text_recognizer, icon_recognizer, profile
     )
 
     if deprecated_str is None or locked_str is None:
@@ -335,7 +335,7 @@ class EssenceScanner(threading.Thread):
         icon_recognizer: Recognizer,
         window_manager: WindowManager,
         user_setting_manager: UserSettingManager,
-        layout: ResolutionProfile,
+        profile: ResolutionProfile,
     ) -> None:
         super().__init__(daemon=True)
         self._scanning = threading.Event()
@@ -343,12 +343,13 @@ class EssenceScanner(threading.Thread):
         self._icon_recognizer: Recognizer = icon_recognizer
         self._window_manager: WindowManager = window_manager
         self._user_setting_manager: UserSettingManager = user_setting_manager
-        self._layout: ResolutionProfile = layout
+        self._profile: ResolutionProfile = profile
 
         from endfield_essence_recognizer.utils.log import str_properties_and_attrs
 
         logger.opt(lazy=True).debug(
-            "Scanner layout configuration: {}", lambda: str_properties_and_attrs(layout)
+            "Scanner profile configuration: {}",
+            lambda: str_properties_and_attrs(profile),
         )
 
     def run(self) -> None:
@@ -366,7 +367,7 @@ class EssenceScanner(threading.Thread):
         if self._window_manager.activate():
             time.sleep(0.5)
 
-        check_scene_result = check_scene(self._window_manager, self._layout)
+        check_scene_result = check_scene(self._window_manager, self._profile)
         if not check_scene_result:
             self._scanning.clear()
             return
@@ -374,8 +375,8 @@ class EssenceScanner(threading.Thread):
         # 获取当前用户设置的快照，用于接下来的判断
         user_setting = self._user_setting_manager.get_user_setting()
 
-        icon_x_list = self._layout.essence_icon_x_list
-        icon_y_list = self._layout.essence_icon_y_list
+        icon_x_list = self._profile.essence_icon_x_list
+        icon_y_list = self._profile.essence_icon_y_list
 
         for i, j in np.ndindex(len(icon_y_list), len(icon_x_list)):
             if not self._window_manager.target_is_active:
@@ -402,7 +403,7 @@ class EssenceScanner(threading.Thread):
                 self._window_manager,
                 self._text_recognizer,
                 self._icon_recognizer,
-                self._layout,
+                self._profile,
             )
 
             if deprecated_str is None or locked_str is None:
@@ -420,7 +421,7 @@ class EssenceScanner(threading.Thread):
                 )
             ):
                 self._window_manager.click(
-                    self._layout.LOCK_BUTTON_POS.x, self._layout.LOCK_BUTTON_POS.y
+                    self._profile.LOCK_BUTTON_POS.x, self._profile.LOCK_BUTTON_POS.y
                 )
                 time.sleep(0.3)
                 logger.success("给你自动锁上了，记得保管好哦！(*/ω＼*)")
@@ -437,7 +438,7 @@ class EssenceScanner(threading.Thread):
                 )
             ):
                 self._window_manager.click(
-                    self._layout.LOCK_BUTTON_POS.x, self._layout.LOCK_BUTTON_POS.y
+                    self._profile.LOCK_BUTTON_POS.x, self._profile.LOCK_BUTTON_POS.y
                 )
                 time.sleep(0.3)
                 logger.success("给你自动解锁了！ヾ(≧▽≦*)o")
@@ -452,8 +453,8 @@ class EssenceScanner(threading.Thread):
                 )
             ):
                 self._window_manager.click(
-                    self._layout.DEPRECATE_BUTTON_POS.x,
-                    self._layout.DEPRECATE_BUTTON_POS.y,
+                    self._profile.DEPRECATE_BUTTON_POS.x,
+                    self._profile.DEPRECATE_BUTTON_POS.y,
                 )
                 time.sleep(0.3)
                 logger.success("给你自动标记为弃用了！(￣︶￣)>")
@@ -470,8 +471,8 @@ class EssenceScanner(threading.Thread):
                 )
             ):
                 self._window_manager.click(
-                    self._layout.DEPRECATE_BUTTON_POS.x,
-                    self._layout.DEPRECATE_BUTTON_POS.y,
+                    self._profile.DEPRECATE_BUTTON_POS.x,
+                    self._profile.DEPRECATE_BUTTON_POS.y,
                 )
                 time.sleep(0.3)
                 logger.success("给你自动取消弃用啦！(＾Ｕ＾)ノ~ＹＯ")
