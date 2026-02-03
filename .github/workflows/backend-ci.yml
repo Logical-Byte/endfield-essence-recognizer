@@ -10,7 +10,8 @@ on:
       - 'tests/**'
       - 'ruff.toml'
       - 'uv.lock'
-      - '.github/workflows/'
+      - 'pyproject.toml'
+      - '.github/workflows/**'
 
   push:
     branches:
@@ -25,7 +26,7 @@ concurrency:
 
 jobs:
   backend-lint:
-    name: Lint and Pre-commit
+    name: Lint and format check
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v5
@@ -38,7 +39,7 @@ jobs:
       - name: Run ruff check and format
         run: |
           uvx ruff check
-          uvx ruff format
+          uvx ruff format --check
 
   backend-test:
     name: Run tests
