@@ -6,11 +6,6 @@ from endfield_essence_recognizer.core.recognition.base import (
     RecognitionProfile,
     TemplateDescriptor,
 )
-from endfield_essence_recognizer.game_data.weapon import (
-    all_attribute_stats,
-    all_secondary_stats,
-    all_skill_stats,
-)
 from endfield_essence_recognizer.utils.image import (
     linear_operation,
     to_gray_image,
@@ -33,6 +28,13 @@ def build_attribute_profile() -> RecognitionProfile[str]:
     """
     Build the recognition profile for essence attributes (ATK, HP, etc.).
     """
+    # Lazy import the game data. Some integration tests may not need it
+    from endfield_essence_recognizer.game_data.weapon import (
+        all_attribute_stats,
+        all_secondary_stats,
+        all_skill_stats,
+    )
+
     templates_dir = (
         importlib.resources.files("endfield_essence_recognizer") / "templates/generated"
     )
