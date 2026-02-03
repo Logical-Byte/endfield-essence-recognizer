@@ -10,6 +10,7 @@ import asyncio
 import inspect
 import logging
 import sys
+from typing import Any
 
 from loguru import logger
 
@@ -110,3 +111,42 @@ logger.add(
 )
 
 logger.debug("Logger initialized with level: {}", _config.log_level)
+
+
+def _get_properties_and_values(obj: object) -> dict[str, Any]:
+    """
+    A __dict__ -like mapping that handles @property attributes as well.
+    """
+    import inspect
+
+    ret = {}
+
+    props = inspect.getmembers(
+        type(obj),
+        lambda o: isinstance(o, property),
+    )
+    for prop_name, prop in props:
+        try:
+            ret[prop_name] = getattr(obj, prop_name)
+        except Exception as e:
+            ret[prop_name] = f"<Error retrieving property: {e}>"
+
+    # also include regular attributes
+    attrs = inspect.getmembers(
+        obj,
+        lambda o: not (inspect.isroutine(o)) and not (isinstance(o, property)),
+    )
+    for attr_name, attr_value in attrs:
+        if not attr_name.startswith("_") and attr_name not in ret:
+            ret[attr_name] = attr_value
+    return ret
+
+
+def str_properties_and_attrs(obj: object) -> str:
+    """
+    Get a string representation of an object's properties and attributes.
+    """
+    import pprint
+
+    props_and_attrs = _get_properties_and_values(obj)
+    return pprint.pformat(props_and_attrs)
