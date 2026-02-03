@@ -117,8 +117,6 @@ def _get_properties_and_values(obj: object) -> dict[str, Any]:
     """
     A __dict__ -like mapping that handles @property attributes as well.
     """
-    import inspect
-
     ret = {}
 
     props = inspect.getmembers(
