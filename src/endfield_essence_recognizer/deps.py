@@ -7,12 +7,23 @@ from pathlib import Path
 
 from fastapi import Depends
 
+from endfield_essence_recognizer.core.layout.base import ResolutionProfile
+from endfield_essence_recognizer.core.layout.res_1080p import Resolution1080p
 from endfield_essence_recognizer.core.path import get_config_path
 from endfield_essence_recognizer.core.window import (
     SUPPORTED_WINDOW_TITLES,
     WindowManager,
 )
 from endfield_essence_recognizer.services.user_setting_manager import UserSettingManager
+
+
+@lru_cache()
+def get_resolution_profile() -> ResolutionProfile:
+    """
+    Get the Layout singleton.
+    """
+    return Resolution1080p()
+
 
 # WindowManager dependency
 

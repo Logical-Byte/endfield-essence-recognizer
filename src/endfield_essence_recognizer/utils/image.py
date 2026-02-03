@@ -9,9 +9,8 @@ import cv2
 import numpy as np
 from cv2.typing import MatLike
 
-type Range = tuple[int, int]
-type Coordinate = tuple[int, int]
-type Scope = tuple[Coordinate, Coordinate]
+from endfield_essence_recognizer.core.layout.base import Region
+
 type Slice = slice | tuple[slice, slice]
 
 
@@ -62,9 +61,8 @@ def linear_operation(image: MatLike, min_value: int, max_value: int) -> MatLike:
     return np.clip(image, 0, 255).astype(np.uint8)
 
 
-def scope_to_slice(scope: Scope | None) -> Slice:
-    """((x0, y0), (x1, y1)) -> (slice(y0, y1), slice(x0, x1))"""
+def scope_to_slice(scope: Region | None) -> Slice:
+    """ROI -> (slice(y0, y1), slice(x0, x1))"""
     if scope is None:
         return slice(None), slice(None)
-    (x0, y0), (x1, y1) = scope
-    return slice(y0, y1), slice(x0, x1)
+    return slice(scope.y0, scope.y1), slice(scope.x0, scope.x1)

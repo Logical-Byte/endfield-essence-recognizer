@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, cast
 
 from endfield_essence_recognizer.deps import (
     default_user_setting_manager,
+    get_resolution_profile,
     get_window_manager_singleton,
 )
 from endfield_essence_recognizer.utils.log import logger
@@ -58,6 +59,7 @@ def on_bracket_left():
             cast("Recognizer", text_recognizer),
             cast("Recognizer", icon_recognizer),
             default_user_setting_manager().get_user_setting(),
+            get_resolution_profile(),
         )
 
 
@@ -76,6 +78,7 @@ def toggle_scan():
             icon_recognizer=cast("Recognizer", icon_recognizer),
             window_manager=get_window_manager_singleton(),
             user_setting_manager=default_user_setting_manager(),
+            layout=get_resolution_profile(),
         )
         essence_scanner_thread.start()
         with importlib.resources.as_file(

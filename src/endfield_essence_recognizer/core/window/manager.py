@@ -3,13 +3,13 @@ from collections.abc import Sequence
 import pygetwindow
 from cv2.typing import MatLike
 
+from endfield_essence_recognizer.core.layout.base import Region
 from endfield_essence_recognizer.core.window.windows_utils import (
     click_on_window,
     get_client_size,
     get_support_window,
     screenshot_window,
 )
-from endfield_essence_recognizer.utils.image import Scope
 
 
 class WindowManager:
@@ -79,7 +79,7 @@ class WindowManager:
             )
         return get_client_size(window)
 
-    def screenshot(self, relative_region: Scope | None = None) -> MatLike:
+    def screenshot(self, relative_region: Region | None = None) -> MatLike:
         """
         Take a screenshot of the window's client area.
         Returns a BGR numpy array compatible with OpenCV.

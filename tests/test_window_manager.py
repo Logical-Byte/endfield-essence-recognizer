@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import pytest
 
+from endfield_essence_recognizer.core.layout.base import Point, Region
 from endfield_essence_recognizer.core.window.manager import WindowManager
 
 
@@ -153,7 +154,7 @@ def test_screenshot(window_manager, mock_window):
         mock_screenshot.assert_called_with(mock_window, None)
 
         # Test with ROI
-        roi = ((0, 0), (10, 10))
+        roi = Region(Point(0, 0), Point(10, 10))
         window_manager.screenshot(roi)
         mock_screenshot.assert_called_with(mock_window, roi)
 
