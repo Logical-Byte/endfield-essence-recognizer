@@ -7,7 +7,7 @@ from cv2.typing import MatLike
 
 from endfield_essence_recognizer.core.recognition.base import LabelT, RecognitionProfile
 from endfield_essence_recognizer.utils.image import load_image
-from endfield_essence_recognizer.utils.log import logger
+from endfield_essence_recognizer.utils.log import logger, str_properties_and_attrs
 
 
 class Recognizer(Generic[LabelT]):
@@ -21,6 +21,11 @@ class Recognizer(Generic[LabelT]):
     def __init__(self, profile: RecognitionProfile[LabelT]) -> None:
         self.profile = profile
         self._templates: defaultdict[LabelT, list[MatLike]] = defaultdict(list)
+
+        logger.opt(lazy=True).debug(
+            "Created Recognizer with profile: {}",
+            lambda: str_properties_and_attrs(profile),
+        )
 
     def load_templates(self) -> None:
         """从 profile 中加载所有模板。"""
