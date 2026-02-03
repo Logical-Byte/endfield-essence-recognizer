@@ -1,7 +1,8 @@
 import importlib.resources
 import threading
 import time
-from typing import Literal, Sequence
+from collections.abc import Sequence
+from typing import Literal
 
 import cv2
 import numpy as np
