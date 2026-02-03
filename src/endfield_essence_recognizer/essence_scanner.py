@@ -2,7 +2,7 @@ import importlib.resources
 import threading
 import time
 from collections.abc import Sequence
-from typing import Literal
+from enum import StrEnum
 
 import cv2
 import numpy as np
@@ -129,11 +129,16 @@ def check_scene(window_manager: WindowManager, profile: ResolutionProfile) -> bo
     return True
 
 
+class EssenceQuality(StrEnum):
+    TREASURE = "treasure"
+    TRASH = "trash"
+
+
 def judge_essence_quality(
     setting: UserSetting,
     stats: list[str | None],
     levels: list[int | None] | None = None,
-) -> Literal["treasure", "trash"]:
+) -> EssenceQuality:
     """根据识别到的属性判断基质品质，并输出日志提示。"""
 
     # 检查属性等级：如果启用了高等级判定，记录是否为高等级宝藏
@@ -165,7 +170,7 @@ def judge_essence_quality(
             logger.opt(colors=True).success(
                 f"这个基质是<green><bold><underline>宝藏</></></>，因为它符合你设定的宝藏基质条件{high_level_info}。"
             )
-            return "treasure"
+            return EssenceQuality.TREASURE
 
     # 尝试匹配已实装武器
     matched_weapon_ids: set[str] = set()
@@ -185,12 +190,12 @@ def judge_essence_quality(
                 f"这个基质是<green><bold><underline>宝藏</></></>，因为它有高等级属性词条{high_level_info}。"
                 "<dim>（但不匹配任何已实装武器）</>"
             )
-            return "treasure"
+            return EssenceQuality.TREASURE
         else:
             logger.opt(colors=True).success(
                 "这个基质是<red><bold><underline>养成材料</></></>，它不匹配任何已实装武器。"
             )
-            return "trash"
+            return EssenceQuality.TRASH
     # 检查匹配到的武器中，是否有不在 trash_weapon_ids 中的
     non_trash_weapon_ids = matched_weapon_ids - set(setting.trash_weapon_ids)
 
@@ -215,7 +220,7 @@ def judge_essence_quality(
         logger.opt(colors=True).success(
             f"这个基质是<green><bold><underline>宝藏</></></>，它完美契合武器{weapons_description_str}{high_level_info}。"
         )
-        return "treasure"
+        return EssenceQuality.TREASURE
     else:
         # 所有匹配到的武器都在 trash_weapon_ids 中
 
@@ -230,13 +235,13 @@ def judge_essence_quality(
                 f"这个基质是<green><bold><underline>宝藏</></></>，因为它有高等级属性词条{high_level_info}。"
                 f"<yellow>即使它匹配的所有武器{weapons_description_str}均已被用户手动拦截。</>"
             )
-            return "treasure"
+            return EssenceQuality.TREASURE
         else:
             logger.opt(colors=True).warning(
                 f"这个基质虽然匹配武器{weapons_description_str}，但匹配的所有武器均已被用户手动拦截，"
                 f"因此这个基质是<red><bold><underline>养成材料</></></>。"
             )
-            return "trash"
+            return EssenceQuality.TRASH
 
 
 def recognize_essence(
@@ -432,11 +437,11 @@ class EssenceScanner(threading.Thread):
             essence_quality = judge_essence_quality(user_setting, stats, levels)
             if lock_label == LockStatusLabel.NOT_LOCKED and (
                 (
-                    essence_quality == "treasure"
+                    essence_quality == EssenceQuality.TREASURE
                     and user_setting.treasure_action == Action.LOCK
                 )
                 or (
-                    essence_quality == "trash"
+                    essence_quality == EssenceQuality.TRASH
                     and user_setting.trash_action == Action.LOCK
                 )
             ):
@@ -447,12 +452,12 @@ class EssenceScanner(threading.Thread):
                 logger.success("给你自动锁上了，记得保管好哦！(*/ω＼*)")
             elif lock_label == LockStatusLabel.LOCKED and (
                 (
-                    essence_quality == "treasure"
+                    essence_quality == EssenceQuality.TREASURE
                     and user_setting.treasure_action
                     in [Action.UNLOCK, Action.UNLOCK_AND_UNDEPRECATE]
                 )
                 or (
-                    essence_quality == "trash"
+                    essence_quality == EssenceQuality.TRASH
                     and user_setting.trash_action
                     in [Action.UNLOCK, Action.UNLOCK_AND_UNDEPRECATE]
                 )
@@ -464,11 +469,11 @@ class EssenceScanner(threading.Thread):
                 logger.success("给你自动解锁了！ヾ(≧▽≦*)o")
             if abandon_label == AbandonStatusLabel.NOT_ABANDONED and (
                 (
-                    essence_quality == "treasure"
+                    essence_quality == EssenceQuality.TREASURE
                     and user_setting.treasure_action == Action.DEPRECATE
                 )
                 or (
-                    essence_quality == "trash"
+                    essence_quality == EssenceQuality.TRASH
                     and user_setting.trash_action == Action.DEPRECATE
                 )
             ):
@@ -480,12 +485,12 @@ class EssenceScanner(threading.Thread):
                 logger.success("给你自动标记为弃用了！(￣︶￣)>")
             elif abandon_label == AbandonStatusLabel.ABANDONED and (
                 (
-                    essence_quality == "treasure"
+                    essence_quality == EssenceQuality.TREASURE
                     and user_setting.treasure_action
                     in [Action.UNDEPRECATE, Action.UNLOCK_AND_UNDEPRECATE]
                 )
                 or (
-                    essence_quality == "trash"
+                    essence_quality == EssenceQuality.TRASH
                     and user_setting.trash_action
                     in [Action.UNDEPRECATE, Action.UNLOCK_AND_UNDEPRECATE]
                 )
