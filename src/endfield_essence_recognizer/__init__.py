@@ -75,7 +75,7 @@ def toggle_scan():
     if essence_scanner_thread is None or not essence_scanner_thread.is_alive():
         logger.info("开始扫描基质")
         essence_scanner_thread = EssenceScanner(
-            text_recognizer=prepare_attribute_recognizer(),
+            attr_recognizer=prepare_attribute_recognizer(),
             abandon_status_recognizer=prepare_abandon_status_recognizer(),
             lock_status_recognizer=prepare_lock_status_recognizer(),
             window_manager=get_window_manager_singleton(),
