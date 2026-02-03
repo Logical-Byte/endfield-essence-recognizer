@@ -327,7 +327,7 @@ def recognize_once(
     if not check_scene_result:
         return
 
-    stats, levels, deprecated_str, locked_str = recognize_essence(
+    stats, levels, abandon_label, lock_label = recognize_essence(
         window_manager,
         attr_recognizer,
         abandon_status_recognizer,
@@ -336,8 +336,8 @@ def recognize_once(
     )
 
     if (
-        deprecated_str == AbandonStatusLabel.MAYBE_ABANDONED
-        or locked_str == LockStatusLabel.MAYBE_LOCKED
+        abandon_label == AbandonStatusLabel.MAYBE_ABANDONED
+        or lock_label == LockStatusLabel.MAYBE_LOCKED
     ):
         return
 
