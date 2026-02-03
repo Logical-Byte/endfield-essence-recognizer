@@ -2,13 +2,20 @@ import importlib.resources
 import threading
 import time
 from collections.abc import Sequence
-from typing import Literal
+from enum import StrEnum
 
 import cv2
 import numpy as np
 from cv2.typing import MatLike
 
 from endfield_essence_recognizer.core.layout.base import Point, ResolutionProfile
+from endfield_essence_recognizer.core.recognition import (
+    AbandonStatusLabel,
+    AbandonStatusRecognizer,
+    AttributeRecognizer,
+    LockStatusLabel,
+    LockStatusRecognizer,
+)
 from endfield_essence_recognizer.core.window import WindowManager
 from endfield_essence_recognizer.game_data import (
     gem_table,
@@ -22,7 +29,6 @@ from endfield_essence_recognizer.game_data.weapon import (
     weapon_type_int_to_translation_key,
 )
 from endfield_essence_recognizer.models.user_setting import Action, UserSetting
-from endfield_essence_recognizer.recognizer import Recognizer
 from endfield_essence_recognizer.services.user_setting_manager import UserSettingManager
 from endfield_essence_recognizer.utils.image import load_image, to_gray_image
 from endfield_essence_recognizer.utils.log import logger
@@ -123,11 +129,16 @@ def check_scene(window_manager: WindowManager, profile: ResolutionProfile) -> bo
     return True
 
 
+class EssenceQuality(StrEnum):
+    TREASURE = "treasure"
+    TRASH = "trash"
+
+
 def judge_essence_quality(
     setting: UserSetting,
     stats: list[str | None],
     levels: list[int | None] | None = None,
-) -> Literal["treasure", "trash"]:
+) -> EssenceQuality:
     """根据识别到的属性判断基质品质，并输出日志提示。"""
 
     # 检查属性等级：如果启用了高等级判定，记录是否为高等级宝藏
@@ -159,7 +170,7 @@ def judge_essence_quality(
             logger.opt(colors=True).success(
                 f"这个基质是<green><bold><underline>宝藏</></></>，因为它符合你设定的宝藏基质条件{high_level_info}。"
             )
-            return "treasure"
+            return EssenceQuality.TREASURE
 
     # 尝试匹配已实装武器
     matched_weapon_ids: set[str] = set()
@@ -179,12 +190,12 @@ def judge_essence_quality(
                 f"这个基质是<green><bold><underline>宝藏</></></>，因为它有高等级属性词条{high_level_info}。"
                 "<dim>（但不匹配任何已实装武器）</>"
             )
-            return "treasure"
+            return EssenceQuality.TREASURE
         else:
             logger.opt(colors=True).success(
                 "这个基质是<red><bold><underline>养成材料</></></>，它不匹配任何已实装武器。"
             )
-            return "trash"
+            return EssenceQuality.TRASH
     # 检查匹配到的武器中，是否有不在 trash_weapon_ids 中的
     non_trash_weapon_ids = matched_weapon_ids - set(setting.trash_weapon_ids)
 
@@ -209,7 +220,7 @@ def judge_essence_quality(
         logger.opt(colors=True).success(
             f"这个基质是<green><bold><underline>宝藏</></></>，它完美契合武器{weapons_description_str}{high_level_info}。"
         )
-        return "treasure"
+        return EssenceQuality.TREASURE
     else:
         # 所有匹配到的武器都在 trash_weapon_ids 中
 
@@ -224,21 +235,22 @@ def judge_essence_quality(
                 f"这个基质是<green><bold><underline>宝藏</></></>，因为它有高等级属性词条{high_level_info}。"
                 f"<yellow>即使它匹配的所有武器{weapons_description_str}均已被用户手动拦截。</>"
             )
-            return "treasure"
+            return EssenceQuality.TREASURE
         else:
             logger.opt(colors=True).warning(
                 f"这个基质虽然匹配武器{weapons_description_str}，但匹配的所有武器均已被用户手动拦截，"
                 f"因此这个基质是<red><bold><underline>养成材料</></></>。"
             )
-            return "trash"
+            return EssenceQuality.TRASH
 
 
 def recognize_essence(
     window_manager: WindowManager,
-    text_recognizer: Recognizer,
-    icon_recognizer: Recognizer,
+    attr_recognizer: AttributeRecognizer,
+    abandon_status_recognizer: AbandonStatusRecognizer,
+    lock_status_recognizer: LockStatusRecognizer,
     profile: ResolutionProfile,
-) -> tuple[list[str | None], list[int | None], str | None, str | None]:
+) -> tuple[list[str | None], list[int | None], AbandonStatusLabel, LockStatusLabel]:
     stats: list[str | None] = []
     levels: list[int | None] = []
 
@@ -254,9 +266,9 @@ def recognize_essence(
 
     for k, roi in enumerate(rois):
         screenshot_image = window_manager.screenshot(roi)
-        result, max_val = text_recognizer.recognize_roi(screenshot_image)
-        stats.append(result)
-        logger.debug(f"属性 {k} 识别结果: {result} (分数: {max_val:.3f})")
+        attr, max_val = attr_recognizer.recognize_roi(screenshot_image)
+        stats.append(attr)
+        logger.debug(f"属性 {k} 识别结果: {attr} (分数: {max_val:.3f})")
 
         # 识别等级（通过检测坐标点状态）
         icon_points = level_icons[k]
@@ -271,16 +283,18 @@ def recognize_essence(
             logger.debug(f"属性 {k} 等级识别结果: 无法识别")
 
     screenshot_image = window_manager.screenshot(profile.DEPRECATE_BUTTON_ROI)
-    deprecated_str, max_val = icon_recognizer.recognize_roi(screenshot_image)
-    deprecated_text = (
-        deprecated_str if deprecated_str is not None else "不知道是否已弃用"
+    abandon_label, max_val = abandon_status_recognizer.recognize_roi_fallback(
+        screenshot_image,
+        fallback_label=AbandonStatusLabel.MAYBE_ABANDONED,
     )
-    logger.debug(f"弃用按钮识别结果: {deprecated_str} (分数: {max_val:.3f})")
+    logger.debug(f"弃用按钮识别结果: {abandon_label.value} (分数: {max_val:.3f})")
 
     screenshot_image = window_manager.screenshot(profile.LOCK_BUTTON_ROI)
-    locked_str, max_val = icon_recognizer.recognize_roi(screenshot_image)
-    locked_text = locked_str if locked_str is not None else "不知道是否已锁定"
-    logger.debug(f"锁定按钮识别结果: {locked_str} (分数: {max_val:.3f})")
+    locked_label, max_val = lock_status_recognizer.recognize_roi_fallback(
+        screenshot_image,
+        fallback_label=LockStatusLabel.MAYBE_LOCKED,
+    )
+    logger.debug(f"锁定按钮识别结果: {locked_label.value} (分数: {max_val:.3f})")
 
     stats_name_parts = []
     for i, stat in enumerate(stats):
@@ -295,16 +309,17 @@ def recognize_essence(
     stats_name = "、".join(stats_name_parts)
 
     logger.opt(colors=True).info(
-        f"已识别当前基质，属性: <magenta>{stats_name}</>, <magenta>{deprecated_text}</>, <magenta>{locked_text}</>"
+        f"已识别当前基质，属性: <magenta>{stats_name}</>, <magenta>{abandon_label.value}</>, <magenta>{locked_label.value}</>"
     )
 
-    return stats, levels, deprecated_str, locked_str
+    return stats, levels, abandon_label, locked_label
 
 
 def recognize_once(
     window_manager: WindowManager,
-    text_recognizer: Recognizer,
-    icon_recognizer: Recognizer,
+    attr_recognizer: AttributeRecognizer,
+    abandon_status_recognizer: AbandonStatusRecognizer,
+    lock_status_recognizer: LockStatusRecognizer,
     user_setting: UserSetting,
     profile: ResolutionProfile,
 ) -> None:
@@ -312,11 +327,18 @@ def recognize_once(
     if not check_scene_result:
         return
 
-    stats, levels, deprecated_str, locked_str = recognize_essence(
-        window_manager, text_recognizer, icon_recognizer, profile
+    stats, levels, abandon_label, lock_label = recognize_essence(
+        window_manager,
+        attr_recognizer,
+        abandon_status_recognizer,
+        lock_status_recognizer,
+        profile,
     )
 
-    if deprecated_str is None or locked_str is None:
+    if (
+        abandon_label == AbandonStatusLabel.MAYBE_ABANDONED
+        or lock_label == LockStatusLabel.MAYBE_LOCKED
+    ):
         return
 
     judge_essence_quality(user_setting, stats, levels)
@@ -332,16 +354,20 @@ class EssenceScanner(threading.Thread):
 
     def __init__(
         self,
-        text_recognizer: Recognizer,
-        icon_recognizer: Recognizer,
+        attr_recognizer: AttributeRecognizer,
+        abandon_status_recognizer: AbandonStatusRecognizer,
+        lock_status_recognizer: LockStatusRecognizer,
         window_manager: WindowManager,
         user_setting_manager: UserSettingManager,
         profile: ResolutionProfile,
     ) -> None:
         super().__init__(daemon=True)
         self._scanning = threading.Event()
-        self._text_recognizer: Recognizer = text_recognizer
-        self._icon_recognizer: Recognizer = icon_recognizer
+        self._attr_recognizer: AttributeRecognizer = attr_recognizer
+        self._abandon_status_recognizer: AbandonStatusRecognizer = (
+            abandon_status_recognizer
+        )
+        self._lock_status_recognizer: LockStatusRecognizer = lock_status_recognizer
         self._window_manager: WindowManager = window_manager
         self._user_setting_manager: UserSettingManager = user_setting_manager
         self._profile: ResolutionProfile = profile
@@ -400,24 +426,30 @@ class EssenceScanner(threading.Thread):
             time.sleep(0.3)
 
             # 识别基质信息
-            stats, levels, deprecated_str, locked_str = recognize_essence(
+            stats, levels, abandon_label, lock_label = recognize_essence(
                 self._window_manager,
-                self._text_recognizer,
-                self._icon_recognizer,
+                self._attr_recognizer,
+                self._abandon_status_recognizer,
+                self._lock_status_recognizer,
                 self._profile,
             )
 
-            if deprecated_str is None or locked_str is None:
-                continue
-
             essence_quality = judge_essence_quality(user_setting, stats, levels)
-            if locked_str == "未锁定" and (
+            # judge_essence_quality has side effects of logging the result, so
+            # the early continue on uncertain recognition should be after it.
+            if (
+                abandon_label == AbandonStatusLabel.MAYBE_ABANDONED
+                or lock_label == LockStatusLabel.MAYBE_LOCKED
+            ):
+                # early continue on uncertain recognition
+                continue
+            if lock_label == LockStatusLabel.NOT_LOCKED and (
                 (
-                    essence_quality == "treasure"
+                    essence_quality == EssenceQuality.TREASURE
                     and user_setting.treasure_action == Action.LOCK
                 )
                 or (
-                    essence_quality == "trash"
+                    essence_quality == EssenceQuality.TRASH
                     and user_setting.trash_action == Action.LOCK
                 )
             ):
@@ -426,14 +458,14 @@ class EssenceScanner(threading.Thread):
                 )
                 time.sleep(0.3)
                 logger.success("给你自动锁上了，记得保管好哦！(*/ω＼*)")
-            elif locked_str == "已锁定" and (
+            elif lock_label == LockStatusLabel.LOCKED and (
                 (
-                    essence_quality == "treasure"
+                    essence_quality == EssenceQuality.TREASURE
                     and user_setting.treasure_action
                     in [Action.UNLOCK, Action.UNLOCK_AND_UNDEPRECATE]
                 )
                 or (
-                    essence_quality == "trash"
+                    essence_quality == EssenceQuality.TRASH
                     and user_setting.trash_action
                     in [Action.UNLOCK, Action.UNLOCK_AND_UNDEPRECATE]
                 )
@@ -443,13 +475,13 @@ class EssenceScanner(threading.Thread):
                 )
                 time.sleep(0.3)
                 logger.success("给你自动解锁了！ヾ(≧▽≦*)o")
-            if deprecated_str == "未弃用" and (
+            if abandon_label == AbandonStatusLabel.NOT_ABANDONED and (
                 (
-                    essence_quality == "treasure"
+                    essence_quality == EssenceQuality.TREASURE
                     and user_setting.treasure_action == Action.DEPRECATE
                 )
                 or (
-                    essence_quality == "trash"
+                    essence_quality == EssenceQuality.TRASH
                     and user_setting.trash_action == Action.DEPRECATE
                 )
             ):
@@ -459,14 +491,14 @@ class EssenceScanner(threading.Thread):
                 )
                 time.sleep(0.3)
                 logger.success("给你自动标记为弃用了！(￣︶￣)>")
-            elif deprecated_str == "已弃用" and (
+            elif abandon_label == AbandonStatusLabel.ABANDONED and (
                 (
-                    essence_quality == "treasure"
+                    essence_quality == EssenceQuality.TREASURE
                     and user_setting.treasure_action
                     in [Action.UNDEPRECATE, Action.UNLOCK_AND_UNDEPRECATE]
                 )
                 or (
-                    essence_quality == "trash"
+                    essence_quality == EssenceQuality.TRASH
                     and user_setting.trash_action
                     in [Action.UNDEPRECATE, Action.UNLOCK_AND_UNDEPRECATE]
                 )
