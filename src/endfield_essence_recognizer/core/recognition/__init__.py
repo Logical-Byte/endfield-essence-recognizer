@@ -18,13 +18,13 @@ from .tasks.locked_deprecated_status import (
 
 # type aliases for recognizers
 
-AttributeRecognizer = Recognizer[str]
+type AttributeRecognizer = Recognizer[str]
 """识别属性文本的识别器类型别名，返回字符串标签"""
 
-AbandonStatusRecognizer = Recognizer[AbandonStatusLabel]
+type AbandonStatusRecognizer = Recognizer[AbandonStatusLabel]
 """识别弃用状态的识别器类型别名，返回 AbandonStatusLabel 标签"""
 
-LockStatusRecognizer = Recognizer[LockStatusLabel]
+type LockStatusRecognizer = Recognizer[LockStatusLabel]
 """识别上锁状态的识别器类型别名，返回 LockStatusLabel 标签"""
 
 # Factory functions
