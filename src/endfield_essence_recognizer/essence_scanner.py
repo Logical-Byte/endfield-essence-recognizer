@@ -241,7 +241,7 @@ def recognize_essence(
     text_recognizer: Recognizer[str],
     icon_recognizer: Recognizer[StatusLabel],
     profile: ResolutionProfile,
-) -> tuple[list[str | None], list[int | None], str | None, str | None]:
+) -> tuple[list[str | None], list[int | None], StatusLabel, StatusLabel]:
     stats: list[str | None] = []
     levels: list[int | None] = []
 
@@ -274,16 +274,18 @@ def recognize_essence(
             logger.debug(f"属性 {k} 等级识别结果: 无法识别")
 
     screenshot_image = window_manager.screenshot(profile.DEPRECATE_BUTTON_ROI)
-    deprecated_str, max_val = icon_recognizer.recognize_roi(screenshot_image)
-    deprecated_text = (
-        deprecated_str if deprecated_str is not None else "不知道是否已弃用"
+    deprecated_str, max_val = icon_recognizer.recognize_roi_fallback(
+        screenshot_image,
+        fallback_label=StatusLabel.MAYBE_ABANDONED,
     )
-    logger.debug(f"弃用按钮识别结果: {deprecated_str} (分数: {max_val:.3f})")
+    logger.debug(f"弃用按钮识别结果: {deprecated_str.value} (分数: {max_val:.3f})")
 
     screenshot_image = window_manager.screenshot(profile.LOCK_BUTTON_ROI)
-    locked_str, max_val = icon_recognizer.recognize_roi(screenshot_image)
-    locked_text = locked_str if locked_str is not None else "不知道是否已锁定"
-    logger.debug(f"锁定按钮识别结果: {locked_str} (分数: {max_val:.3f})")
+    locked_str, max_val = icon_recognizer.recognize_roi_fallback(
+        screenshot_image,
+        fallback_label=StatusLabel.MAYBE_LOCKED,
+    )
+    logger.debug(f"锁定按钮识别结果: {locked_str.value} (分数: {max_val:.3f})")
 
     stats_name_parts = []
     for i, stat in enumerate(stats):
@@ -298,7 +300,7 @@ def recognize_essence(
     stats_name = "、".join(stats_name_parts)
 
     logger.opt(colors=True).info(
-        f"已识别当前基质，属性: <magenta>{stats_name}</>, <magenta>{deprecated_text}</>, <magenta>{locked_text}</>"
+        f"已识别当前基质，属性: <magenta>{stats_name}</>, <magenta>{deprecated_str.value}</>, <magenta>{locked_str.value}</>"
     )
 
     return stats, levels, deprecated_str, locked_str
@@ -306,8 +308,8 @@ def recognize_essence(
 
 def recognize_once(
     window_manager: WindowManager,
-    text_recognizer: Recognizer,
-    icon_recognizer: Recognizer,
+    text_recognizer: Recognizer[str],
+    icon_recognizer: Recognizer[StatusLabel],
     user_setting: UserSetting,
     profile: ResolutionProfile,
 ) -> None:
@@ -319,7 +321,13 @@ def recognize_once(
         window_manager, text_recognizer, icon_recognizer, profile
     )
 
-    if deprecated_str is None or locked_str is None:
+    if deprecated_str not in (
+        StatusLabel.ABANDONED,
+        StatusLabel.NOT_ABANDONED,
+    ) or locked_str not in (
+        StatusLabel.LOCKED,
+        StatusLabel.UNLOCKED,
+    ):
         return
 
     judge_essence_quality(user_setting, stats, levels)
