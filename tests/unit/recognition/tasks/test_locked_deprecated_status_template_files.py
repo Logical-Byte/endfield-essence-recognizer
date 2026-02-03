@@ -1,6 +1,6 @@
 import pytest
 
-from endfield_essence_recognizer.core.recognition.tasks.locked_deprecated_status import (
+from endfield_essence_recognizer.core.recognition.tasks.abandon_lock_status import (
     build_abandon_status_profile,
     build_lock_status_profile,
 )

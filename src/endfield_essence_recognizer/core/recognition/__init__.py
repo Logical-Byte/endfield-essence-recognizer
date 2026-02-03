@@ -6,14 +6,14 @@ from .base import (
     TemplateDescriptor,
 )
 from .recognizer import Recognizer
-from .tasks.attribute import (
-    build_attribute_profile,
-)
-from .tasks.locked_deprecated_status import (
+from .tasks.abandon_lock_status import (
     AbandonStatusLabel,
     LockStatusLabel,
     build_abandon_status_profile,
     build_lock_status_profile,
+)
+from .tasks.attribute import (
+    build_attribute_profile,
 )
 
 # type aliases for recognizers
