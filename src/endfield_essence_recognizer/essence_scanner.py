@@ -11,10 +11,10 @@ from cv2.typing import MatLike
 from endfield_essence_recognizer.core.layout.base import Point, ResolutionProfile
 from endfield_essence_recognizer.core.recognition import (
     AbandonStatusLabel,
-    AbandonStatusRecognizer,
-    AttributeRecognizer,
     LockStatusLabel,
-    LockStatusRecognizer,
+)
+from endfield_essence_recognizer.core.scanner.context import (
+    ScannerContext,
 )
 from endfield_essence_recognizer.core.window import WindowManager
 from endfield_essence_recognizer.game_data import (
@@ -246,9 +246,7 @@ def judge_essence_quality(
 
 def recognize_essence(
     window_manager: WindowManager,
-    attr_recognizer: AttributeRecognizer,
-    abandon_status_recognizer: AbandonStatusRecognizer,
-    lock_status_recognizer: LockStatusRecognizer,
+    ctx: ScannerContext,
     profile: ResolutionProfile,
 ) -> tuple[list[str | None], list[int | None], AbandonStatusLabel, LockStatusLabel]:
     stats: list[str | None] = []
@@ -266,7 +264,7 @@ def recognize_essence(
 
     for k, roi in enumerate(rois):
         screenshot_image = window_manager.screenshot(roi)
-        attr, max_val = attr_recognizer.recognize_roi(screenshot_image)
+        attr, max_val = ctx.attr_recognizer.recognize_roi(screenshot_image)
         stats.append(attr)
         logger.debug(f"属性 {k} 识别结果: {attr} (分数: {max_val:.3f})")
 
@@ -283,14 +281,14 @@ def recognize_essence(
             logger.debug(f"属性 {k} 等级识别结果: 无法识别")
 
     screenshot_image = window_manager.screenshot(profile.DEPRECATE_BUTTON_ROI)
-    abandon_label, max_val = abandon_status_recognizer.recognize_roi_fallback(
+    abandon_label, max_val = ctx.abandon_status_recognizer.recognize_roi_fallback(
         screenshot_image,
         fallback_label=AbandonStatusLabel.MAYBE_ABANDONED,
     )
     logger.debug(f"弃用按钮识别结果: {abandon_label.value} (分数: {max_val:.3f})")
 
     screenshot_image = window_manager.screenshot(profile.LOCK_BUTTON_ROI)
-    locked_label, max_val = lock_status_recognizer.recognize_roi_fallback(
+    locked_label, max_val = ctx.lock_status_recognizer.recognize_roi_fallback(
         screenshot_image,
         fallback_label=LockStatusLabel.MAYBE_LOCKED,
     )
@@ -317,9 +315,7 @@ def recognize_essence(
 
 def recognize_once(
     window_manager: WindowManager,
-    attr_recognizer: AttributeRecognizer,
-    abandon_status_recognizer: AbandonStatusRecognizer,
-    lock_status_recognizer: LockStatusRecognizer,
+    ctx: ScannerContext,
     user_setting: UserSetting,
     profile: ResolutionProfile,
 ) -> None:
@@ -329,9 +325,7 @@ def recognize_once(
 
     stats, levels, abandon_label, lock_label = recognize_essence(
         window_manager,
-        attr_recognizer,
-        abandon_status_recognizer,
-        lock_status_recognizer,
+        ctx,
         profile,
     )
 
@@ -354,20 +348,14 @@ class EssenceScanner(threading.Thread):
 
     def __init__(
         self,
-        attr_recognizer: AttributeRecognizer,
-        abandon_status_recognizer: AbandonStatusRecognizer,
-        lock_status_recognizer: LockStatusRecognizer,
+        ctx: ScannerContext,
         window_manager: WindowManager,
         user_setting_manager: UserSettingManager,
         profile: ResolutionProfile,
     ) -> None:
         super().__init__(daemon=True)
         self._scanning = threading.Event()
-        self._attr_recognizer: AttributeRecognizer = attr_recognizer
-        self._abandon_status_recognizer: AbandonStatusRecognizer = (
-            abandon_status_recognizer
-        )
-        self._lock_status_recognizer: LockStatusRecognizer = lock_status_recognizer
+        self.ctx: ScannerContext = ctx
         self._window_manager: WindowManager = window_manager
         self._user_setting_manager: UserSettingManager = user_setting_manager
         self._profile: ResolutionProfile = profile
@@ -428,9 +416,7 @@ class EssenceScanner(threading.Thread):
             # 识别基质信息
             stats, levels, abandon_label, lock_label = recognize_essence(
                 self._window_manager,
-                self._attr_recognizer,
-                self._abandon_status_recognizer,
-                self._lock_status_recognizer,
+                self.ctx,
                 self._profile,
             )
 

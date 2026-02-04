@@ -18,6 +18,10 @@ from endfield_essence_recognizer.core.recognition import (
     prepare_attribute_recognizer,
     prepare_lock_status_recognizer,
 )
+from endfield_essence_recognizer.core.scanner.context import (
+    ScannerContext,
+    build_scanner_context,
+)
 from endfield_essence_recognizer.core.window import (
     SUPPORTED_WINDOW_TITLES,
     WindowManager,
@@ -118,3 +122,11 @@ def get_lock_status_recognizer_dep() -> LockStatusRecognizer:
     Get the default lock status Recognizer instance.
     """
     return prepare_lock_status_recognizer()
+
+
+# ScannerContext dependency
+def get_scanner_context_dep() -> ScannerContext:
+    """
+    Get the default ScannerContext instance.
+    """
+    return build_scanner_context()
