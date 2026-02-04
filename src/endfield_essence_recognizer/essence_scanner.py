@@ -9,9 +9,6 @@ from endfield_essence_recognizer.core.recognition import (
     AbandonStatusLabel,
     LockStatusLabel,
 )
-from endfield_essence_recognizer.core.recognition.brightness_detector import (
-    recognize_level_from_icon_points,
-)
 from endfield_essence_recognizer.core.recognition.tasks.ui import UISceneLabel
 from endfield_essence_recognizer.core.scanner.context import (
     ScannerContext,
@@ -182,11 +179,6 @@ def recognize_essence(
     full_screenshot = window_manager.screenshot()
 
     rois = [profile.STATS_0_ROI, profile.STATS_1_ROI, profile.STATS_2_ROI]
-    level_icons = [
-        profile.STATS_0_LEVEL_ICONS,
-        profile.STATS_1_LEVEL_ICONS,
-        profile.STATS_2_LEVEL_ICONS,
-    ]
 
     for k, roi in enumerate(rois):
         screenshot_image = window_manager.screenshot(roi)
@@ -195,10 +187,7 @@ def recognize_essence(
         logger.debug(f"属性 {k} 识别结果: {attr} (分数: {max_val:.3f})")
 
         # 识别等级（通过检测坐标点状态）
-        icon_points = level_icons[k]
-        level_value = recognize_level_from_icon_points(
-            full_screenshot, icon_points, profile.LEVEL_ICON_SAMPLE_RADIUS
-        )
+        level_value = ctx.attr_level_recognizer.recognize_level(full_screenshot, k)
         levels.append(level_value)
 
         if level_value is not None:

@@ -102,23 +102,3 @@ class ResolutionProfile(Protocol):
     def STATS_2_ROI(self) -> Region:
         """第三个属性词条的识别区域。"""
         ...
-
-    @property
-    def STATS_0_LEVEL_ICONS(self) -> Sequence[Point]:
-        """第一个属性各等级 (+1 到 +4) 图标的采样坐标点。"""
-        ...
-
-    @property
-    def STATS_1_LEVEL_ICONS(self) -> Sequence[Point]:
-        """第二个属性各等级 (+1 到 +4) 图标的采样坐标点。"""
-        ...
-
-    @property
-    def STATS_2_LEVEL_ICONS(self) -> Sequence[Point]:
-        """第三个属性各等级 (+1 到 +4) 图标的采样坐标点。"""
-        ...
-
-    @property
-    def LEVEL_ICON_SAMPLE_RADIUS(self) -> int:
-        """等级图标状态采样的半径。"""
-        ...

@@ -2,81 +2,59 @@
 Detect the average brightness of a region in an image.
 """
 
-from collections.abc import Sequence
+from dataclasses import dataclass
 
 import numpy as np
 from cv2.typing import MatLike
 
 from endfield_essence_recognizer.core.layout.base import Point
-from endfield_essence_recognizer.utils.image import to_gray_image
+from endfield_essence_recognizer.utils.image import (
+    make_region_from_center,
+    region_out_of_bounds,
+)
 from endfield_essence_recognizer.utils.log import logger
 
-# original helper functions for brightness detection
+
+@dataclass(frozen=True)
+class RegionBrightnessProfile:
+    """实例化亮度检测所需的配置。"""
+
+    threshold: int = 200
+    """亮度阈值 (0-255)。当区域平均亮度超过此值时视为“激活”。"""
+    sample_radius: int = 3
+    """采样半径。以给定点为中心，采样 (2*radius+1)^2 个像素。"""
 
 
-def detect_icon_state_at_point(image: MatLike, x: int, y: int, radius: int = 3) -> bool:
+class BrightnessDetector:
     """
-    检测指定坐标点的图标状态。
-
-    Args:
-        image: 全局灰度图像（客户区截图）
-        x: 图标中心 x 坐标（客户区像素坐标）
-        y: 图标中心 y 坐标（客户区像素坐标）
-        radius: 采样半径
-
-    Returns:
-        True 表示白色/亮色（激活），False 表示黑色/暗色（未激活）
+    一个简单的亮度检测器，用于判断图像中某个点周围的区域是否“足够亮”。
     """
-    height, width = image.shape[:2]
-    if x < radius or x >= width - radius or y < radius or y >= height - radius:
-        logger.warning(f"坐标点 ({x}, {y}) 超出图像范围")
-        return False
 
-    # 提取坐标点周围区域的平均亮度
-    region = image[y - radius : y + radius + 1, x - radius : x + radius + 1]
-    avg_brightness = np.mean(region)  # type: ignore
+    def __init__(self, profile: RegionBrightnessProfile) -> None:
+        self.profile = profile
 
-    # 阈值：大于 200 认为是白色/亮色（激活）
-    is_active = avg_brightness > 200
-    logger.trace(
-        f"坐标点 ({x}, {y}) 亮度={avg_brightness:.1f}, 状态={'白色' if is_active else '灰色'}"
-    )
-    return is_active
+    def is_bright(self, image: MatLike, point: Point) -> bool:
+        """
+        检测指定坐标点周围区域是否激活（超过阈值）。
 
+        Args:
+            image: 灰度图像。
+            point:待检测的中心点。
 
-def recognize_level_from_icon_points(
-    image: MatLike,
-    icon_points: Sequence[Point],
-    radius: int = 2,
-) -> int | None:
-    """
-    根据坐标点列表识别等级。
+        Returns:
+            True 表示亮色（激活），False 表示暗色（未激活）。
+        """
+        height, width = image.shape[:2]
+        region = make_region_from_center(point, self.profile.sample_radius)
+        if region_out_of_bounds(region, width, height):
+            logger.warning(f"坐标点 {point} 超出图像范围")
+            return False
 
-    Args:
-        image: 全局图像（客户区截图）
-        icon_points: 4个图标的坐标点列表 [Point(x1,y1), Point(x2,y2), Point(x3,y3), Point(x4,y4)]
-        radius: 采样半径
+        roi_image = image[region.y0 : region.y1, region.x0 : region.x1]
+        avg_brightness = float(np.mean(roi_image))  # type: ignore
 
-    Returns:
-        等级 (1-4) 或 None（识别失败）
-    """
-    gray = to_gray_image(image)
-
-    # 检测每个图标的状态
-    active_count = 0
-    for i, p in enumerate(icon_points):
-        is_active = detect_icon_state_at_point(gray, p.x, p.y, radius)
+        is_active = avg_brightness > self.profile.threshold
         logger.trace(
-            f"图标 {i + 1} ({p.x},{p.y}) 状态: {'白色' if is_active else '灰色'}"
+            f"坐标点 {point} 亮度={avg_brightness:.1f}, 状态={'亮色' if is_active else '暗色'}"
         )
-        if is_active:
-            active_count += 1
-        else:
-            # 假设白色图标是连续的，遇到黑色后不再计数
-            break
-
-    # 根据激活图标数量返回等级
-    if 1 <= active_count <= 4:
-        return active_count
-    else:
-        return None
+        return is_active

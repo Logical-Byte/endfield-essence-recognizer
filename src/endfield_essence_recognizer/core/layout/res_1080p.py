@@ -53,34 +53,3 @@ class Resolution1080p(ResolutionProfile):
     @property
     def STATS_2_ROI(self) -> Region:
         return Region(Point(1508, 468), Point(1700, 500))
-
-    @property
-    def STATS_0_LEVEL_ICONS(self) -> Sequence[Point]:
-        return [
-            Point(1503, 395),  # +1
-            Point(1520, 395),  # +2
-            Point(1538, 395),  # +3
-            Point(1554, 395),  # +4
-        ]
-
-    @property
-    def STATS_1_LEVEL_ICONS(self) -> Sequence[Point]:
-        return [
-            Point(1503, 452),  # +1
-            Point(1520, 452),  # +2
-            Point(1538, 452),  # +3
-            Point(1554, 452),  # +4
-        ]
-
-    @property
-    def STATS_2_LEVEL_ICONS(self) -> Sequence[Point]:
-        return [
-            Point(1503, 507),  # +1
-            Point(1520, 507),  # +2
-            Point(1538, 507),  # +3
-            Point(1554, 507),  # +4
-        ]
-
-    @property
-    def LEVEL_ICON_SAMPLE_RADIUS(self) -> int:
-        return 2

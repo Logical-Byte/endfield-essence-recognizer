@@ -5,6 +5,10 @@ from .base import (
     RecognitionProfile,
     TemplateDescriptor,
 )
+from .brightness_detector import (
+    BrightnessDetector,
+    RegionBrightnessProfile,
+)
 from .recognizer import Recognizer
 from .tasks.abandon_lock_status import (
     AbandonStatusLabel,
@@ -14,6 +18,10 @@ from .tasks.abandon_lock_status import (
 )
 from .tasks.attribute import (
     build_attribute_profile,
+)
+from .tasks.attribute_level import (
+    AttributeLevelRecognizer,
+    build_attribute_level_recognizer_profile,
 )
 from .tasks.ui import (
     UISceneLabel,
@@ -64,6 +72,11 @@ def prepare_ui_scene_recognizer() -> UISceneRecognizer:
     return prepare_recognizer(build_ui_scene_profile())
 
 
+@lru_cache()
+def prepare_attribute_level_detector() -> AttributeLevelRecognizer:
+    return AttributeLevelRecognizer(build_attribute_level_recognizer_profile())
+
+
 __all__ = [
     "LabelT",
     "AbandonStatusLabel",
@@ -73,12 +86,16 @@ __all__ = [
     "AbandonStatusRecognizer",
     "LockStatusRecognizer",
     "UISceneRecognizer",
+    "AttributeLevelRecognizer",
     "TemplateDescriptor",
     "RecognitionProfile",
+    "RegionBrightnessProfile",
     "Recognizer",
+    "BrightnessDetector",
     "prepare_recognizer",
     "prepare_attribute_recognizer",
     "prepare_abandon_status_recognizer",
     "prepare_lock_status_recognizer",
     "prepare_ui_scene_recognizer",
+    "prepare_attribute_level_detector",
 ]

@@ -12,10 +12,12 @@ from endfield_essence_recognizer.core.layout.res_1080p import Resolution1080p
 from endfield_essence_recognizer.core.path import get_config_path
 from endfield_essence_recognizer.core.recognition import (
     AbandonStatusRecognizer,
+    AttributeLevelRecognizer,
     AttributeRecognizer,
     LockStatusRecognizer,
     UISceneRecognizer,
     prepare_abandon_status_recognizer,
+    prepare_attribute_level_detector,
     prepare_attribute_recognizer,
     prepare_lock_status_recognizer,
     prepare_ui_scene_recognizer,
@@ -136,6 +138,9 @@ def get_ui_scene_recognizer_dep() -> UISceneRecognizer:
 # ScannerContext dependency
 def get_scanner_context_dep(
     attr_recognizer: AttributeRecognizer = Depends(get_attribute_recognizer_dep),
+    attr_level_recognizer: AttributeLevelRecognizer = Depends(
+        prepare_attribute_level_detector
+    ),
     abandon_status_recognizer: AbandonStatusRecognizer = Depends(
         get_abandon_status_recognizer_dep
     ),
@@ -149,6 +154,7 @@ def get_scanner_context_dep(
     """
     return ScannerContext(
         attr_recognizer=attr_recognizer,
+        attr_level_recognizer=attr_level_recognizer,
         abandon_status_recognizer=abandon_status_recognizer,
         lock_status_recognizer=lock_status_recognizer,
         ui_scene_recognizer=ui_scene_recognizer,
