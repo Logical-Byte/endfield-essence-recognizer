@@ -1,20 +1,17 @@
-import importlib.resources
 import threading
 import time
-from collections.abc import Sequence
 from enum import StrEnum
 
-import cv2
 import numpy as np
-from cv2.typing import MatLike
 
-from endfield_essence_recognizer.core.layout.base import Point, ResolutionProfile
+from endfield_essence_recognizer.core.layout.base import ResolutionProfile
 from endfield_essence_recognizer.core.recognition import (
     AbandonStatusLabel,
-    AbandonStatusRecognizer,
-    AttributeRecognizer,
     LockStatusLabel,
-    LockStatusRecognizer,
+)
+from endfield_essence_recognizer.core.recognition.tasks.ui import UISceneLabel
+from endfield_essence_recognizer.core.scanner.context import (
+    ScannerContext,
 )
 from endfield_essence_recognizer.core.window import WindowManager
 from endfield_essence_recognizer.game_data import (
@@ -30,85 +27,12 @@ from endfield_essence_recognizer.game_data.weapon import (
 )
 from endfield_essence_recognizer.models.user_setting import Action, UserSetting
 from endfield_essence_recognizer.services.user_setting_manager import UserSettingManager
-from endfield_essence_recognizer.utils.image import load_image, to_gray_image
 from endfield_essence_recognizer.utils.log import logger
 
-# 识别相关常量
-ESSENCE_UI_TEMPLATE_PATH = (
-    importlib.resources.files("endfield_essence_recognizer")
-    / "templates/screenshot/武器基质.png"
-)
 
-
-def detect_icon_state_at_point(image: MatLike, x: int, y: int, radius: int = 3) -> bool:
-    """
-    检测指定坐标点的图标状态。
-
-    Args:
-        image: 全局灰度图像（客户区截图）
-        x: 图标中心 x 坐标（客户区像素坐标）
-        y: 图标中心 y 坐标（客户区像素坐标）
-        radius: 采样半径
-
-    Returns:
-        True 表示白色/亮色（激活），False 表示黑色/暗色（未激活）
-    """
-    height, width = image.shape[:2]
-    if x < radius or x >= width - radius or y < radius or y >= height - radius:
-        logger.warning(f"坐标点 ({x}, {y}) 超出图像范围")
-        return False
-
-    # 提取坐标点周围区域的平均亮度
-    region = image[y - radius : y + radius + 1, x - radius : x + radius + 1]
-    avg_brightness = np.mean(region)  # type: ignore
-
-    # 阈值：大于 200 认为是白色/亮色（激活）
-    is_active = avg_brightness > 200
-    logger.trace(
-        f"坐标点 ({x}, {y}) 亮度={avg_brightness:.1f}, 状态={'白色' if is_active else '灰色'}"
-    )
-    return is_active
-
-
-def recognize_level_from_icon_points(
-    image: MatLike,
-    icon_points: Sequence[Point],
-    radius: int = 2,
-) -> int | None:
-    """
-    根据坐标点列表识别等级。
-
-    Args:
-        image: 全局图像（客户区截图）
-        icon_points: 4个图标的坐标点列表 [Point(x1,y1), Point(x2,y2), Point(x3,y3), Point(x4,y4)]
-        radius: 采样半径
-
-    Returns:
-        等级 (1-4) 或 None（识别失败）
-    """
-    gray = to_gray_image(image)
-
-    # 检测每个图标的状态
-    active_count = 0
-    for i, p in enumerate(icon_points):
-        is_active = detect_icon_state_at_point(gray, p.x, p.y, radius)
-        logger.trace(
-            f"图标 {i + 1} ({p.x},{p.y}) 状态: {'白色' if is_active else '灰色'}"
-        )
-        if is_active:
-            active_count += 1
-        else:
-            # 假设白色图标是连续的，遇到黑色后不再计数
-            break
-
-    # 根据激活图标数量返回等级
-    if 1 <= active_count <= 4:
-        return active_count
-    else:
-        return None
-
-
-def check_scene(window_manager: WindowManager, profile: ResolutionProfile) -> bool:
+def check_scene(
+    window_manager: WindowManager, ctx: ScannerContext, profile: ResolutionProfile
+) -> bool:
     width, height = window_manager.get_client_size()
     if (width, height) != profile.RESOLUTION:
         logger.warning(
@@ -117,11 +41,10 @@ def check_scene(window_manager: WindowManager, profile: ResolutionProfile) -> bo
         return False
 
     screenshot = window_manager.screenshot(profile.ESSENCE_UI_ROI)
-    template = load_image(ESSENCE_UI_TEMPLATE_PATH.read_bytes())
-    res = cv2.matchTemplate(screenshot, template, cv2.TM_CCOEFF_NORMED)
-    _, max_val, _, _ = cv2.minMaxLoc(res)
-    logger.debug(f"基质界面模板匹配分数: {max_val:.3f}")
-    if max_val < 0.8:
+    scene_label, max_val = ctx.ui_scene_recognizer.recognize_roi_fallback(
+        screenshot, fallback_label=UISceneLabel.UNKNOWN
+    )
+    if scene_label != UISceneLabel.ESSENCE_UI:
         logger.warning(
             '当前界面不是基质界面。请按 "N" 键打开贵重品库后切换到武器基质页面。'
         )
@@ -246,9 +169,7 @@ def judge_essence_quality(
 
 def recognize_essence(
     window_manager: WindowManager,
-    attr_recognizer: AttributeRecognizer,
-    abandon_status_recognizer: AbandonStatusRecognizer,
-    lock_status_recognizer: LockStatusRecognizer,
+    ctx: ScannerContext,
     profile: ResolutionProfile,
 ) -> tuple[list[str | None], list[int | None], AbandonStatusLabel, LockStatusLabel]:
     stats: list[str | None] = []
@@ -258,23 +179,15 @@ def recognize_essence(
     full_screenshot = window_manager.screenshot()
 
     rois = [profile.STATS_0_ROI, profile.STATS_1_ROI, profile.STATS_2_ROI]
-    level_icons = [
-        profile.STATS_0_LEVEL_ICONS,
-        profile.STATS_1_LEVEL_ICONS,
-        profile.STATS_2_LEVEL_ICONS,
-    ]
 
     for k, roi in enumerate(rois):
         screenshot_image = window_manager.screenshot(roi)
-        attr, max_val = attr_recognizer.recognize_roi(screenshot_image)
+        attr, max_val = ctx.attr_recognizer.recognize_roi(screenshot_image)
         stats.append(attr)
         logger.debug(f"属性 {k} 识别结果: {attr} (分数: {max_val:.3f})")
 
         # 识别等级（通过检测坐标点状态）
-        icon_points = level_icons[k]
-        level_value = recognize_level_from_icon_points(
-            full_screenshot, icon_points, profile.LEVEL_ICON_SAMPLE_RADIUS
-        )
+        level_value = ctx.attr_level_recognizer.recognize_level(full_screenshot, k)
         levels.append(level_value)
 
         if level_value is not None:
@@ -283,14 +196,14 @@ def recognize_essence(
             logger.debug(f"属性 {k} 等级识别结果: 无法识别")
 
     screenshot_image = window_manager.screenshot(profile.DEPRECATE_BUTTON_ROI)
-    abandon_label, max_val = abandon_status_recognizer.recognize_roi_fallback(
+    abandon_label, max_val = ctx.abandon_status_recognizer.recognize_roi_fallback(
         screenshot_image,
         fallback_label=AbandonStatusLabel.MAYBE_ABANDONED,
     )
     logger.debug(f"弃用按钮识别结果: {abandon_label.value} (分数: {max_val:.3f})")
 
     screenshot_image = window_manager.screenshot(profile.LOCK_BUTTON_ROI)
-    locked_label, max_val = lock_status_recognizer.recognize_roi_fallback(
+    locked_label, max_val = ctx.lock_status_recognizer.recognize_roi_fallback(
         screenshot_image,
         fallback_label=LockStatusLabel.MAYBE_LOCKED,
     )
@@ -317,21 +230,17 @@ def recognize_essence(
 
 def recognize_once(
     window_manager: WindowManager,
-    attr_recognizer: AttributeRecognizer,
-    abandon_status_recognizer: AbandonStatusRecognizer,
-    lock_status_recognizer: LockStatusRecognizer,
+    ctx: ScannerContext,
     user_setting: UserSetting,
     profile: ResolutionProfile,
 ) -> None:
-    check_scene_result = check_scene(window_manager, profile)
+    check_scene_result = check_scene(window_manager, ctx, profile)
     if not check_scene_result:
         return
 
     stats, levels, abandon_label, lock_label = recognize_essence(
         window_manager,
-        attr_recognizer,
-        abandon_status_recognizer,
-        lock_status_recognizer,
+        ctx,
         profile,
     )
 
@@ -354,20 +263,14 @@ class EssenceScanner(threading.Thread):
 
     def __init__(
         self,
-        attr_recognizer: AttributeRecognizer,
-        abandon_status_recognizer: AbandonStatusRecognizer,
-        lock_status_recognizer: LockStatusRecognizer,
+        ctx: ScannerContext,
         window_manager: WindowManager,
         user_setting_manager: UserSettingManager,
         profile: ResolutionProfile,
     ) -> None:
         super().__init__(daemon=True)
         self._scanning = threading.Event()
-        self._attr_recognizer: AttributeRecognizer = attr_recognizer
-        self._abandon_status_recognizer: AbandonStatusRecognizer = (
-            abandon_status_recognizer
-        )
-        self._lock_status_recognizer: LockStatusRecognizer = lock_status_recognizer
+        self.ctx: ScannerContext = ctx
         self._window_manager: WindowManager = window_manager
         self._user_setting_manager: UserSettingManager = user_setting_manager
         self._profile: ResolutionProfile = profile
@@ -394,7 +297,7 @@ class EssenceScanner(threading.Thread):
         if self._window_manager.activate():
             time.sleep(0.5)
 
-        check_scene_result = check_scene(self._window_manager, self._profile)
+        check_scene_result = check_scene(self._window_manager, self.ctx, self._profile)
         if not check_scene_result:
             self._scanning.clear()
             return
@@ -428,9 +331,7 @@ class EssenceScanner(threading.Thread):
             # 识别基质信息
             stats, levels, abandon_label, lock_label = recognize_essence(
                 self._window_manager,
-                self._attr_recognizer,
-                self._abandon_status_recognizer,
-                self._lock_status_recognizer,
+                self.ctx,
                 self._profile,
             )
 

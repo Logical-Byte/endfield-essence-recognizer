@@ -9,7 +9,7 @@ import cv2
 import numpy as np
 from cv2.typing import MatLike
 
-from endfield_essence_recognizer.core.layout.base import Region
+from endfield_essence_recognizer.core.layout.base import Point, Region
 
 type Slice = slice | tuple[slice, slice]
 
@@ -66,3 +66,27 @@ def scope_to_slice(scope: Region | None) -> Slice:
     if scope is None:
         return slice(None), slice(None)
     return slice(scope.y0, scope.y1), slice(scope.x0, scope.x1)
+
+
+def make_region_from_center(center: Point, radius: int) -> Region:
+    """
+    从中心点和半径创建一个正方形区域。区域边长为 2*radius + 1。
+
+    e.g. , center=(10,10), radius=2 -> Region((8,8),(13,13))
+    """
+    return Region(
+        Point(center.x - radius, center.y - radius),
+        Point(center.x + radius + 1, center.y + radius + 1),
+    )
+
+
+def region_out_of_bounds(
+    region: Region,
+    image_width: int,
+    image_height: int,
+) -> bool:
+    """检查区域是否超出图像范围。"""
+    return not (
+        0 <= region.x0 < region.x1 <= image_width
+        and 0 <= region.y0 < region.y1 <= image_height
+    )

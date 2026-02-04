@@ -3,13 +3,12 @@ from __future__ import annotations
 import importlib.resources
 from typing import TYPE_CHECKING
 
+from endfield_essence_recognizer.core.scanner.context import ScannerContext
 from endfield_essence_recognizer.deps import (
+    build_scanner_context,
     default_user_setting_manager,
     get_resolution_profile,
     get_window_manager_singleton,
-    prepare_abandon_status_recognizer,
-    prepare_attribute_recognizer,
-    prepare_lock_status_recognizer,
 )
 from endfield_essence_recognizer.utils.log import logger
 from endfield_essence_recognizer.version import __version__ as __version__
@@ -47,6 +46,7 @@ def on_bracket_left():
     from endfield_essence_recognizer.essence_scanner import recognize_once
 
     window_manager: WindowManager = get_window_manager_singleton()
+    scanner_ctx: ScannerContext = build_scanner_context()
     if not window_manager.target_is_active:
         logger.debug("终末地窗口不在前台，忽略 '[' 键。")
         return
@@ -54,9 +54,7 @@ def on_bracket_left():
         logger.info("检测到 '[' 键，开始识别基质")
         recognize_once(
             window_manager,
-            prepare_attribute_recognizer(),
-            prepare_abandon_status_recognizer(),
-            prepare_lock_status_recognizer(),
+            scanner_ctx,
             default_user_setting_manager().get_user_setting(),
             get_resolution_profile(),
         )
@@ -73,9 +71,7 @@ def toggle_scan():
     if essence_scanner_thread is None or not essence_scanner_thread.is_alive():
         logger.info("开始扫描基质")
         essence_scanner_thread = EssenceScanner(
-            attr_recognizer=prepare_attribute_recognizer(),
-            abandon_status_recognizer=prepare_abandon_status_recognizer(),
-            lock_status_recognizer=prepare_lock_status_recognizer(),
+            ctx=build_scanner_context(),
             window_manager=get_window_manager_singleton(),
             user_setting_manager=default_user_setting_manager(),
             profile=get_resolution_profile(),
