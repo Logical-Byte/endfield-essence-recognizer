@@ -12,12 +12,10 @@ from endfield_essence_recognizer.core.layout.res_1080p import Resolution1080p
 from endfield_essence_recognizer.core.path import get_config_path
 from endfield_essence_recognizer.core.recognition import (
     AbandonStatusRecognizer,
-    AttributeLevelRecognizer,
     AttributeRecognizer,
     LockStatusRecognizer,
     UISceneRecognizer,
     prepare_abandon_status_recognizer,
-    prepare_attribute_level_recognizer,
     prepare_attribute_recognizer,
     prepare_lock_status_recognizer,
     prepare_ui_scene_recognizer,
@@ -106,12 +104,27 @@ def default_user_setting_manager() -> UserSettingManager:
 
 
 @lru_cache()
+def get_scanner_context_singleton() -> ScannerContext:
+    """
+    Get the singleton ScannerContext instance.
+    """
+    return build_scanner_context()
+
+
+def get_scanner_context_dep() -> ScannerContext:
+    """
+    Get the default ScannerContext instance.
+    """
+    return get_scanner_context_singleton()
+
+
+@lru_cache()
 def get_scanner_service_singleton() -> ScannerService:
     from endfield_essence_recognizer.essence_scanner import EssenceScanner
 
     def scanner_factory() -> EssenceScanner:
         return EssenceScanner(
-            ctx=build_scanner_context(),
+            ctx=get_scanner_context_singleton(),
             window_manager=get_window_manager_singleton(),
             user_setting_manager=default_user_setting_manager(),
             profile=get_resolution_profile(),
@@ -120,7 +133,12 @@ def get_scanner_service_singleton() -> ScannerService:
     return ScannerService(scanner_factory=scanner_factory)
 
 
-def get_scanner_service_dep() -> ScannerService:
+def get_scanner_service_dep(
+    ctx: ScannerContext = Depends(get_scanner_context_dep),
+    window_manager: WindowManager = Depends(get_window_manager_dep),
+    user_setting_manager: UserSettingManager = Depends(get_user_setting_manager_dep),
+    profile: ResolutionProfile = Depends(get_resolution_profile),
+) -> ScannerService:
     """
     Get the ScannerService dependency.
     """
@@ -156,29 +174,3 @@ def get_ui_scene_recognizer_dep() -> UISceneRecognizer:
     Get the default UI scene Recognizer instance.
     """
     return prepare_ui_scene_recognizer()
-
-
-# ScannerContext dependency
-def get_scanner_context_dep(
-    attr_recognizer: AttributeRecognizer = Depends(get_attribute_recognizer_dep),
-    attr_level_recognizer: AttributeLevelRecognizer = Depends(
-        prepare_attribute_level_recognizer
-    ),
-    abandon_status_recognizer: AbandonStatusRecognizer = Depends(
-        get_abandon_status_recognizer_dep
-    ),
-    lock_status_recognizer: LockStatusRecognizer = Depends(
-        get_lock_status_recognizer_dep
-    ),
-    ui_scene_recognizer: UISceneRecognizer = Depends(get_ui_scene_recognizer_dep),
-) -> ScannerContext:
-    """
-    Get the default ScannerContext instance.
-    """
-    return ScannerContext(
-        attr_recognizer=attr_recognizer,
-        attr_level_recognizer=attr_level_recognizer,
-        abandon_status_recognizer=abandon_status_recognizer,
-        lock_status_recognizer=lock_status_recognizer,
-        ui_scene_recognizer=ui_scene_recognizer,
-    )
