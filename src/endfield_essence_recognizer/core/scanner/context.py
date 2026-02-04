@@ -11,7 +11,7 @@ from endfield_essence_recognizer.core.recognition import (
     LockStatusRecognizer,
     UISceneRecognizer,
     prepare_abandon_status_recognizer,
-    prepare_attribute_level_detector,
+    prepare_attribute_level_recognizer,
     prepare_attribute_recognizer,
     prepare_lock_status_recognizer,
     prepare_ui_scene_recognizer,
@@ -39,7 +39,7 @@ def build_scanner_context() -> ScannerContext:
     """
     return ScannerContext(
         attr_recognizer=prepare_attribute_recognizer(),
-        attr_level_recognizer=prepare_attribute_level_detector(),
+        attr_level_recognizer=prepare_attribute_level_recognizer(),
         abandon_status_recognizer=prepare_abandon_status_recognizer(),
         lock_status_recognizer=prepare_lock_status_recognizer(),
         ui_scene_recognizer=prepare_ui_scene_recognizer(),

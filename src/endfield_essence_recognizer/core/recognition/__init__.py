@@ -73,7 +73,7 @@ def prepare_ui_scene_recognizer() -> UISceneRecognizer:
 
 
 @lru_cache()
-def prepare_attribute_level_detector() -> AttributeLevelRecognizer:
+def prepare_attribute_level_recognizer() -> AttributeLevelRecognizer:
     return AttributeLevelRecognizer(build_attribute_level_recognizer_profile())
 
 
@@ -97,5 +97,5 @@ __all__ = [
     "prepare_abandon_status_recognizer",
     "prepare_lock_status_recognizer",
     "prepare_ui_scene_recognizer",
-    "prepare_attribute_level_detector",
+    "prepare_attribute_level_recognizer",
 ]
