@@ -1,6 +1,7 @@
 import json
 
 import pytest
+from pydantic import ValidationError
 
 from endfield_essence_recognizer.models.user_setting import UserSetting
 from endfield_essence_recognizer.services.user_setting_manager import UserSettingManager
@@ -130,5 +131,5 @@ def test_update_from_user_setting(manager, settings_file):
 
 def test_update_from_dict_invalid_data(manager):
     """Test that update_from_dict raises an exception when provided with invalid data."""
-    with pytest.raises(Exception):  # Pydantic ValidationError
+    with pytest.raises(ValidationError):
         manager.update_from_dict({"trash_weapon_ids": "not a list"})

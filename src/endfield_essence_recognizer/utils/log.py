@@ -123,7 +123,7 @@ def _get_properties_and_values(obj: object) -> dict[str, Any]:
         type(obj),
         lambda o: isinstance(o, property),
     )
-    for prop_name, prop in props:
+    for prop_name, _prop in props:
         try:
             ret[prop_name] = getattr(obj, prop_name)
         except Exception as e:
