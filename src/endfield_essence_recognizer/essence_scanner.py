@@ -41,7 +41,7 @@ def check_scene(
         return False
 
     screenshot = window_manager.screenshot(profile.ESSENCE_UI_ROI)
-    scene_label, max_val = ctx.ui_scene_recognizer.recognize_roi_fallback(
+    scene_label, _max_val = ctx.ui_scene_recognizer.recognize_roi_fallback(
         screenshot, fallback_label=UISceneLabel.UNKNOWN
     )
     if scene_label != UISceneLabel.ESSENCE_UI:
@@ -68,7 +68,7 @@ def judge_essence_quality(
     is_high_level_treasure = False
     high_level_info = ""
     if setting.high_level_treasure_enabled and levels is not None:
-        for i, (stat, level) in enumerate(zip(stats, levels)):
+        for stat, level in zip(stats, levels, strict=False):
             if (
                 stat is not None
                 and level is not None
