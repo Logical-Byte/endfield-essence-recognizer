@@ -6,7 +6,7 @@ from cv2.typing import MatLike
 from endfield_essence_recognizer.core.layout.base import Point
 from endfield_essence_recognizer.core.recognition.brightness_detector import (
     BrightnessDetector,
-    RegionBrightnessProfile,
+    BrightnessDetectorProfile,
 )
 from endfield_essence_recognizer.utils.image import to_gray_image
 
@@ -39,7 +39,7 @@ class AttributeLevelRecognizerProfile:
     Configureation for AttributeLevelRecognizer.
     """
 
-    brightness_profile: RegionBrightnessProfile
+    brightness_profile: BrightnessDetectorProfile
 
     stats_level_icon_points: list[Sequence[Point]]
 
@@ -49,7 +49,7 @@ def build_attribute_level_recognizer_profile() -> AttributeLevelRecognizerProfil
     Builds the AttributeLevelRecognizerProfile with hardcoded 1080p settings.
     """
     # config the brightness detector profile
-    brightness_profile = RegionBrightnessProfile(threshold=200, sample_radius=2)
+    brightness_profile = BrightnessDetectorProfile(threshold=200, sample_radius=2)
 
     # hardcode the 1080p icon points
     stats_level_icon_points = _STATS_LEVEL_ICONS

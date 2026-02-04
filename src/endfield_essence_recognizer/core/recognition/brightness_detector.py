@@ -16,7 +16,7 @@ from endfield_essence_recognizer.utils.log import logger
 
 
 @dataclass(frozen=True)
-class RegionBrightnessProfile:
+class BrightnessDetectorProfile:
     """实例化亮度检测所需的配置。"""
 
     threshold: int = 200
@@ -30,7 +30,7 @@ class BrightnessDetector:
     一个简单的亮度检测器，用于判断图像中某个点周围的区域是否“足够亮”。
     """
 
-    def __init__(self, profile: RegionBrightnessProfile) -> None:
+    def __init__(self, profile: BrightnessDetectorProfile) -> None:
         self.profile = profile
 
     def is_bright(self, image: MatLike, point: Point) -> bool:

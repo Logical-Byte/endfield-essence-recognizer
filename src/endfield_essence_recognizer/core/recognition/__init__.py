@@ -7,7 +7,7 @@ from .base import (
 )
 from .brightness_detector import (
     BrightnessDetector,
-    RegionBrightnessProfile,
+    BrightnessDetectorProfile,
 )
 from .recognizer import Recognizer
 from .tasks.abandon_lock_status import (
@@ -89,7 +89,7 @@ __all__ = [
     "AttributeLevelRecognizer",
     "TemplateDescriptor",
     "RecognitionProfile",
-    "RegionBrightnessProfile",
+    "BrightnessDetectorProfile",
     "Recognizer",
     "BrightnessDetector",
     "prepare_recognizer",
