@@ -15,6 +15,10 @@ from .tasks.abandon_lock_status import (
 from .tasks.attribute import (
     build_attribute_profile,
 )
+from .tasks.ui import (
+    UISceneLabel,
+    build_ui_scene_profile,
+)
 
 # type aliases for recognizers
 
@@ -26,6 +30,9 @@ type AbandonStatusRecognizer = Recognizer[AbandonStatusLabel]
 
 type LockStatusRecognizer = Recognizer[LockStatusLabel]
 """识别上锁状态的识别器类型别名，返回 LockStatusLabel 标签"""
+
+type UISceneRecognizer = Recognizer[UISceneLabel]
+"""识别UI场景的识别器类型别名，返回 UISceneLabel 标签"""
 
 # Factory functions
 
@@ -52,13 +59,20 @@ def prepare_lock_status_recognizer() -> LockStatusRecognizer:
     return prepare_recognizer(build_lock_status_profile())
 
 
+@lru_cache()
+def prepare_ui_scene_recognizer() -> UISceneRecognizer:
+    return prepare_recognizer(build_ui_scene_profile())
+
+
 __all__ = [
     "LabelT",
     "AbandonStatusLabel",
     "LockStatusLabel",
+    "UISceneLabel",
     "AttributeRecognizer",
     "AbandonStatusRecognizer",
     "LockStatusRecognizer",
+    "UISceneRecognizer",
     "TemplateDescriptor",
     "RecognitionProfile",
     "Recognizer",
@@ -66,4 +80,5 @@ __all__ = [
     "prepare_attribute_recognizer",
     "prepare_abandon_status_recognizer",
     "prepare_lock_status_recognizer",
+    "prepare_ui_scene_recognizer",
 ]

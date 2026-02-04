@@ -1,10 +1,8 @@
-import importlib.resources
 import threading
 import time
 from collections.abc import Sequence
 from enum import StrEnum
 
-import cv2
 import numpy as np
 from cv2.typing import MatLike
 
@@ -13,6 +11,7 @@ from endfield_essence_recognizer.core.recognition import (
     AbandonStatusLabel,
     LockStatusLabel,
 )
+from endfield_essence_recognizer.core.recognition.tasks.ui import UISceneLabel
 from endfield_essence_recognizer.core.scanner.context import (
     ScannerContext,
 )
@@ -30,14 +29,8 @@ from endfield_essence_recognizer.game_data.weapon import (
 )
 from endfield_essence_recognizer.models.user_setting import Action, UserSetting
 from endfield_essence_recognizer.services.user_setting_manager import UserSettingManager
-from endfield_essence_recognizer.utils.image import load_image, to_gray_image
+from endfield_essence_recognizer.utils.image import to_gray_image
 from endfield_essence_recognizer.utils.log import logger
-
-# 识别相关常量
-ESSENCE_UI_TEMPLATE_PATH = (
-    importlib.resources.files("endfield_essence_recognizer")
-    / "templates/screenshot/武器基质.png"
-)
 
 
 def detect_icon_state_at_point(image: MatLike, x: int, y: int, radius: int = 3) -> bool:
@@ -108,7 +101,9 @@ def recognize_level_from_icon_points(
         return None
 
 
-def check_scene(window_manager: WindowManager, profile: ResolutionProfile) -> bool:
+def check_scene(
+    window_manager: WindowManager, ctx: ScannerContext, profile: ResolutionProfile
+) -> bool:
     width, height = window_manager.get_client_size()
     if (width, height) != profile.RESOLUTION:
         logger.warning(
@@ -117,11 +112,10 @@ def check_scene(window_manager: WindowManager, profile: ResolutionProfile) -> bo
         return False
 
     screenshot = window_manager.screenshot(profile.ESSENCE_UI_ROI)
-    template = load_image(ESSENCE_UI_TEMPLATE_PATH.read_bytes())
-    res = cv2.matchTemplate(screenshot, template, cv2.TM_CCOEFF_NORMED)
-    _, max_val, _, _ = cv2.minMaxLoc(res)
-    logger.debug(f"基质界面模板匹配分数: {max_val:.3f}")
-    if max_val < 0.8:
+    scene_label, max_val = ctx.ui_scene_recognizer.recognize_roi_fallback(
+        screenshot, fallback_label=UISceneLabel.UNKNOWN
+    )
+    if scene_label != UISceneLabel.ESSENCE_UI:
         logger.warning(
             '当前界面不是基质界面。请按 "N" 键打开贵重品库后切换到武器基质页面。'
         )
@@ -319,7 +313,7 @@ def recognize_once(
     user_setting: UserSetting,
     profile: ResolutionProfile,
 ) -> None:
-    check_scene_result = check_scene(window_manager, profile)
+    check_scene_result = check_scene(window_manager, ctx, profile)
     if not check_scene_result:
         return
 
@@ -382,7 +376,7 @@ class EssenceScanner(threading.Thread):
         if self._window_manager.activate():
             time.sleep(0.5)
 
-        check_scene_result = check_scene(self._window_manager, self._profile)
+        check_scene_result = check_scene(self._window_manager, self.ctx, self._profile)
         if not check_scene_result:
             self._scanning.clear()
             return

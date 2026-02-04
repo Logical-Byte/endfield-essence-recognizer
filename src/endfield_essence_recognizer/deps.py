@@ -14,13 +14,15 @@ from endfield_essence_recognizer.core.recognition import (
     AbandonStatusRecognizer,
     AttributeRecognizer,
     LockStatusRecognizer,
+    UISceneRecognizer,
     prepare_abandon_status_recognizer,
     prepare_attribute_recognizer,
     prepare_lock_status_recognizer,
+    prepare_ui_scene_recognizer,
 )
 from endfield_essence_recognizer.core.scanner.context import (
     ScannerContext,
-    build_scanner_context,
+    build_scanner_context,  # noqa: F401
 )
 from endfield_essence_recognizer.core.window import (
     SUPPORTED_WINDOW_TITLES,
@@ -124,9 +126,30 @@ def get_lock_status_recognizer_dep() -> LockStatusRecognizer:
     return prepare_lock_status_recognizer()
 
 
+def get_ui_scene_recognizer_dep() -> UISceneRecognizer:
+    """
+    Get the default UI scene Recognizer instance.
+    """
+    return prepare_ui_scene_recognizer()
+
+
 # ScannerContext dependency
-def get_scanner_context_dep() -> ScannerContext:
+def get_scanner_context_dep(
+    attr_recognizer: AttributeRecognizer = Depends(get_attribute_recognizer_dep),
+    abandon_status_recognizer: AbandonStatusRecognizer = Depends(
+        get_abandon_status_recognizer_dep
+    ),
+    lock_status_recognizer: LockStatusRecognizer = Depends(
+        get_lock_status_recognizer_dep
+    ),
+    ui_scene_recognizer: UISceneRecognizer = Depends(get_ui_scene_recognizer_dep),
+) -> ScannerContext:
     """
     Get the default ScannerContext instance.
     """
-    return build_scanner_context()
+    return ScannerContext(
+        attr_recognizer=attr_recognizer,
+        abandon_status_recognizer=abandon_status_recognizer,
+        lock_status_recognizer=lock_status_recognizer,
+        ui_scene_recognizer=ui_scene_recognizer,
+    )
