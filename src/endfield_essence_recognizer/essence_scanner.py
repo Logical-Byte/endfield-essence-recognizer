@@ -253,7 +253,7 @@ def recognize_once(
     judge_essence_quality(user_setting, stats, levels)
 
 
-class EssenceScanner(threading.Thread):
+class EssenceScanner:
     """
     基质图标扫描器后台线程。
 
@@ -268,8 +268,6 @@ class EssenceScanner(threading.Thread):
         user_setting_manager: UserSettingManager,
         profile: ResolutionProfile,
     ) -> None:
-        super().__init__(daemon=True)
-        self._scanning = threading.Event()
         self.ctx: ScannerContext = ctx
         self._window_manager: WindowManager = window_manager
         self._user_setting_manager: UserSettingManager = user_setting_manager
@@ -282,13 +280,9 @@ class EssenceScanner(threading.Thread):
             lambda: str_properties_and_attrs(profile),
         )
 
-    def run(self) -> None:
-        logger.info("开始基质扫描线程...")
-        self._scanning.set()
-
+    def execute(self, stop_event: threading.Event) -> None:
         if not self._window_manager.target_exists:
             logger.info("未找到终末地窗口，停止基质扫描。")
-            self._scanning.clear()
             return
 
         if self._window_manager.restore():
@@ -299,7 +293,6 @@ class EssenceScanner(threading.Thread):
 
         check_scene_result = check_scene(self._window_manager, self.ctx, self._profile)
         if not check_scene_result:
-            self._scanning.clear()
             return
 
         # 获取当前用户设置的快照，用于接下来的判断
@@ -311,10 +304,9 @@ class EssenceScanner(threading.Thread):
         for i, j in np.ndindex(len(icon_y_list), len(icon_x_list)):
             if not self._window_manager.target_is_active:
                 logger.info("终末地窗口不在前台，停止基质扫描。")
-                self._scanning.clear()
                 break
 
-            if not self._scanning.is_set():
+            if stop_event.is_set():
                 logger.info("基质扫描被中断。")
                 break
 
@@ -414,7 +406,3 @@ class EssenceScanner(threading.Thread):
         else:
             # 扫描完成
             logger.info("基质扫描完成。")
-
-    def stop(self) -> None:
-        logger.info("停止基质扫描线程...")
-        self._scanning.clear()

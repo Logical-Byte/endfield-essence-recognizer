@@ -24,12 +24,13 @@ from endfield_essence_recognizer.core.recognition import (
 )
 from endfield_essence_recognizer.core.scanner.context import (
     ScannerContext,
-    build_scanner_context,  # noqa: F401
+    build_scanner_context,
 )
 from endfield_essence_recognizer.core.window import (
     SUPPORTED_WINDOW_TITLES,
     WindowManager,
 )
+from endfield_essence_recognizer.services.scanner_service import ScannerService
 from endfield_essence_recognizer.services.user_setting_manager import UserSettingManager
 
 
@@ -102,6 +103,28 @@ def default_user_setting_manager() -> UserSettingManager:
     Get the default singleton UserSettingManager instance.
     """
     return get_user_setting_manager_singleton(get_config_path())
+
+
+@lru_cache()
+def get_scanner_service_singleton() -> ScannerService:
+    from endfield_essence_recognizer.essence_scanner import EssenceScanner
+
+    def scanner_factory() -> EssenceScanner:
+        return EssenceScanner(
+            ctx=build_scanner_context(),
+            window_manager=get_window_manager_singleton(),
+            user_setting_manager=default_user_setting_manager(),
+            profile=get_resolution_profile(),
+        )
+
+    return ScannerService(scanner_factory=scanner_factory)
+
+
+def get_scanner_service_dep() -> ScannerService:
+    """
+    Get the ScannerService dependency.
+    """
+    return get_scanner_service_singleton()
 
 
 # Recognizer dependencies

@@ -10,15 +10,16 @@ from fastapi import Body, Depends, FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from endfield_essence_recognizer import toggle_scan
 from endfield_essence_recognizer.core.config import ServerConfig, get_server_config
 from endfield_essence_recognizer.core.path import get_logs_dir
 from endfield_essence_recognizer.core.window import WindowManager
 from endfield_essence_recognizer.deps import (
+    get_scanner_service_dep,
     get_user_setting_manager_dep,
     get_window_manager_dep,
 )
 from endfield_essence_recognizer.models.user_setting import UserSetting
+from endfield_essence_recognizer.services.scanner_service import ScannerService
 from endfield_essence_recognizer.services.user_setting_manager import (
     UserSettingManager,
 )
@@ -169,8 +170,10 @@ async def get_version() -> str | None:
 
 
 @app.post("/api/start_scanning")
-async def start_scanning() -> None:
-    toggle_scan()
+async def start_scanning(
+    scanner_service: ScannerService = Depends(get_scanner_service_dep),
+) -> None:
+    scanner_service.toggle_scan()
 
 
 @app.post("/api/open_logs_folder")

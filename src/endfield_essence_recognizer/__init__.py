@@ -17,7 +17,6 @@ if TYPE_CHECKING:
     import threading
 
     from endfield_essence_recognizer.core.window import WindowManager
-    from endfield_essence_recognizer.essence_scanner import EssenceScanner
 
 
 # 资源路径
@@ -35,8 +34,6 @@ screenshot_template_dir = (
 )
 
 # 全局变量
-essence_scanner_thread: EssenceScanner | None = None
-"""基质扫描器线程实例"""
 server_thread: threading.Thread | None = None
 """后端服务器线程实例"""
 
@@ -64,19 +61,13 @@ def toggle_scan():
     """切换基质扫描状态"""
     import winsound
 
-    from endfield_essence_recognizer.essence_scanner import EssenceScanner
+    from endfield_essence_recognizer.deps import get_scanner_service_singleton
 
-    global essence_scanner_thread
+    scanner_service = get_scanner_service_singleton()
 
-    if essence_scanner_thread is None or not essence_scanner_thread.is_alive():
+    if not scanner_service.is_running():
         logger.info("开始扫描基质")
-        essence_scanner_thread = EssenceScanner(
-            ctx=build_scanner_context(),
-            window_manager=get_window_manager_singleton(),
-            user_setting_manager=default_user_setting_manager(),
-            profile=get_resolution_profile(),
-        )
-        essence_scanner_thread.start()
+        scanner_service.start_scan()
         with importlib.resources.as_file(
             enable_sound_path
         ) as enable_sound_path_ensured:
@@ -86,8 +77,7 @@ def toggle_scan():
             )
     else:
         logger.info("停止扫描基质")
-        essence_scanner_thread.stop()
-        essence_scanner_thread = None
+        scanner_service.stop_scan()
         with importlib.resources.as_file(
             disable_sound_path
         ) as disable_sound_path_ensured:
@@ -110,9 +100,14 @@ def on_bracket_right():
 
 def on_exit():
     """处理 Alt+Delete 按下事件 - 退出程序"""
-    global essence_scanner_thread
-
     logger.info('检测到 "Alt+Delete"，正在退出程序...')
+
+    # 停止扫描器
+    from endfield_essence_recognizer.deps import get_scanner_service_singleton
+
+    scanner_service = get_scanner_service_singleton()
+    if scanner_service.is_running():
+        scanner_service.stop_scan()
 
     # 关闭 webview 窗口，剩下的清理工作交给 main 函数
     from endfield_essence_recognizer.webui import window
@@ -122,8 +117,6 @@ def on_exit():
 
 def main():
     """主函数"""
-
-    global essence_scanner_thread
 
     # 打印欢迎信息
     message = """
@@ -181,9 +174,11 @@ def main():
 
     finally:
         # 停止基质扫描线程
-        if essence_scanner_thread is not None and essence_scanner_thread.is_alive():
-            essence_scanner_thread.stop()
-            essence_scanner_thread = None
+        from endfield_essence_recognizer.deps import get_scanner_service_singleton
+
+        scanner_service = get_scanner_service_singleton()
+        if scanner_service.is_running():
+            scanner_service.stop_scan()
 
         # 关闭后端
         server.should_exit = True
