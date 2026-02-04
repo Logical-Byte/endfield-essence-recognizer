@@ -3,7 +3,6 @@ from __future__ import annotations
 import importlib.resources
 from typing import TYPE_CHECKING
 
-from endfield_essence_recognizer.core.scanner.context import ScannerContext
 from endfield_essence_recognizer.deps import (
     build_scanner_context,
     default_user_setting_manager,
@@ -16,6 +15,7 @@ from endfield_essence_recognizer.version import __version__ as __version__
 if TYPE_CHECKING:
     import threading
 
+    from endfield_essence_recognizer.core.scanner.context import ScannerContext
     from endfield_essence_recognizer.core.window import WindowManager
     from endfield_essence_recognizer.essence_scanner import EssenceScanner
 
