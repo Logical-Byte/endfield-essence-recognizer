@@ -36,7 +36,7 @@ _STATS_LEVEL_ICONS: list[Sequence[Point]] = [
 @dataclass(frozen=True)
 class AttributeLevelRecognizerProfile:
     """
-    Configureation for AttributeLevelRecognizer.
+    Configuration for AttributeLevelRecognizer.
     """
 
     brightness_profile: BrightnessDetectorProfile
