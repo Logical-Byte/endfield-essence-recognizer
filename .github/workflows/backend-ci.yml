@@ -36,10 +36,11 @@ jobs:
         with:
           enable-cache: true
 
-      - name: Run ruff check and format
-        run: |
-          uvx ruff check
-          uvx ruff format --check
+      - name: ruff check
+        run: uvx ruff check . --output-format=github
+
+      - name: ruff format check
+        run: uvx ruff format --check .
 
   backend-test:
     name: Run tests
