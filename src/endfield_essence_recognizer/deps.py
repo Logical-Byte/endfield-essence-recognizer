@@ -207,6 +207,21 @@ def get_essence_scanner_dep(
     )
 
 
+def default_essence_scanner() -> EssenceScanner:
+    """
+    Get the default EssenceScanner instance.
+
+    Some functions need an EssenceScanner but are not called within FastAPI request context.
+    So we provide this default builder function.
+    """
+    return EssenceScanner(
+        ctx=default_scanner_context(),
+        window_manager=get_window_manager_singleton(),
+        user_setting_manager=default_user_setting_manager(),
+        profile=get_resolution_profile(),
+    )
+
+
 @lru_cache()
 def get_scanner_service() -> ScannerService:
     return ScannerService()
