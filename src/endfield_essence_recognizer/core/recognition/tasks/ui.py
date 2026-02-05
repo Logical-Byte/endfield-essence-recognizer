@@ -15,6 +15,7 @@ class UISceneLabel(StrEnum):
     """Labels for different UI scenes."""
 
     ESSENCE_UI = "Essence UI"
+    LIST_OF_DELIVERY_JOBS = "List of Delivery Jobs"
     UNKNOWN = "Unknown"
 
 
@@ -26,10 +27,18 @@ def build_ui_scene_profile() -> RecognitionProfile[UISceneLabel]:
         importlib.resources.files("endfield_essence_recognizer")
         / "templates/screenshot/武器基质.png"
     )
+    list_of_delivery_jobs_template = (
+        importlib.resources.files("endfield_essence_recognizer")
+        / "templates/screenshot/运送委托列表_已激活.png"
+    )
     templates = [
         TemplateDescriptor(
             path=essence_ui_template,
             label=UISceneLabel.ESSENCE_UI,
+        ),
+        TemplateDescriptor(
+            path=list_of_delivery_jobs_template,
+            label=UISceneLabel.LIST_OF_DELIVERY_JOBS,
         ),
     ]
     return RecognitionProfile(

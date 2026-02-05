@@ -53,3 +53,11 @@ class Resolution1080p(ResolutionProfile):
     @property
     def STATS_2_ROI(self) -> Region:
         return Region(Point(1508, 468), Point(1700, 500))
+
+    @property
+    def LIST_OF_DELIVERY_JOBS_SCENE_CHECK_ROI(self) -> Region:
+        return Region(Point(340, 68), Point(702, 208))
+
+    @property
+    def DELIVERY_JOB_REWARD_ROI(self) -> Region:
+        return Region(Point(1251, 252), Point(1413, 989))

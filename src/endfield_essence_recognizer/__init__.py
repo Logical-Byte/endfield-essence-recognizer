@@ -102,6 +102,25 @@ def on_bracket_right():
         toggle_scan()
 
 
+def on_delivery_job_claim():
+    r"""处理 "\" 键按下事件 - 抢单"""
+    from endfield_essence_recognizer.delivery_claimer import DeliveryClaimer
+
+    window_manager: WindowManager = get_window_manager_singleton()
+
+    if not window_manager.target_is_active:
+        logger.debug(r'终末地窗口不在前台，忽略 "\" 键。')
+        return
+    else:
+        logger.info(r'检测到 "\" 键，开始抢单')
+        claimer = DeliveryClaimer(
+            ctx=default_scanner_context(),
+            window_manager=window_manager,
+            profile=get_resolution_profile(),
+        )
+        claimer.run()
+
+
 def on_exit():
     """处理 Alt+Delete 按下事件 - 退出程序"""
     logger.info('检测到 "Alt+Delete"，正在退出程序...')
@@ -153,6 +172,7 @@ def main():
 
     keyboard.add_hotkey("[", on_bracket_left)
     keyboard.add_hotkey("]", on_bracket_right)
+    keyboard.add_hotkey("\\", on_delivery_job_claim)
     keyboard.add_hotkey("alt+delete", on_exit)
 
     logger.info("开始监听热键...")

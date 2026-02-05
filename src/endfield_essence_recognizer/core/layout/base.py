@@ -102,3 +102,13 @@ class ResolutionProfile(Protocol):
     def STATS_2_ROI(self) -> Region:
         """第三个属性词条的识别区域。"""
         ...
+
+    @property
+    def LIST_OF_DELIVERY_JOBS_SCENE_CHECK_ROI(self) -> Region:
+        """用于判定是否在运送委托列表界面的识别区域。"""
+        ...
+
+    @property
+    def DELIVERY_JOB_REWARD_ROI(self) -> Region:
+        """用于识别运送委托奖励的区域。"""
+        ...
