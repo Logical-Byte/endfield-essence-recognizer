@@ -30,6 +30,7 @@ from endfield_essence_recognizer.core.window import (
     SUPPORTED_WINDOW_TITLES,
     WindowManager,
 )
+from endfield_essence_recognizer.core.window.adapter import WindowActionsAdapter
 from endfield_essence_recognizer.services.audio_service import (
     AudioService,
     build_audio_service_profile,
@@ -214,10 +215,11 @@ def get_scanner_engine_dep(
     Note this dependency depends on ResolutionProfile, which will help multi-resolution
     support in the future.
     """
+    adapter = WindowActionsAdapter(window_manager)
     return ScannerEngine(
         ctx=ctx,
-        image_source=window_manager,
-        window_actions=window_manager,
+        image_source=adapter,
+        window_actions=adapter,
         user_setting_manager=user_setting_manager,
         profile=profile,
     )
@@ -231,10 +233,11 @@ def default_scanner_engine() -> ScannerEngine:
     So we provide this default builder function.
     """
     window_manager = get_window_manager_singleton()
+    adapter = WindowActionsAdapter(window_manager)
     return ScannerEngine(
         ctx=default_scanner_context(),
-        image_source=window_manager,
-        window_actions=window_manager,
+        image_source=adapter,
+        window_actions=adapter,
         user_setting_manager=default_user_setting_manager(),
         profile=get_resolution_profile(),
     )

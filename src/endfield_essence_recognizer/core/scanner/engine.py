@@ -1,8 +1,5 @@
+import itertools
 import threading
-import time
-from enum import StrEnum
-
-import numpy as np
 
 from endfield_essence_recognizer.core.interfaces import ImageSource, WindowActions
 from endfield_essence_recognizer.core.layout.base import ResolutionProfile
@@ -11,10 +8,19 @@ from endfield_essence_recognizer.core.recognition import (
     LockStatusLabel,
 )
 from endfield_essence_recognizer.core.recognition.tasks.ui import UISceneLabel
+from endfield_essence_recognizer.core.scanner.action_logic import (
+    ActionType,
+    decide_actions,
+)
 from endfield_essence_recognizer.core.scanner.context import (
     ScannerContext,
 )
-from endfield_essence_recognizer.models.user_setting import Action, UserSetting
+from endfield_essence_recognizer.core.scanner.evaluate import evaluate_essence
+from endfield_essence_recognizer.core.scanner.models import (
+    EssenceData,
+    EssenceQuality,
+)
+from endfield_essence_recognizer.models.user_setting import UserSetting
 from endfield_essence_recognizer.services.user_setting_manager import UserSettingManager
 from endfield_essence_recognizer.utils.log import logger
 
@@ -41,139 +47,11 @@ def check_scene(
     return True
 
 
-class EssenceQuality(StrEnum):
-    TREASURE = "treasure"
-    TRASH = "trash"
-
-
-def judge_essence_quality(
-    setting: UserSetting,
-    stats: list[str | None],
-    levels: list[int | None],
-) -> EssenceQuality:
-    """根据识别到的属性判断基质品质，并输出日志提示。"""
-
-    from endfield_essence_recognizer.game_data import (
-        gem_table,
-        get_translation,
-        weapon_basic_table,
-    )
-    from endfield_essence_recognizer.game_data.item import get_item_name
-    from endfield_essence_recognizer.game_data.weapon import (
-        get_gem_tag_name,
-        weapon_stats_dict,
-        weapon_type_int_to_translation_key,
-    )
-
-    # 检查属性等级：如果启用了高等级判定，记录是否为高等级宝藏
-    is_high_level_treasure = False
-    high_level_info = ""
-    if setting.high_level_treasure_enabled:
-        # stats 的顺序是 [基础属性, 附加属性, 技能属性]，对应 termType [0, 1, 2]
-        thresholds = [
-            setting.high_level_treasure_attribute_threshold,  # 基础属性阈值
-            setting.high_level_treasure_secondary_threshold,  # 附加属性阈值
-            setting.high_level_treasure_skill_threshold,  # 技能属性阈值
-        ]
-        for stat, level in zip(stats, levels, strict=True):
-            if stat is not None and level is not None:
-                gem = gem_table.get(stat)
-                if gem is not None:
-                    threshold = thresholds[gem["termType"]]
-                    if level >= threshold:
-                        is_high_level_treasure = True
-                        high_level_info = f"（含高等级属性词条：{get_gem_tag_name(stat, 'CN')}+{level}）"
-                        break
-
-    # 尝试匹配用户自定义的宝藏基质条件
-    for treasure_stat in setting.treasure_essence_stats:
-        if (
-            treasure_stat.attribute in stats
-            and treasure_stat.secondary in stats
-            and treasure_stat.skill in stats
-        ):
-            logger.opt(colors=True).success(
-                f"这个基质是<green><bold><underline>宝藏</></></>，因为它符合你设定的宝藏基质条件{high_level_info}。"
-            )
-            return EssenceQuality.TREASURE
-
-    # 尝试匹配已实装武器
-    matched_weapon_ids: set[str] = set()
-    for weapon_id in weapon_basic_table:
-        weapon_stats = weapon_stats_dict[weapon_id]
-        if (
-            weapon_stats["attribute"] == stats[0]
-            and weapon_stats["secondary"] == stats[1]
-            and weapon_stats["skill"] == stats[2]
-        ):
-            matched_weapon_ids.add(weapon_id)
-
-    if not matched_weapon_ids:
-        # 未匹配到任何已实装武器
-        if is_high_level_treasure:
-            logger.opt(colors=True).success(
-                f"这个基质是<green><bold><underline>宝藏</></></>，因为它有高等级属性词条{high_level_info}。"
-                "<dim>（但不匹配任何已实装武器）</>"
-            )
-            return EssenceQuality.TREASURE
-        else:
-            logger.opt(colors=True).success(
-                "这个基质是<red><bold><underline>养成材料</></></>，它不匹配任何已实装武器。"
-            )
-            return EssenceQuality.TRASH
-    # 检查匹配到的武器中，是否有不在 trash_weapon_ids 中的
-    non_trash_weapon_ids = matched_weapon_ids - set(setting.trash_weapon_ids)
-
-    def format_weapon_description(weapon_id: str) -> str:
-        """格式化武器描述，如`名称（稀有度★ 类型）`"""
-        weapon_basic = weapon_basic_table[weapon_id]
-        weapon_name = get_item_name(weapon_id, "CN")
-        weapon_type = get_translation(
-            weapon_type_int_to_translation_key[weapon_id], "CN"
-        )
-        return f"<bold>{weapon_name}（{weapon_basic['rarity']}★ {weapon_type}）</>"
-
-    if non_trash_weapon_ids:
-        # 只要有一个匹配武器未被拦截，就是宝藏
-
-        # 输出所有匹配到且未被拦截的武器列表
-        weapon_descriptions = [
-            format_weapon_description(wid) for wid in non_trash_weapon_ids
-        ]
-        weapons_description_str = "、".join(weapon_descriptions)
-
-        logger.opt(colors=True).success(
-            f"这个基质是<green><bold><underline>宝藏</></></>，它完美契合武器{weapons_description_str}{high_level_info}。"
-        )
-        return EssenceQuality.TREASURE
-    else:
-        # 所有匹配到的武器都在 trash_weapon_ids 中
-
-        # 输出所有匹配到的武器列表
-        weapon_descriptions = [
-            format_weapon_description(wid) for wid in matched_weapon_ids
-        ]
-        weapons_description_str = "、".join(weapon_descriptions)
-
-        if is_high_level_treasure:
-            logger.opt(colors=True).success(
-                f"这个基质是<green><bold><underline>宝藏</></></>，因为它有高等级属性词条{high_level_info}。"
-                f"<yellow>即使它匹配的所有武器{weapons_description_str}均已被用户手动拦截。</>"
-            )
-            return EssenceQuality.TREASURE
-        else:
-            logger.opt(colors=True).warning(
-                f"这个基质虽然匹配武器{weapons_description_str}，但匹配的所有武器均已被用户手动拦截，"
-                f"因此这个基质是<red><bold><underline>养成材料</></></>。"
-            )
-            return EssenceQuality.TRASH
-
-
 def recognize_essence(
     image_source: ImageSource,
     ctx: ScannerContext,
     profile: ResolutionProfile,
-) -> tuple[list[str | None], list[int | None], AbandonStatusLabel, LockStatusLabel]:
+) -> EssenceData:
     from endfield_essence_recognizer.game_data.weapon import (
         get_gem_tag_name,
     )
@@ -231,7 +109,7 @@ def recognize_essence(
         f"已识别当前基质，属性: <magenta>{stats_name}</>, <magenta>{abandon_label.value}</>, <magenta>{locked_label.value}</>"
     )
 
-    return stats, levels, abandon_label, locked_label
+    return EssenceData(stats, levels, abandon_label, locked_label)
 
 
 def recognize_once(
@@ -244,19 +122,21 @@ def recognize_once(
     if not check_scene_result:
         return
 
-    stats, levels, abandon_label, lock_label = recognize_essence(
+    data = recognize_essence(
         image_source,
         ctx,
         profile,
     )
 
     if (
-        abandon_label == AbandonStatusLabel.MAYBE_ABANDONED
-        or lock_label == LockStatusLabel.MAYBE_LOCKED
+        data.abandon_label == AbandonStatusLabel.MAYBE_ABANDONED
+        or data.lock_label == LockStatusLabel.MAYBE_LOCKED
     ):
         return
 
-    judge_essence_quality(user_setting, stats, levels)
+    evaluation = evaluate_essence(data, user_setting)
+    # all logs use success for simplicity
+    logger.opt(colors=True).success(evaluation.log_message)
 
 
 class ScannerEngine:
@@ -294,10 +174,10 @@ class ScannerEngine:
             return
 
         if self._window_actions.restore():
-            time.sleep(0.5)
+            self._window_actions.wait(0.5)
 
         if self._window_actions.activate():
-            time.sleep(0.5)
+            self._window_actions.wait(0.5)
 
         check_scene_result = check_scene(self._image_source, self.ctx, self._profile)
         if not check_scene_result:
@@ -309,7 +189,9 @@ class ScannerEngine:
         icon_x_list = self._profile.essence_icon_x_list
         icon_y_list = self._profile.essence_icon_y_list
 
-        for i, j in np.ndindex(len(icon_y_list), len(icon_x_list)):
+        for (i, relative_y), (j, relative_x) in itertools.product(
+            enumerate(icon_y_list), enumerate(icon_x_list)
+        ):
             if not self._window_actions.target_is_active:
                 logger.info("终末地窗口不在前台，停止基质扫描。")
                 break
@@ -321,95 +203,50 @@ class ScannerEngine:
             logger.info(f"正在扫描第 {i + 1} 行第 {j + 1} 列的基质...")
 
             # 点击基质图标位置
-            relative_x = icon_x_list[j]
-            relative_y = icon_y_list[i]
             self._window_actions.click(relative_x, relative_y)
 
             # 等待短暂时间以确保界面更新
-            time.sleep(0.3)
+            self._window_actions.wait(0.3)
 
             # 识别基质信息
-            stats, levels, abandon_label, lock_label = recognize_essence(
+            data = recognize_essence(
                 self._image_source,
                 self.ctx,
                 self._profile,
             )
 
-            essence_quality = judge_essence_quality(user_setting, stats, levels)
-            # judge_essence_quality has side effects of logging the result, so
-            # the early continue on uncertain recognition should be after it.
             if (
-                abandon_label == AbandonStatusLabel.MAYBE_ABANDONED
-                or lock_label == LockStatusLabel.MAYBE_LOCKED
+                data.abandon_label == AbandonStatusLabel.MAYBE_ABANDONED
+                or data.lock_label == LockStatusLabel.MAYBE_LOCKED
             ):
                 # early continue on uncertain recognition
                 continue
-            if lock_label == LockStatusLabel.NOT_LOCKED and (
-                (
-                    essence_quality == EssenceQuality.TREASURE
-                    and user_setting.treasure_action == Action.LOCK
-                )
-                or (
-                    essence_quality == EssenceQuality.TRASH
-                    and user_setting.trash_action == Action.LOCK
-                )
+
+            evaluation = evaluate_essence(data, user_setting)
+
+            # Log the result
+            if (
+                evaluation.quality == EssenceQuality.TRASH
+                and evaluation.matched_weapons
             ):
-                self._window_actions.click(
-                    self._profile.LOCK_BUTTON_POS.x, self._profile.LOCK_BUTTON_POS.y
-                )
-                time.sleep(0.3)
-                logger.success("给你自动锁上了，记得保管好哦！(*/ω＼*)")
-            elif lock_label == LockStatusLabel.LOCKED and (
-                (
-                    essence_quality == EssenceQuality.TREASURE
-                    and user_setting.treasure_action
-                    in [Action.UNLOCK, Action.UNLOCK_AND_UNDEPRECATE]
-                )
-                or (
-                    essence_quality == EssenceQuality.TRASH
-                    and user_setting.trash_action
-                    in [Action.UNLOCK, Action.UNLOCK_AND_UNDEPRECATE]
-                )
-            ):
-                self._window_actions.click(
-                    self._profile.LOCK_BUTTON_POS.x, self._profile.LOCK_BUTTON_POS.y
-                )
-                time.sleep(0.3)
-                logger.success("给你自动解锁了！ヾ(≧▽≦*)o")
-            if abandon_label == AbandonStatusLabel.NOT_ABANDONED and (
-                (
-                    essence_quality == EssenceQuality.TREASURE
-                    and user_setting.treasure_action == Action.DEPRECATE
-                )
-                or (
-                    essence_quality == EssenceQuality.TRASH
-                    and user_setting.trash_action == Action.DEPRECATE
-                )
-            ):
-                self._window_actions.click(
-                    self._profile.DEPRECATE_BUTTON_POS.x,
-                    self._profile.DEPRECATE_BUTTON_POS.y,
-                )
-                time.sleep(0.3)
-                logger.success("给你自动标记为弃用了！(￣︶￣)>")
-            elif abandon_label == AbandonStatusLabel.ABANDONED and (
-                (
-                    essence_quality == EssenceQuality.TREASURE
-                    and user_setting.treasure_action
-                    in [Action.UNDEPRECATE, Action.UNLOCK_AND_UNDEPRECATE]
-                )
-                or (
-                    essence_quality == EssenceQuality.TRASH
-                    and user_setting.trash_action
-                    in [Action.UNDEPRECATE, Action.UNLOCK_AND_UNDEPRECATE]
-                )
-            ):
-                self._window_actions.click(
-                    self._profile.DEPRECATE_BUTTON_POS.x,
-                    self._profile.DEPRECATE_BUTTON_POS.y,
-                )
-                time.sleep(0.3)
-                logger.success("给你自动取消弃用啦！(＾Ｕ＾)ノ~ＹＯ")
+                logger.opt(colors=True).warning(evaluation.log_message)
+            else:
+                logger.opt(colors=True).success(evaluation.log_message)
+
+            # Decide actions
+            actions = decide_actions(data, evaluation, user_setting)
+
+            # Execute actions
+            for action in actions:
+                if action.type == ActionType.CLICK_LOCK:
+                    pos = self._profile.LOCK_BUTTON_POS
+                    self._window_actions.click(pos.x, pos.y)
+                elif action.type == ActionType.CLICK_ABANDON:
+                    pos = self._profile.DEPRECATE_BUTTON_POS
+                    self._window_actions.click(pos.x, pos.y)
+
+                self._window_actions.wait(0.3)
+                logger.success(action.log_message)
 
         else:
             # 扫描完成
