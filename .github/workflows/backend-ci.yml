@@ -36,14 +36,18 @@ jobs:
         with:
           enable-cache: true
 
-      - name: Run ruff check and format
-        run: |
-          uvx ruff check
-          uvx ruff format --check
+      - name: ruff check
+        run: uvx ruff check . --output-format=github
+
+      - name: ruff format check
+        run: uvx ruff format --check .
 
   backend-test:
     name: Run tests
     runs-on: windows-latest
+    permissions:
+      contents: read
+      checks: write
     steps:
       - uses: actions/checkout@v5
 
@@ -59,4 +63,10 @@ jobs:
         run: uv sync --dev
 
       - name: Run tests
-        run: uv run pytest tests -v --ci
+        run: uv run pytest tests -v --ci -ra --junitxml=pytest-results.xml
+
+      - name: Publish test report
+        uses: mikepenz/action-junit-report@v6
+        if: always() # Always run to publish results even if tests fail
+        with:
+          report_paths: pytest-results.xml
