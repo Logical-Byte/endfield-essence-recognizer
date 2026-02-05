@@ -38,3 +38,7 @@ eer = "endfield_essence_recognizer.__main__:main"
 [build-system]
 requires = ["uv_build>=0.9.3,<0.10.0"]
 build-backend = "uv_build"
+
+[pytest]
+junit_suite_name = "backend tests"
+junit_duration_report = "total"
