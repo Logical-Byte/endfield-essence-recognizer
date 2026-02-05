@@ -44,6 +44,7 @@ jobs:
 
       - name: ruff format check
         run: uvx ruff format --check .
+        if: always() # Always run to report formatting issues
 
   backend-test:
     name: Run tests
