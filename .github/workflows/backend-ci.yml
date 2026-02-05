@@ -17,6 +17,9 @@ on:
     branches:
       - main
       - dev
+      # branches that ends with `-ci` or `/ci` (e.g., feature-ci, fix/ci)
+      - '**/ci'
+      - '*-ci'
       # Run on all changes
 
 # Ensure that only one CI run happens per PR/branch at a time
@@ -48,6 +51,7 @@ jobs:
     permissions:
       contents: read
       checks: write
+      pull-requests: write
     steps:
       - uses: actions/checkout@v5
 
@@ -70,3 +74,6 @@ jobs:
         if: always() # Always run to publish results even if tests fail
         with:
           report_paths: pytest-results.xml
+          detailed_summary: true
+          include_time_in_summary: true
+          comment: true
