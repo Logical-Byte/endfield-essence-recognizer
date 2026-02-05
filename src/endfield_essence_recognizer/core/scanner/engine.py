@@ -1,6 +1,5 @@
 import itertools
 import threading
-import time
 
 from endfield_essence_recognizer.core.interfaces import ImageSource, WindowActions
 from endfield_essence_recognizer.core.layout.base import ResolutionProfile
@@ -175,10 +174,10 @@ class ScannerEngine:
             return
 
         if self._window_actions.restore():
-            time.sleep(0.5)
+            self._window_actions.wait(0.5)
 
         if self._window_actions.activate():
-            time.sleep(0.5)
+            self._window_actions.wait(0.5)
 
         check_scene_result = check_scene(self._image_source, self.ctx, self._profile)
         if not check_scene_result:
@@ -207,7 +206,7 @@ class ScannerEngine:
             self._window_actions.click(relative_x, relative_y)
 
             # 等待短暂时间以确保界面更新
-            time.sleep(0.3)
+            self._window_actions.wait(0.3)
 
             # 识别基质信息
             data = recognize_essence(
@@ -246,7 +245,7 @@ class ScannerEngine:
                     pos = self._profile.DEPRECATE_BUTTON_POS
                     self._window_actions.click(pos.x, pos.y)
 
-                time.sleep(0.3)
+                self._window_actions.wait(0.3)
                 logger.success(action.log_message)
 
         else:

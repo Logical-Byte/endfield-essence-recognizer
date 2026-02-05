@@ -59,6 +59,9 @@ class MockWindowActions:
     def click(self, x, y):
         self.click_calls.append((x, y))
 
+    def wait(self, seconds):
+        pass
+
 
 @pytest.fixture
 def mock_scanner_context():
