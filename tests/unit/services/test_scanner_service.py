@@ -21,10 +21,10 @@ def test_scanner_service_start_scan():
 
     mock_scanner = MagicMock()
     mock_scanner.execute = mock_execute
-    service = ScannerService(scanner_factory=lambda: mock_scanner)
+    service = ScannerService()
 
     assert not service.is_running()
-    service.start_scan()
+    service.start_scan(scanner_factory=lambda: mock_scanner)
 
     # Wait for the worker thread to reach the execute_called.set() line
     assert execute_called.wait(timeout=1.0)
@@ -52,17 +52,17 @@ def test_scanner_service_toggle_scan():
 
     mock_scanner = MagicMock()
     mock_scanner.execute = mock_execute
-    service = ScannerService(scanner_factory=lambda: mock_scanner)
+    service = ScannerService()
 
     # First toggle: Start the scan
-    service.toggle_scan()
+    service.toggle_scan(scanner_factory=lambda: mock_scanner)
     assert execute_called.wait(timeout=1.0)
     assert service.is_running()
 
     # Second toggle: Stop the scan
     # We unblock the worker so the join() inside toggle_scan can complete
     block_execute.set()
-    service.toggle_scan()
+    service.toggle_scan(scanner_factory=lambda: mock_scanner)
     assert not service.is_running()
     assert service._stop_event.is_set()
 
@@ -84,14 +84,14 @@ def test_scanner_service_already_running():
 
     mock_scanner.execute.side_effect = side_effect
 
-    service = ScannerService(scanner_factory=lambda: mock_scanner)
+    service = ScannerService()
 
     # Start the first time
-    service.start_scan()
+    service.start_scan(scanner_factory=lambda: mock_scanner)
     assert execute_event.wait(timeout=1.0)
 
     # Calling it again while the first one is blocked should do nothing
-    service.start_scan()
+    service.start_scan(scanner_factory=lambda: mock_scanner)
 
     # Verify that mock_scanner.execute was only called once
     assert mock_scanner.execute.call_count == 1

@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 
 from endfield_essence_recognizer.core.scanner.context import ScannerContext
 from endfield_essence_recognizer.deps import (
-    build_scanner_context,
+    default_scanner_context,
     default_user_setting_manager,
     get_resolution_profile,
     get_window_manager_singleton,
@@ -43,7 +43,7 @@ def on_bracket_left():
     from endfield_essence_recognizer.essence_scanner import recognize_once
 
     window_manager: WindowManager = get_window_manager_singleton()
-    scanner_ctx: ScannerContext = build_scanner_context()
+    scanner_ctx: ScannerContext = default_scanner_context()
     if not window_manager.target_is_active:
         logger.debug("终末地窗口不在前台，忽略 '[' 键。")
         return
@@ -61,13 +61,17 @@ def toggle_scan():
     """切换基质扫描状态"""
     import winsound
 
-    from endfield_essence_recognizer.deps import get_scanner_service_singleton
+    from endfield_essence_recognizer.deps import (
+        get_essence_scanner_dep,
+        get_scanner_service,
+    )
 
-    scanner_service = get_scanner_service_singleton()
+    scanner_service = get_scanner_service()
 
     if not scanner_service.is_running():
         logger.info("开始扫描基质")
-        scanner_service.start_scan()
+        scanner = get_essence_scanner_dep()
+        scanner_service.start_scan(scanner_factory=lambda: scanner)
         with importlib.resources.as_file(
             enable_sound_path
         ) as enable_sound_path_ensured:
@@ -103,9 +107,9 @@ def on_exit():
     logger.info('检测到 "Alt+Delete"，正在退出程序...')
 
     # 停止扫描器
-    from endfield_essence_recognizer.deps import get_scanner_service_singleton
+    from endfield_essence_recognizer.deps import get_scanner_service
 
-    scanner_service = get_scanner_service_singleton()
+    scanner_service = get_scanner_service()
     if scanner_service.is_running():
         scanner_service.stop_scan()
 
@@ -174,9 +178,9 @@ def main():
 
     finally:
         # 停止基质扫描线程
-        from endfield_essence_recognizer.deps import get_scanner_service_singleton
+        from endfield_essence_recognizer.deps import get_scanner_service
 
-        scanner_service = get_scanner_service_singleton()
+        scanner_service = get_scanner_service()
         if scanner_service.is_running():
             scanner_service.stop_scan()
 

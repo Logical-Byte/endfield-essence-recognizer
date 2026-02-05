@@ -1,10 +1,10 @@
+from __future__ import annotations
+
 import threading
-from typing import TYPE_CHECKING, Callable
+from typing import Callable
 
+from endfield_essence_recognizer.essence_scanner import EssenceScanner
 from endfield_essence_recognizer.utils.log import logger
-
-if TYPE_CHECKING:
-    from endfield_essence_recognizer.essence_scanner import EssenceScanner
 
 
 class ScannerService:
@@ -18,25 +18,23 @@ class ScannerService:
 
     def __init__(
         self,
-        scanner_factory: Callable[[], "EssenceScanner"],
     ) -> None:
         """
         Initialize the ScannerService.
-
-        Args:
-            scanner_factory: A callable that returns a new instance of EssenceScanner.
         """
-        self._scanner_factory = scanner_factory
         self._thread: threading.Thread | None = None
         self._stop_event = threading.Event()  # Event to signal the thread to stop
         self._lock = threading.RLock()  # Reentrant lock for nested locking
 
-    def start_scan(self) -> None:
+    def start_scan(self, scanner_factory: Callable[[], EssenceScanner]) -> None:
         """
         Start the scanning process in a background thread.
 
         If a scan is already running, a warning is logged and nothing happens.
         If a previous thread exists but is dead, it is joined before a new one is started.
+
+        Args:
+            scanner_factory: A callable that returns a EssenceScanner instance.
         """
         with self._lock:
             if self.is_running():
@@ -49,7 +47,7 @@ class ScannerService:
 
             logger.info("正在启动扫描服务...")
             self._stop_event.clear()
-            scanner = self._scanner_factory()
+            scanner = scanner_factory()
 
             self._thread = threading.Thread(
                 target=scanner.execute,
@@ -89,12 +87,15 @@ class ScannerService:
         with self._lock:
             return self._thread is not None and self._thread.is_alive()
 
-    def toggle_scan(self) -> None:
+    def toggle_scan(self, scanner_factory: Callable[[], EssenceScanner]) -> None:
         """
         Toggle the scanning state.
 
         Starts the scan if it's not running, or stops it if it is.
         Uses a single lock to ensure atomicity of the toggle operation.
+
+        Args:
+            scanner_factory: A callable that returns a EssenceScanner instance. Called if starting a scan.
         """
         # Use a single lock for the whole toggle operation to prevent races
         # between checking and acting. RLock allows us to call start/stop internally.
@@ -102,4 +103,4 @@ class ScannerService:
             if self.is_running():
                 self.stop_scan()
             else:
-                self.start_scan()
+                self.start_scan(scanner_factory)
