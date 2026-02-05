@@ -227,7 +227,7 @@ def default_scanner_engine() -> ScannerEngine:
     """
     Get the default ScannerEngine instance.
 
-    Some functions need an ScannerEngine but are not called within FastAPI request context.
+    Some functions need a ScannerEngine but are not called within FastAPI request context.
     So we provide this default builder function.
     """
     window_manager = get_window_manager_singleton()
