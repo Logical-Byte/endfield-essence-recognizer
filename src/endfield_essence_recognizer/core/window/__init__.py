@@ -1,6 +1,6 @@
 from .manager import WindowManager
 
-SUPPORTED_WINDOW_TITLES = ["Endfield", "QQ"]
+SUPPORTED_WINDOW_TITLES = ["Endfield"]
 """List of window titles that the application supports interacting with."""
 
 __all__ = [
