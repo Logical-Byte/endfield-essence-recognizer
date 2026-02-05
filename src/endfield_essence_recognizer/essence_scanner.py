@@ -75,7 +75,7 @@ def judge_essence_quality(
             setting.high_level_treasure_secondary_threshold,  # 附加属性阈值
             setting.high_level_treasure_skill_threshold,  # 技能属性阈值
         ]
-        for stat, level in zip(stats, levels):
+        for stat, level in zip(stats, levels, strict=True):
             if stat is not None and level is not None:
                 gem = gem_table.get(stat)
                 if gem is not None:
