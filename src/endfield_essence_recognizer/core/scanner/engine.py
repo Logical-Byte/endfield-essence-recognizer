@@ -1,7 +1,6 @@
+import itertools
 import threading
 import time
-
-import numpy as np
 
 from endfield_essence_recognizer.core.interfaces import ImageSource, WindowActions
 from endfield_essence_recognizer.core.layout.base import ResolutionProfile
@@ -191,7 +190,9 @@ class ScannerEngine:
         icon_x_list = self._profile.essence_icon_x_list
         icon_y_list = self._profile.essence_icon_y_list
 
-        for i, j in np.ndindex(len(icon_y_list), len(icon_x_list)):
+        for (i, relative_y), (j, relative_x) in itertools.product(
+            enumerate(icon_y_list), enumerate(icon_x_list)
+        ):
             if not self._window_actions.target_is_active:
                 logger.info("终末地窗口不在前台，停止基质扫描。")
                 break
@@ -203,8 +204,6 @@ class ScannerEngine:
             logger.info(f"正在扫描第 {i + 1} 行第 {j + 1} 列的基质...")
 
             # 点击基质图标位置
-            relative_x = icon_x_list[j]
-            relative_y = icon_y_list[i]
             self._window_actions.click(relative_x, relative_y)
 
             # 等待短暂时间以确保界面更新
