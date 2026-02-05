@@ -68,7 +68,7 @@ jobs:
         run: uv sync --dev
 
       - name: Run tests
-        run: uv run pytest tests -v --ci -ra --junitxml=pytest-results.xml --junit_duration_report=total --junit_suite_name=backend-tests
+        run: uv run pytest tests -v --ci -ra --junitxml=pytest-results.xml
 
       - name: Publish test report
         uses: mikepenz/action-junit-report@v6
