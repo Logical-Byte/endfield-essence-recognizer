@@ -62,7 +62,7 @@ def toggle_scan():
     import winsound
 
     from endfield_essence_recognizer.deps import (
-        get_essence_scanner_dep,
+        default_essence_scanner,
         get_scanner_service,
     )
 
@@ -70,7 +70,7 @@ def toggle_scan():
 
     if not scanner_service.is_running():
         logger.info("开始扫描基质")
-        scanner = get_essence_scanner_dep()
+        scanner = default_essence_scanner()
         scanner_service.start_scan(scanner_factory=lambda: scanner)
         with importlib.resources.as_file(
             enable_sound_path
