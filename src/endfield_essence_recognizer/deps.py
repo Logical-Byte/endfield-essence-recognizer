@@ -5,8 +5,6 @@ FastAPI dependency injection.
 from functools import lru_cache
 from pathlib import Path
 
-from fastapi import Depends
-
 from endfield_essence_recognizer.core.layout.base import ResolutionProfile
 from endfield_essence_recognizer.core.layout.res_1080p import Resolution1080p
 from endfield_essence_recognizer.core.path import get_config_path
@@ -89,13 +87,11 @@ def get_user_setting_manager_singleton(user_setting_file: Path) -> UserSettingMa
     return _get_user_setting_manager_cached(absolute_path)
 
 
-def get_user_setting_manager_dep(
-    user_setting_file: Path = Depends(get_config_path_dep),
-) -> UserSettingManager:
+def get_user_setting_manager_dep() -> UserSettingManager:
     """
     Get the singleton UserSettingManager instance.
     """
-    return get_user_setting_manager_singleton(user_setting_file)
+    return get_user_setting_manager_singleton(get_config_path_dep())
 
 
 def default_user_setting_manager() -> UserSettingManager:
@@ -162,37 +158,20 @@ def default_scanner_context() -> ScannerContext:
     )
 
 
-def get_scanner_context_dep(
-    attr_recognizer: AttributeRecognizer = Depends(get_attribute_recognizer_dep),
-    attr_level_recognizer: AttributeLevelRecognizer = Depends(
-        get_attribute_level_recognizer_dep
-    ),
-    abandon_status_recognizer: AbandonStatusRecognizer = Depends(
-        get_abandon_status_recognizer_dep
-    ),
-    lock_status_recognizer: LockStatusRecognizer = Depends(
-        get_lock_status_recognizer_dep
-    ),
-    ui_scene_recognizer: UISceneRecognizer = Depends(get_ui_scene_recognizer_dep),
-) -> ScannerContext:
+def get_scanner_context_dep() -> ScannerContext:
     """
     Get a ScannerContext instance.
     """
     return ScannerContext(
-        attr_recognizer=attr_recognizer,
-        attr_level_recognizer=attr_level_recognizer,
-        abandon_status_recognizer=abandon_status_recognizer,
-        lock_status_recognizer=lock_status_recognizer,
-        ui_scene_recognizer=ui_scene_recognizer,
+        attr_recognizer=get_attribute_recognizer_dep(),
+        attr_level_recognizer=get_attribute_level_recognizer_dep(),
+        abandon_status_recognizer=get_abandon_status_recognizer_dep(),
+        lock_status_recognizer=get_lock_status_recognizer_dep(),
+        ui_scene_recognizer=get_ui_scene_recognizer_dep(),
     )
 
 
-def get_essence_scanner_dep(
-    ctx: ScannerContext = Depends(get_scanner_context_dep),
-    window_manager: WindowManager = Depends(get_window_manager_dep),
-    user_setting_manager: UserSettingManager = Depends(get_user_setting_manager_dep),
-    profile: ResolutionProfile = Depends(get_resolution_profile),
-) -> EssenceScanner:
+def get_essence_scanner_dep() -> EssenceScanner:
     """
     Get an EssenceScanner instance.
 
@@ -200,10 +179,10 @@ def get_essence_scanner_dep(
     support in the future.
     """
     return EssenceScanner(
-        ctx=ctx,
-        window_manager=window_manager,
-        user_setting_manager=user_setting_manager,
-        profile=profile,
+        ctx=get_scanner_context_dep(),
+        window_manager=get_window_manager_dep(),
+        user_setting_manager=get_user_setting_manager_dep(),
+        profile=get_resolution_profile(),
     )
 
 
