@@ -30,6 +30,10 @@ from endfield_essence_recognizer.core.window import (
     WindowManager,
 )
 from endfield_essence_recognizer.essence_scanner import EssenceScanner
+from endfield_essence_recognizer.services.audio_service import (
+    AudioService,
+    build_audio_service_profile,
+)
 from endfield_essence_recognizer.services.scanner_service import ScannerService
 from endfield_essence_recognizer.services.user_setting_manager import UserSettingManager
 
@@ -40,6 +44,17 @@ def get_resolution_profile() -> ResolutionProfile:
     Get the ResolutionProfile instance.
     """
     return Resolution1080p()
+
+
+# AudioService dependency
+
+
+@lru_cache()
+def get_audio_service() -> AudioService:
+    """
+    Get the AudioService singleton.
+    """
+    return AudioService(build_audio_service_profile())
 
 
 # WindowManager dependency

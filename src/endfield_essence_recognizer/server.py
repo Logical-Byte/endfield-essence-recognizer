@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Literal
 
+import keyboard
 import uvicorn
 from fastapi import Body, Depends, FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
@@ -12,14 +13,21 @@ from fastapi.staticfiles import StaticFiles
 
 from endfield_essence_recognizer.core.config import ServerConfig, get_server_config
 from endfield_essence_recognizer.core.path import get_logs_dir
+from endfield_essence_recognizer.core.scanner.context import ScannerContext
 from endfield_essence_recognizer.core.window import WindowManager
 from endfield_essence_recognizer.deps import (
+    default_essence_scanner,
+    default_scanner_context,
+    default_user_setting_manager,
+    get_audio_service,
     get_essence_scanner_dep,
+    get_resolution_profile,
     get_scanner_service,
     get_user_setting_manager_dep,
     get_window_manager_dep,
+    get_window_manager_singleton,
 )
-from endfield_essence_recognizer.essence_scanner import EssenceScanner
+from endfield_essence_recognizer.essence_scanner import EssenceScanner, recognize_once
 from endfield_essence_recognizer.models.user_setting import UserSetting
 from endfield_essence_recognizer.services.scanner_service import ScannerService
 from endfield_essence_recognizer.services.user_setting_manager import (
@@ -31,6 +39,65 @@ from endfield_essence_recognizer.utils.log import (
     websocket_handler,
 )
 from endfield_essence_recognizer.version import __version__
+
+
+def handle_keyboard_single_recognition():
+    """处理 "[" 键按下事件 - 仅识别不操作"""
+    window_manager: WindowManager = get_window_manager_singleton()
+    scanner_ctx: ScannerContext = default_scanner_context()
+    if not window_manager.target_is_active:
+        logger.debug("终末地窗口不在前台，忽略 '[' 键。")
+        return
+    else:
+        logger.info("检测到 '[' 键，开始识别基质")
+        recognize_once(
+            window_manager,
+            scanner_ctx,
+            default_user_setting_manager().get_user_setting(),
+            get_resolution_profile(),
+        )
+
+
+def handle_keyboard_toggle_scan():
+    """切换基质扫描状态"""
+    scanner_service = get_scanner_service()
+    audio_service = get_audio_service()
+
+    if not scanner_service.is_running():
+        logger.info("开始扫描基质")
+        scanner = default_essence_scanner()
+        scanner_service.start_scan(scanner_factory=lambda: scanner)
+        audio_service.play_enable()
+    else:
+        logger.info("停止扫描基质")
+        scanner_service.stop_scan()
+        audio_service.play_disable()
+
+
+def handle_keyboard_auto_click():
+    """处理 "]" 键按下事件 - 切换自动点击"""
+    window_manager: WindowManager = get_window_manager_singleton()
+
+    if not window_manager.target_is_active:
+        logger.debug('终末地窗口不在前台，忽略 "]" 键。')
+        return
+    else:
+        handle_keyboard_toggle_scan()
+
+
+def handle_keyboard_on_exit():
+    """处理 Alt+Delete 按下事件 - 退出程序"""
+    logger.info('检测到 "Alt+Delete"，正在退出程序...')
+
+    # 停止扫描器
+    scanner_service = get_scanner_service()
+    if scanner_service.is_running():
+        scanner_service.stop_scan()
+
+    # 关闭 webview 窗口，剩下的清理工作交给 main 函数
+    from endfield_essence_recognizer.webui import window
+
+    window.destroy()
 
 
 async def broadcast_logs():
@@ -79,6 +146,12 @@ async def lifespan(app: FastAPI):
         else:
             logger.error("未找到前端构建文件夹，请先执行前端构建！")
 
+    # 注册热键
+    keyboard.add_hotkey("[", handle_keyboard_single_recognition)
+    keyboard.add_hotkey("]", handle_keyboard_auto_click)
+    keyboard.add_hotkey("alt+delete", handle_keyboard_on_exit)
+    logger.info("全局热键已注册")
+
     global task
     task = asyncio.create_task(broadcast_logs())
     yield
@@ -88,6 +161,10 @@ async def lifespan(app: FastAPI):
             await task
         except asyncio.CancelledError:
             pass
+
+    # 注销热键
+    keyboard.unhook_all()
+    logger.info("全局热键已注销")
 
 
 websocket_connections: set[WebSocket] = set()
