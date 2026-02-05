@@ -49,7 +49,7 @@ disable_sound_path = (
 )
 
 
-def on_bracket_left():
+def handle_keyboard_single_recognition():
     """处理 "[" 键按下事件 - 仅识别不操作"""
     window_manager: WindowManager = get_window_manager_singleton()
     scanner_ctx: ScannerContext = default_scanner_context()
@@ -66,7 +66,7 @@ def on_bracket_left():
         )
 
 
-def toggle_scan():
+def handle_keyboard_toggle_scan():
     """切换基质扫描状态"""
     scanner_service = get_scanner_service()
 
@@ -93,7 +93,7 @@ def toggle_scan():
             )
 
 
-def on_bracket_right():
+def handle_keyboard_auto_click():
     """处理 "]" 键按下事件 - 切换自动点击"""
     window_manager: WindowManager = get_window_manager_singleton()
 
@@ -101,10 +101,10 @@ def on_bracket_right():
         logger.debug('终末地窗口不在前台，忽略 "]" 键。')
         return
     else:
-        toggle_scan()
+        handle_keyboard_toggle_scan()
 
 
-def on_exit():
+def handle_keyboard_on_exit():
     """处理 Alt+Delete 按下事件 - 退出程序"""
     logger.info('检测到 "Alt+Delete"，正在退出程序...')
 
@@ -166,9 +166,9 @@ async def lifespan(app: FastAPI):
             logger.error("未找到前端构建文件夹，请先执行前端构建！")
 
     # 注册热键
-    keyboard.add_hotkey("[", on_bracket_left)
-    keyboard.add_hotkey("]", on_bracket_right)
-    keyboard.add_hotkey("alt+delete", on_exit)
+    keyboard.add_hotkey("[", handle_keyboard_single_recognition)
+    keyboard.add_hotkey("]", handle_keyboard_auto_click)
+    keyboard.add_hotkey("alt+delete", handle_keyboard_on_exit)
     logger.info("全局热键已注册")
 
     global task
