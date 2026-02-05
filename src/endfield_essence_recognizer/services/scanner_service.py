@@ -6,12 +6,12 @@ from typing import TYPE_CHECKING, Callable
 from endfield_essence_recognizer.utils.log import logger
 
 if TYPE_CHECKING:
-    from endfield_essence_recognizer.essence_scanner import EssenceScanner
+    from endfield_essence_recognizer.core.scanner.engine import ScannerEngine
 
 
 class ScannerService:
     """
-    A service that manages the lifecycle of the EssenceScanner background thread.
+    A service that manages the lifecycle of the ScannerEngine background thread.
 
     This service ensures thread-safety using an RLock and provides methods to start,
     stop, and toggle the scanning process. It also ensures that only one scanning
@@ -28,7 +28,7 @@ class ScannerService:
         self._stop_event = threading.Event()  # Event to signal the thread to stop
         self._lock = threading.RLock()  # Reentrant lock for nested locking
 
-    def start_scan(self, scanner_factory: Callable[[], EssenceScanner]) -> None:
+    def start_scan(self, scanner_factory: Callable[[], ScannerEngine]) -> None:
         """
         Start the scanning process in a background thread.
 
@@ -36,7 +36,7 @@ class ScannerService:
         If a previous thread exists but is dead, it is joined before a new one is started.
 
         Args:
-            scanner_factory: A callable that returns a EssenceScanner instance.
+            scanner_factory: A callable that returns a ScannerEngine instance.
         """
         with self._lock:
             if self.is_running():
@@ -89,7 +89,7 @@ class ScannerService:
         with self._lock:
             return self._thread is not None and self._thread.is_alive()
 
-    def toggle_scan(self, scanner_factory: Callable[[], EssenceScanner]) -> None:
+    def toggle_scan(self, scanner_factory: Callable[[], ScannerEngine]) -> None:
         """
         Toggle the scanning state.
 
@@ -97,7 +97,7 @@ class ScannerService:
         Uses a single lock to ensure atomicity of the toggle operation.
 
         Args:
-            scanner_factory: A callable that returns a EssenceScanner instance. Called if starting a scan.
+            scanner_factory: A callable that returns a ScannerEngine instance. Called if starting a scan.
         """
         # Use a single lock for the whole toggle operation to prevent races
         # between checking and acting. RLock allows us to call start/stop internally.

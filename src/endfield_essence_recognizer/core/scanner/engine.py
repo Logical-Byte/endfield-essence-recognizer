@@ -4,6 +4,7 @@ from enum import StrEnum
 
 import numpy as np
 
+from endfield_essence_recognizer.core.interfaces import ImageSource, WindowActions
 from endfield_essence_recognizer.core.layout.base import ResolutionProfile
 from endfield_essence_recognizer.core.recognition import (
     AbandonStatusLabel,
@@ -13,23 +14,22 @@ from endfield_essence_recognizer.core.recognition.tasks.ui import UISceneLabel
 from endfield_essence_recognizer.core.scanner.context import (
     ScannerContext,
 )
-from endfield_essence_recognizer.core.window import WindowManager
 from endfield_essence_recognizer.models.user_setting import Action, UserSetting
 from endfield_essence_recognizer.services.user_setting_manager import UserSettingManager
 from endfield_essence_recognizer.utils.log import logger
 
 
 def check_scene(
-    window_manager: WindowManager, ctx: ScannerContext, profile: ResolutionProfile
+    image_source: ImageSource, ctx: ScannerContext, profile: ResolutionProfile
 ) -> bool:
-    width, height = window_manager.get_client_size()
+    width, height = image_source.get_client_size()
     if (width, height) != profile.RESOLUTION:
         logger.warning(
             f"检测到终末地窗口的客户区尺寸为 {width}x{height}，请将终末地分辨率调整为 {profile.RESOLUTION[0]}x{profile.RESOLUTION[1]} 窗口。"
         )
         return False
 
-    screenshot = window_manager.screenshot(profile.ESSENCE_UI_ROI)
+    screenshot = image_source.screenshot(profile.ESSENCE_UI_ROI)
     scene_label, _max_val = ctx.ui_scene_recognizer.recognize_roi_fallback(
         screenshot, fallback_label=UISceneLabel.UNKNOWN
     )
@@ -170,7 +170,7 @@ def judge_essence_quality(
 
 
 def recognize_essence(
-    window_manager: WindowManager,
+    image_source: ImageSource,
     ctx: ScannerContext,
     profile: ResolutionProfile,
 ) -> tuple[list[str | None], list[int | None], AbandonStatusLabel, LockStatusLabel]:
@@ -182,12 +182,12 @@ def recognize_essence(
     levels: list[int | None] = []
 
     # 截取客户区全局截图用于等级检测
-    full_screenshot = window_manager.screenshot()
+    full_screenshot = image_source.screenshot()
 
     rois = [profile.STATS_0_ROI, profile.STATS_1_ROI, profile.STATS_2_ROI]
 
     for k, roi in enumerate(rois):
-        screenshot_image = window_manager.screenshot(roi)
+        screenshot_image = image_source.screenshot(roi)
         attr, max_val = ctx.attr_recognizer.recognize_roi(screenshot_image)
         stats.append(attr)
         logger.debug(f"属性 {k} 识别结果: {attr} (分数: {max_val:.3f})")
@@ -201,14 +201,14 @@ def recognize_essence(
         else:
             logger.debug(f"属性 {k} 等级识别结果: 无法识别")
 
-    screenshot_image = window_manager.screenshot(profile.DEPRECATE_BUTTON_ROI)
+    screenshot_image = image_source.screenshot(profile.DEPRECATE_BUTTON_ROI)
     abandon_label, max_val = ctx.abandon_status_recognizer.recognize_roi_fallback(
         screenshot_image,
         fallback_label=AbandonStatusLabel.MAYBE_ABANDONED,
     )
     logger.debug(f"弃用按钮识别结果: {abandon_label.value} (分数: {max_val:.3f})")
 
-    screenshot_image = window_manager.screenshot(profile.LOCK_BUTTON_ROI)
+    screenshot_image = image_source.screenshot(profile.LOCK_BUTTON_ROI)
     locked_label, max_val = ctx.lock_status_recognizer.recognize_roi_fallback(
         screenshot_image,
         fallback_label=LockStatusLabel.MAYBE_LOCKED,
@@ -235,17 +235,17 @@ def recognize_essence(
 
 
 def recognize_once(
-    window_manager: WindowManager,
+    image_source: ImageSource,
     ctx: ScannerContext,
     user_setting: UserSetting,
     profile: ResolutionProfile,
 ) -> None:
-    check_scene_result = check_scene(window_manager, ctx, profile)
+    check_scene_result = check_scene(image_source, ctx, profile)
     if not check_scene_result:
         return
 
     stats, levels, abandon_label, lock_label = recognize_essence(
-        window_manager,
+        image_source,
         ctx,
         profile,
     )
@@ -259,23 +259,25 @@ def recognize_once(
     judge_essence_quality(user_setting, stats, levels)
 
 
-class EssenceScanner:
+class ScannerEngine:
     """
-    基质图标扫描器后台线程。
+    基质图标扫描器引擎。
 
-    此线程负责自动遍历游戏界面中的 45 个基质图标位置，
+    此引擎负责自动遍历游戏界面中的 45 个基质图标位置，
     对每个位置执行"点击 -> 截图 -> 识别"的流程。
     """
 
     def __init__(
         self,
         ctx: ScannerContext,
-        window_manager: WindowManager,
+        image_source: ImageSource,
+        window_actions: WindowActions,
         user_setting_manager: UserSettingManager,
         profile: ResolutionProfile,
     ) -> None:
         self.ctx: ScannerContext = ctx
-        self._window_manager: WindowManager = window_manager
+        self._image_source = image_source
+        self._window_actions = window_actions
         self._user_setting_manager: UserSettingManager = user_setting_manager
         self._profile: ResolutionProfile = profile
 
@@ -287,17 +289,17 @@ class EssenceScanner:
         )
 
     def execute(self, stop_event: threading.Event) -> None:
-        if not self._window_manager.target_exists:
+        if not self._window_actions.target_exists:
             logger.info("未找到终末地窗口，停止基质扫描。")
             return
 
-        if self._window_manager.restore():
+        if self._window_actions.restore():
             time.sleep(0.5)
 
-        if self._window_manager.activate():
+        if self._window_actions.activate():
             time.sleep(0.5)
 
-        check_scene_result = check_scene(self._window_manager, self.ctx, self._profile)
+        check_scene_result = check_scene(self._image_source, self.ctx, self._profile)
         if not check_scene_result:
             return
 
@@ -308,7 +310,7 @@ class EssenceScanner:
         icon_y_list = self._profile.essence_icon_y_list
 
         for i, j in np.ndindex(len(icon_y_list), len(icon_x_list)):
-            if not self._window_manager.target_is_active:
+            if not self._window_actions.target_is_active:
                 logger.info("终末地窗口不在前台，停止基质扫描。")
                 break
 
@@ -321,14 +323,14 @@ class EssenceScanner:
             # 点击基质图标位置
             relative_x = icon_x_list[j]
             relative_y = icon_y_list[i]
-            self._window_manager.click(relative_x, relative_y)
+            self._window_actions.click(relative_x, relative_y)
 
             # 等待短暂时间以确保界面更新
             time.sleep(0.3)
 
             # 识别基质信息
             stats, levels, abandon_label, lock_label = recognize_essence(
-                self._window_manager,
+                self._image_source,
                 self.ctx,
                 self._profile,
             )
@@ -352,7 +354,7 @@ class EssenceScanner:
                     and user_setting.trash_action == Action.LOCK
                 )
             ):
-                self._window_manager.click(
+                self._window_actions.click(
                     self._profile.LOCK_BUTTON_POS.x, self._profile.LOCK_BUTTON_POS.y
                 )
                 time.sleep(0.3)
@@ -369,7 +371,7 @@ class EssenceScanner:
                     in [Action.UNLOCK, Action.UNLOCK_AND_UNDEPRECATE]
                 )
             ):
-                self._window_manager.click(
+                self._window_actions.click(
                     self._profile.LOCK_BUTTON_POS.x, self._profile.LOCK_BUTTON_POS.y
                 )
                 time.sleep(0.3)
@@ -384,7 +386,7 @@ class EssenceScanner:
                     and user_setting.trash_action == Action.DEPRECATE
                 )
             ):
-                self._window_manager.click(
+                self._window_actions.click(
                     self._profile.DEPRECATE_BUTTON_POS.x,
                     self._profile.DEPRECATE_BUTTON_POS.y,
                 )
@@ -402,7 +404,7 @@ class EssenceScanner:
                     in [Action.UNDEPRECATE, Action.UNLOCK_AND_UNDEPRECATE]
                 )
             ):
-                self._window_manager.click(
+                self._window_actions.click(
                     self._profile.DEPRECATE_BUTTON_POS.x,
                     self._profile.DEPRECATE_BUTTON_POS.y,
                 )

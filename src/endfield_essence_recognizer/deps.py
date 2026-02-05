@@ -25,11 +25,11 @@ from endfield_essence_recognizer.core.recognition import (
 from endfield_essence_recognizer.core.scanner.context import (
     ScannerContext,
 )
+from endfield_essence_recognizer.core.scanner.engine import ScannerEngine
 from endfield_essence_recognizer.core.window import (
     SUPPORTED_WINDOW_TITLES,
     WindowManager,
 )
-from endfield_essence_recognizer.essence_scanner import EssenceScanner
 from endfield_essence_recognizer.services.audio_service import (
     AudioService,
     build_audio_service_profile,
@@ -202,36 +202,39 @@ def get_scanner_context_dep(
     )
 
 
-def get_essence_scanner_dep(
+def get_scanner_engine_dep(
     ctx: ScannerContext = Depends(get_scanner_context_dep),
     window_manager: WindowManager = Depends(get_window_manager_dep),
     user_setting_manager: UserSettingManager = Depends(get_user_setting_manager_dep),
     profile: ResolutionProfile = Depends(get_resolution_profile),
-) -> EssenceScanner:
+) -> ScannerEngine:
     """
-    Get an EssenceScanner instance.
+    Get a ScannerEngine instance.
 
     Note this dependency depends on ResolutionProfile, which will help multi-resolution
     support in the future.
     """
-    return EssenceScanner(
+    return ScannerEngine(
         ctx=ctx,
-        window_manager=window_manager,
+        image_source=window_manager,
+        window_actions=window_manager,
         user_setting_manager=user_setting_manager,
         profile=profile,
     )
 
 
-def default_essence_scanner() -> EssenceScanner:
+def default_scanner_engine() -> ScannerEngine:
     """
-    Get the default EssenceScanner instance.
+    Get the default ScannerEngine instance.
 
-    Some functions need an EssenceScanner but are not called within FastAPI request context.
+    Some functions need an ScannerEngine but are not called within FastAPI request context.
     So we provide this default builder function.
     """
-    return EssenceScanner(
+    window_manager = get_window_manager_singleton()
+    return ScannerEngine(
         ctx=default_scanner_context(),
-        window_manager=get_window_manager_singleton(),
+        image_source=window_manager,
+        window_actions=window_manager,
         user_setting_manager=default_user_setting_manager(),
         profile=get_resolution_profile(),
     )
