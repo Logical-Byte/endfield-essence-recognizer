@@ -34,8 +34,21 @@ def load_json_file(path: Traversable) -> Any:
 
 
 def load_table_cfg(filename: str) -> Any:
-    """加载 TableCfg 目录下的 JSON 文件并返回数据"""
-    return load_json_file(table_cfg_dir / filename)
+    """
+    加载 TableCfg 目录下的 JSON 文件并返回数据
+    如果在 GitHub Actions 环境中运行，则返回空的递归默认字典（CI 中暂时无法使用实际数据）
+    """
+    import os
+
+    if not os.environ.get("GITHUB_ACTIONS") == "true":
+        return load_json_file(table_cfg_dir / filename)
+    else:
+        from collections import defaultdict
+
+        def recursive_defaultdict():
+            return defaultdict(recursive_defaultdict)
+
+        return recursive_defaultdict()
 
 
 def get_translation(text_data: TranslationKey, language: str) -> str:
