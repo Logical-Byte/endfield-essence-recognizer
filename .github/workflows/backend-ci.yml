@@ -45,6 +45,9 @@ jobs:
   backend-test:
     name: Run tests
     runs-on: windows-latest
+    permissions:
+      contents: read
+      checks: write
     steps:
       - uses: actions/checkout@v5
 
