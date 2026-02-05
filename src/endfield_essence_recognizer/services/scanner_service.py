@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import threading
-from typing import Callable
+from typing import TYPE_CHECKING, Callable
 
-from endfield_essence_recognizer.essence_scanner import EssenceScanner
 from endfield_essence_recognizer.utils.log import logger
+
+if TYPE_CHECKING:
+    from endfield_essence_recognizer.essence_scanner import EssenceScanner
 
 
 class ScannerService:

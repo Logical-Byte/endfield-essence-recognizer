@@ -14,17 +14,6 @@ from endfield_essence_recognizer.core.scanner.context import (
     ScannerContext,
 )
 from endfield_essence_recognizer.core.window import WindowManager
-from endfield_essence_recognizer.game_data import (
-    gem_table,
-    get_translation,
-    weapon_basic_table,
-)
-from endfield_essence_recognizer.game_data.item import get_item_name
-from endfield_essence_recognizer.game_data.weapon import (
-    get_gem_tag_name,
-    weapon_stats_dict,
-    weapon_type_int_to_translation_key,
-)
 from endfield_essence_recognizer.models.user_setting import Action, UserSetting
 from endfield_essence_recognizer.services.user_setting_manager import UserSettingManager
 from endfield_essence_recognizer.utils.log import logger
@@ -63,6 +52,18 @@ def judge_essence_quality(
     levels: list[int | None] | None = None,
 ) -> EssenceQuality:
     """根据识别到的属性判断基质品质，并输出日志提示。"""
+
+    from endfield_essence_recognizer.game_data import (
+        gem_table,
+        get_translation,
+        weapon_basic_table,
+    )
+    from endfield_essence_recognizer.game_data.item import get_item_name
+    from endfield_essence_recognizer.game_data.weapon import (
+        get_gem_tag_name,
+        weapon_stats_dict,
+        weapon_type_int_to_translation_key,
+    )
 
     # 检查属性等级：如果启用了高等级判定，记录是否为高等级宝藏
     is_high_level_treasure = False
@@ -172,6 +173,10 @@ def recognize_essence(
     ctx: ScannerContext,
     profile: ResolutionProfile,
 ) -> tuple[list[str | None], list[int | None], AbandonStatusLabel, LockStatusLabel]:
+    from endfield_essence_recognizer.game_data.weapon import (
+        get_gem_tag_name,
+    )
+
     stats: list[str | None] = []
     levels: list[int | None] = []
 
