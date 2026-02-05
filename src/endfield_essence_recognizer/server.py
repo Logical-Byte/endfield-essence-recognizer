@@ -14,20 +14,23 @@ from fastapi.staticfiles import StaticFiles
 from endfield_essence_recognizer.core.config import ServerConfig, get_server_config
 from endfield_essence_recognizer.core.path import get_logs_dir
 from endfield_essence_recognizer.core.scanner.context import ScannerContext
+from endfield_essence_recognizer.core.scanner.engine import (
+    ScannerEngine,
+    recognize_once,
+)
 from endfield_essence_recognizer.core.window import WindowManager
 from endfield_essence_recognizer.deps import (
-    default_essence_scanner,
     default_scanner_context,
+    default_scanner_engine,
     default_user_setting_manager,
     get_audio_service,
-    get_essence_scanner_dep,
     get_resolution_profile,
+    get_scanner_engine_dep,
     get_scanner_service,
     get_user_setting_manager_dep,
     get_window_manager_dep,
     get_window_manager_singleton,
 )
-from endfield_essence_recognizer.essence_scanner import EssenceScanner, recognize_once
 from endfield_essence_recognizer.models.user_setting import UserSetting
 from endfield_essence_recognizer.services.scanner_service import ScannerService
 from endfield_essence_recognizer.services.user_setting_manager import (
@@ -65,7 +68,7 @@ def handle_keyboard_toggle_scan():
 
     if not scanner_service.is_running():
         logger.info("开始扫描基质")
-        scanner = default_essence_scanner()
+        scanner = default_scanner_engine()
         scanner_service.start_scan(scanner_factory=lambda: scanner)
         audio_service.play_enable()
     else:
@@ -250,7 +253,7 @@ async def get_version() -> str | None:
 
 @app.post("/api/start_scanning")
 async def start_scanning(
-    scanner: EssenceScanner = Depends(get_essence_scanner_dep),
+    scanner: ScannerEngine = Depends(get_scanner_engine_dep),
     scanner_service: ScannerService = Depends(get_scanner_service),
 ) -> None:
     scanner_service.toggle_scan(scanner_factory=lambda: scanner)
