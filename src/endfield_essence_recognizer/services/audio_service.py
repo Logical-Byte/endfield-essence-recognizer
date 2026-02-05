@@ -46,39 +46,33 @@ class SoundPlayer:
     """
     A specific player that manages a single sound resource.
 
-    It loads the sound data into memory upon initialization and
-    provides a method to play it.
+    It plays audio directly from the file system to support asynchronous playback.
+    Note: Combining SND_MEMORY with SND_ASYNC can cause RuntimeErrors, so we
+    use SND_FILENAME | SND_ASYNC and do not cache audio data in memory.
     """
 
     def __init__(self, resource: SoundResource) -> None:
         self._resource = resource
-        self._data: bytes | None = None
         try:
-            self._data = self._load_data(resource)
-        except (FileNotFoundError, OSError) as e:
-            logger.warning(f"Failed to load sound resource {resource.path}: {e}")
+            with importlib.resources.as_file(resource.path) as file_path:
+                if not file_path.exists():
+                    logger.warning(f"Sound resource not found: {file_path}")
         except Exception as e:
             logger.error(
-                f"Unexpected error loading sound resource {resource.path}: {e}"
+                f"Unexpected error checking sound resource {resource.path}: {e}"
             )
-
-    def _load_data(self, resource: SoundResource) -> bytes:
-        if isinstance(resource.path, Path):
-            return resource.path.read_bytes()
-        elif isinstance(resource.path, Traversable):
-            return resource.path.read_bytes()
-        else:
-            raise TypeError(f"Unsupported resource type: {type(resource.path)}")
 
     def play(self) -> None:
         """Play the sound. Raises exception on failure."""
-        if self._data is None:
-            logger.warning(
-                f"Cannot play sound, resource not loaded: {self._resource.path}"
-            )
-            return
+        # Ensure the resource is available as a file on the filesystem
+        with importlib.resources.as_file(self._resource.path) as file_path:
+            if not file_path.exists():
+                logger.warning(f"Cannot play sound, file not found: {file_path}")
+                return
 
-        winsound.PlaySound(self._data, winsound.SND_MEMORY | winsound.SND_ASYNC)
+            winsound.PlaySound(
+                str(file_path), winsound.SND_FILENAME | winsound.SND_ASYNC
+            )
 
 
 class AudioService:
@@ -92,10 +86,12 @@ class AudioService:
 
     def play_enable(self) -> None:
         """Play the enable notification sound."""
+        logger.debug("Playing enable sound")
         self._safe_play(self._enable_player)
 
     def play_disable(self) -> None:
         """Play the disable notification sound."""
+        logger.debug("Playing disable sound")
         self._safe_play(self._disable_player)
 
     def _safe_play(self, player: SoundPlayer) -> None:

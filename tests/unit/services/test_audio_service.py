@@ -34,7 +34,9 @@ def test_audio_service_play_enable(mock_winsound):
     """Test that play_enable calls winsound.PlaySound with correct data."""
     # Create a dummy file for testing
     mock_path = MagicMock(spec=Path)
-    mock_path.read_bytes.return_value = b"fake_wav_data"
+    mock_path.exists.return_value = True
+    # When converted to string, it should look like a path
+    mock_path.__str__.return_value = "fake/path/enable.wav"  # type: ignore
 
     profile = AudioServiceProfile(
         enable_sound=SoundResource(path=mock_path),
@@ -42,11 +44,14 @@ def test_audio_service_play_enable(mock_winsound):
     )
 
     service = AudioService(profile)
-    service.play_enable()
+    # Patch as_file to return our mock path directly context manager style
+    with patch("importlib.resources.as_file") as mock_as_file:
+        mock_as_file.return_value.__enter__.return_value = mock_path
+        service.play_enable()
 
     mock_winsound.PlaySound.assert_called_once()
     args, _ = mock_winsound.PlaySound.call_args
-    assert args[0] == b"fake_wav_data"
+    assert args[0] == "fake/path/enable.wav"
 
 
 @patch("endfield_essence_recognizer.services.audio_service.winsound")
@@ -54,7 +59,8 @@ def test_audio_service_play_disable(mock_winsound):
     """Test that play_enable calls winsound.PlaySound with correct data."""
     # Create a dummy file for testing
     mock_path = MagicMock(spec=Path)
-    mock_path.read_bytes.return_value = b"fake_wav_data"
+    mock_path.exists.return_value = True
+    mock_path.__str__.return_value = "fake/path/disable.wav"  # type: ignore
 
     profile = AudioServiceProfile(
         enable_sound=SoundResource(path=mock_path),
@@ -62,18 +68,21 @@ def test_audio_service_play_disable(mock_winsound):
     )
 
     service = AudioService(profile)
-    service.play_disable()
+
+    with patch("importlib.resources.as_file") as mock_as_file:
+        mock_as_file.return_value.__enter__.return_value = mock_path
+        service.play_disable()
 
     mock_winsound.PlaySound.assert_called_once()
     args, _ = mock_winsound.PlaySound.call_args
-    assert args[0] == b"fake_wav_data"
+    assert args[0] == "fake/path/disable.wav"
 
 
 @patch("endfield_essence_recognizer.services.audio_service.logger")
 def test_sound_player_missing_resource(mock_logger):
     """Test that SoundPlayer handles missing resource gracefully."""
     mock_path = MagicMock(spec=Path)
-    mock_path.read_bytes.side_effect = FileNotFoundError("File not found")
+    mock_path.exists.return_value = False
 
     resource = SoundResource(path=mock_path)
 
@@ -81,14 +90,15 @@ def test_sound_player_missing_resource(mock_logger):
     player = SoundPlayer(resource)
 
     mock_logger.warning.assert_called()
-    assert "Failed to load sound resource" in mock_logger.warning.call_args[0][0]
+    assert "Sound resource not found" in mock_logger.warning.call_args[0][0]
 
     # Play should log warning but not raise
-    player.play()
+    # We need to simulate as_file returning a path that doesn't exist
+    with patch("importlib.resources.as_file") as mock_as_file:
+        mock_as_file.return_value.__enter__.return_value = mock_path
+        player.play()
 
-    assert (
-        "Cannot play sound, resource not loaded" in mock_logger.warning.call_args[0][0]
-    )
+    assert "Cannot play sound, file not found" in mock_logger.warning.call_args[0][0]
 
 
 @patch("endfield_essence_recognizer.services.audio_service.logger")
@@ -96,7 +106,8 @@ def test_sound_player_missing_resource(mock_logger):
 def test_sound_player_play_error(mock_winsound, mock_logger):
     """Test that play handles unexpected errors gracefully."""
     mock_path = MagicMock(spec=Path)
-    mock_path.read_bytes.return_value = b"data"
+    mock_path.exists.return_value = True
+    mock_path.__str__.return_value = "fake/path/sound.wav"  # type: ignore
 
     resource = SoundResource(path=mock_path)
     # player = SoundPlayer(resource) # Start the player not needed, we use service
@@ -107,7 +118,9 @@ def test_sound_player_play_error(mock_winsound, mock_logger):
     profile = AudioServiceProfile(enable_sound=resource, disable_sound=resource)
     service = AudioService(profile)
 
-    service.play_enable()
+    with patch("importlib.resources.as_file") as mock_as_file:
+        mock_as_file.return_value.__enter__.return_value = mock_path
+        service.play_enable()
 
     mock_logger.error.assert_called()
     assert "Failed to play sound" in mock_logger.error.call_args[0][0]
