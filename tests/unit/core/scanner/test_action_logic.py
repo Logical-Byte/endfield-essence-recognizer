@@ -143,6 +143,12 @@ def test_deprecate_if_not_locked(default_data, default_eval, default_settings):
     actions = decide_actions(default_data, default_eval, default_settings)
     assert len(actions) == 0
 
+    # Case 3: Unlocked but ALREADY abandoned -> Should NOT deprecate (no action needed)
+    default_data.lock_label = LockStatusLabel.NOT_LOCKED
+    default_data.abandon_label = AbandonStatusLabel.ABANDONED
+    actions = decide_actions(default_data, default_eval, default_settings)
+    assert len(actions) == 0
+
 
 def test_lock_if_not_deprecated(default_data, default_eval, default_settings):
     """
@@ -161,5 +167,11 @@ def test_lock_if_not_deprecated(default_data, default_eval, default_settings):
     # Case 2: Abandoned -> Should NOT lock
     default_data.abandon_label = AbandonStatusLabel.ABANDONED
     default_data.lock_label = LockStatusLabel.NOT_LOCKED
+    actions = decide_actions(default_data, default_eval, default_settings)
+    assert len(actions) == 0
+
+    # Case 3: Not abandoned but ALREADY locked -> Should NOT lock (no action needed)
+    default_data.abandon_label = AbandonStatusLabel.NOT_ABANDONED
+    default_data.lock_label = LockStatusLabel.LOCKED
     actions = decide_actions(default_data, default_eval, default_settings)
     assert len(actions) == 0
