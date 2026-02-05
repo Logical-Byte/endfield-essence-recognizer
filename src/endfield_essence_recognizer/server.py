@@ -1,7 +1,6 @@
 import asyncio
 import importlib.resources
 import os
-import winsound
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Literal
@@ -20,6 +19,7 @@ from endfield_essence_recognizer.deps import (
     default_essence_scanner,
     default_scanner_context,
     default_user_setting_manager,
+    get_audio_service,
     get_essence_scanner_dep,
     get_resolution_profile,
     get_scanner_service,
@@ -39,14 +39,6 @@ from endfield_essence_recognizer.utils.log import (
     websocket_handler,
 )
 from endfield_essence_recognizer.version import __version__
-
-# 资源路径
-enable_sound_path = (
-    importlib.resources.files("endfield_essence_recognizer") / "sounds/enable.wav"
-)
-disable_sound_path = (
-    importlib.resources.files("endfield_essence_recognizer") / "sounds/disable.wav"
-)
 
 
 def handle_keyboard_single_recognition():
@@ -69,28 +61,17 @@ def handle_keyboard_single_recognition():
 def handle_keyboard_toggle_scan():
     """切换基质扫描状态"""
     scanner_service = get_scanner_service()
+    audio_service = get_audio_service()
 
     if not scanner_service.is_running():
         logger.info("开始扫描基质")
         scanner = default_essence_scanner()
         scanner_service.start_scan(scanner_factory=lambda: scanner)
-        with importlib.resources.as_file(
-            enable_sound_path
-        ) as enable_sound_path_ensured:
-            winsound.PlaySound(
-                str(enable_sound_path_ensured),
-                winsound.SND_FILENAME | winsound.SND_ASYNC,
-            )
+        audio_service.play_enable()
     else:
         logger.info("停止扫描基质")
         scanner_service.stop_scan()
-        with importlib.resources.as_file(
-            disable_sound_path
-        ) as disable_sound_path_ensured:
-            winsound.PlaySound(
-                str(disable_sound_path_ensured),
-                winsound.SND_FILENAME | winsound.SND_ASYNC,
-            )
+        audio_service.play_disable()
 
 
 def handle_keyboard_auto_click():
