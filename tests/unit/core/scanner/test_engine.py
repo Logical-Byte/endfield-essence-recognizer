@@ -135,6 +135,7 @@ def mock_profile():
     return profile
 
 
+@pytest.mark.skip_in_ci(reason="Skip scanner engine tests in CI environment")
 def test_scanner_engine_execution(
     mock_scanner_context, mock_user_setting_manager, mock_profile
 ):

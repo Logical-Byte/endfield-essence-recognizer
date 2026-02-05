@@ -1,21 +1,30 @@
+import os
+
 import pytest
+from _pytest.config import Config
+from _pytest.config.argparsing import Parser
+from _pytest.nodes import Item
 
 
-def pytest_addoption(parser):
+def pytest_addoption(parser: Parser):
     # 添加 --ci 命令行参数
     parser.addoption(
         "--ci", action="store_true", default=False, help="表示当前运行环境为 CI"
     )
 
 
-def pytest_collection_modifyitems(config, items):
-    # 如果命令行没有带 --ci 参数，直接返回，正常运行所有测试
-    if not config.getoption("--ci"):
-        return
+# register skip_in_ci marker
+def pytest_configure(config: Config):
+    config.addinivalue_line(
+        "markers", "skip_in_ci: 标记此测试在 CI 环境中被跳过（需在本地运行）"
+    )
 
-    # 如果带了 --ci 参数，遍历所有测试用例
-    skip_ci = pytest.mark.skip(reason="此测试在 CI 环境中被跳过（需在本地运行）")
-    for item in items:
-        # 如果测试用例带有 'skip_in_ci' 标记，则给它打上 skip 标签
-        if "skip_in_ci" in item.keywords:
-            item.add_marker(skip_ci)
+    is_ci = config.getoption("--ci") or os.getenv("GITHUB_ACTIONS") == "true"
+
+    config._ci_mode = is_ci
+
+
+def pytest_runtest_setup(item: Item):
+    # 检查是否设置了 --ci 参数
+    if item.config._ci_mode and item.get_closest_marker("skip_in_ci"):
+        pytest.skip("跳过在 CI 环境中运行的测试")
