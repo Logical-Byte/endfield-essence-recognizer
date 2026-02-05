@@ -3,7 +3,7 @@ from __future__ import annotations
 from enum import StrEnum
 from typing import Any, ClassVar
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class Action(StrEnum):
@@ -22,7 +22,7 @@ class EssenceStats(BaseModel):
 
 
 class UserSetting(BaseModel):
-    _VERSION: ClassVar[int] = 0
+    _VERSION: ClassVar[int] = 2
 
     version: int = _VERSION
 
@@ -34,8 +34,12 @@ class UserSetting(BaseModel):
 
     high_level_treasure_enabled: bool = False
     """是否启用高等级基质属性词条判定为宝藏"""
-    high_level_treasure_threshold: int = 3
-    """高等级基质属性词条的等级阈值 (+3 或 +4)"""
+    high_level_treasure_attribute_threshold: int = Field(default=3, ge=1, le=6)
+    """高等级基础属性词条的等级阈值（+1~+6）"""
+    high_level_treasure_secondary_threshold: int = Field(default=3, ge=1, le=6)
+    """高等级附加属性词条的等级阈值（+1~+6）"""
+    high_level_treasure_skill_threshold: int = Field(default=3, ge=1, le=3)
+    """高等级技能属性词条的等级阈值（+1~+3）"""
 
     def update_from_model(self, other: UserSetting) -> None:
         for field in self.__class__.model_fields:

@@ -49,7 +49,7 @@ class EssenceQuality(StrEnum):
 def judge_essence_quality(
     setting: UserSetting,
     stats: list[str | None],
-    levels: list[int | None] | None = None,
+    levels: list[int | None],
 ) -> EssenceQuality:
     """根据识别到的属性判断基质品质，并输出日志提示。"""
 
@@ -68,21 +68,22 @@ def judge_essence_quality(
     # 检查属性等级：如果启用了高等级判定，记录是否为高等级宝藏
     is_high_level_treasure = False
     high_level_info = ""
-    if setting.high_level_treasure_enabled and levels is not None:
-        for stat, level in zip(stats, levels, strict=False):
-            if (
-                stat is not None
-                and level is not None
-                and level >= setting.high_level_treasure_threshold
-            ):
-                # 检查该词条是否为有效词条 (termType == 0/1/2，即基础属性、附加属性或技能属性)
+    if setting.high_level_treasure_enabled:
+        # stats 的顺序是 [基础属性, 附加属性, 技能属性]，对应 termType [0, 1, 2]
+        thresholds = [
+            setting.high_level_treasure_attribute_threshold,  # 基础属性阈值
+            setting.high_level_treasure_secondary_threshold,  # 附加属性阈值
+            setting.high_level_treasure_skill_threshold,  # 技能属性阈值
+        ]
+        for stat, level in zip(stats, levels):
+            if stat is not None and level is not None:
                 gem = gem_table.get(stat)
-                if gem is not None and gem.get("termType") in (0, 1, 2):
-                    is_high_level_treasure = True
-                    high_level_info = (
-                        f"（含高等级属性词条：{get_gem_tag_name(stat, 'CN')}+{level}）"
-                    )
-                    break
+                if gem is not None:
+                    threshold = thresholds[gem["termType"]]
+                    if level >= threshold:
+                        is_high_level_treasure = True
+                        high_level_info = f"（含高等级属性词条：{get_gem_tag_name(stat, 'CN')}+{level}）"
+                        break
 
     # 尝试匹配用户自定义的宝藏基质条件
     for treasure_stat in setting.treasure_essence_stats:
