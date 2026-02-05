@@ -35,13 +35,13 @@ def decide_actions(
     Decides what physical actions to perform based on the current state vs desired quality.
 
     Logic:
-    - If locked but should be unlocked (based on Trash/Treasure settings), return CLICK_LOCK action with "Unlocked" message.
-    - If unlocked but should be locked, return CLICK_LOCK action with "Locked" message.
-    - If abandoned but should be kept, return CLICK_ABANDON with "Unabandoned" message.
-    - If kept but should be abandoned, return CLICK_ABANDON with "Abandoned" message.
+    - If locked but should be unlocked (based on Trash/Treasure settings), return CLICK_LOCK action with a Chinese feedback message indicating it was unlocked.
+    - If unlocked but should be locked, return CLICK_LOCK action with a Chinese feedback message indicating it was locked.
+    - If abandoned but should be kept, return CLICK_ABANDON with a Chinese feedback message indicating abandonment was cancelled.
+    - If kept but should be abandoned, return CLICK_ABANDON with a Chinese feedback message indicating it was marked as abandoned.
 
     Note:
-    - Message should be in Chinese, and align with the current implementation for consistency.
+    - Messages are localized (Chinese), and the exact text is implementation-specific but should align with the current implementation for consistency.
 
     Args:
         data: Current state of the essence (locked?, observed?).

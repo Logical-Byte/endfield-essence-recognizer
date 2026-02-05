@@ -39,15 +39,15 @@ def evaluate_essence(data: EssenceData, setting: UserSetting) -> EvaluationResul
     stats = data.stats
     levels = data.levels
 
-    # 检查属性等级：如果启用了高等级判定，记录是否为高等级宝藏
+    # Check attribute levels: if high-level evaluation is enabled, record whether it is a high-level treasure
     is_high_level_treasure = False
     high_level_info = ""
     if setting.high_level_treasure_enabled:
-        # stats 的顺序是 [基础属性, 附加属性, 技能属性]，对应 termType [0, 1, 2]
+        # The order of stats is [attribute, secondary, skill], corresponding to termType [0, 1, 2]
         thresholds = [
-            setting.high_level_treasure_attribute_threshold,  # 基础属性阈值
-            setting.high_level_treasure_secondary_threshold,  # 附加属性阈值
-            setting.high_level_treasure_skill_threshold,  # 技能属性阈值
+            setting.high_level_treasure_attribute_threshold,  # attribute threshold
+            setting.high_level_treasure_secondary_threshold,  # secondary stat threshold
+            setting.high_level_treasure_skill_threshold,  # skill stat threshold
         ]
         for stat, level in zip(stats, levels, strict=True):
             if stat is not None and level is not None:

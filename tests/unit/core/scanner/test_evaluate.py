@@ -122,9 +122,6 @@ def test_evaluate_weapon_match_treasure(
     result = evaluate_essence(default_essence_data, default_settings)
     assert result.quality == EssenceQuality.TREASURE
     assert "TestWeapon" in result.log_message
-    assert (
-        "matches" not in result.matched_weapons
-    )  # Wait, implementation returns matched_weapons set
     assert "weapon_1" in result.matched_weapons
 
 
