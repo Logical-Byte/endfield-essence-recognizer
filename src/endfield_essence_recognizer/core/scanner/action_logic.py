@@ -66,6 +66,11 @@ def decide_actions(
         should_lock = True
     elif target_action in [Action.UNLOCK, Action.UNLOCK_AND_UNDEPRECATE]:
         should_unlock = True
+    elif (
+        target_action == Action.LOCK_IF_NOT_DEPRECATED
+        and data.abandon_label == AbandonStatusLabel.NOT_ABANDONED
+    ):
+        should_lock = True
 
     if data.lock_label == LockStatusLabel.NOT_LOCKED and should_lock:
         actions.append(
@@ -89,6 +94,11 @@ def decide_actions(
         should_abandon = True
     elif target_action in [Action.UNDEPRECATE, Action.UNLOCK_AND_UNDEPRECATE]:
         should_unabandon = True
+    elif (
+        target_action == Action.DEPRECATE_IF_NOT_LOCKED
+        and data.lock_label == LockStatusLabel.NOT_LOCKED
+    ):
+        should_abandon = True
 
     if data.abandon_label == AbandonStatusLabel.NOT_ABANDONED and should_abandon:
         actions.append(
