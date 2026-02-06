@@ -40,8 +40,10 @@ class ScreenshotService:
             logger.debug(
                 "[ScreenshotService] Activating game window before screenshot."
             )
-            self._window_manager.activate()
-            await asyncio.sleep(0.2)
+            if self._window_manager.restore():
+                await asyncio.sleep(0.2)
+            if self._window_manager.activate():
+                await asyncio.sleep(0.2)
 
         # Capture screenshot
         logger.debug("[ScreenshotService] Capturing screenshot of the game window.")
