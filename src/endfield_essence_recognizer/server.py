@@ -163,6 +163,8 @@ def init_mount_frontend_build(app: FastAPI, server_config: ServerConfig):
 
     Args:
         app: The FastAPI application instance to mount the static files on.
+        server_config: The server configuration specifying dev mode and the frontend
+            distribution directory to mount.
     """
     if server_config.dev_mode:
         # dev mode uses Vite dev server, no need to mount static files
