@@ -32,6 +32,10 @@ from endfield_essence_recognizer.deps import (
     get_window_manager_dep,
     get_window_manager_singleton,
 )
+from endfield_essence_recognizer.models.screenshot import (
+    ScreenshotRequest,
+    ScreenshotResponse,
+)
 from endfield_essence_recognizer.models.user_setting import UserSetting
 from endfield_essence_recognizer.services.log_service import LogService
 from endfield_essence_recognizer.services.scanner_service import ScannerService
@@ -270,6 +274,25 @@ async def get_screenshot(
     base64_string = base64.b64encode(encoded_bytes.tobytes()).decode("utf-8")
 
     return f"data:{mime_type};base64,{base64_string}"
+
+
+@app.post(
+    "/api/take_and_save_screenshot",
+    description="后端截图并保存到本地，返回文件路径和文件名",
+)
+async def take_and_save_screenshot(
+    request: ScreenshotRequest,
+) -> ScreenshotResponse:
+    """Takes a screenshot and saves it to a local directory."""
+    # TODO: Implementation
+    _ = request
+    dummy_response = ScreenshotResponse(
+        success=True,
+        message="截图成功",
+        file_path="C:/dummy/path/Endfield_screenshot.png",
+        file_name="Endfield_screenshot.png",
+    )
+    return dummy_response
 
 
 @app.get("/api/version")
