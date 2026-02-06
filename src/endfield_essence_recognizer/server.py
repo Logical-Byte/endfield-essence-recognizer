@@ -119,7 +119,7 @@ def bind_hotkeys():
 
 
 def log_welcome_message():
-    # 打印欢迎信息
+    """Log a formatted welcome and usage guide message to the logger."""
     message = """
 ==================================================
 <green><bold>终末地基质妙妙小工具已启动</></>
