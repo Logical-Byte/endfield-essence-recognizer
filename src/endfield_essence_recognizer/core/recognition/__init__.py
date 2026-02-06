@@ -23,6 +23,14 @@ from .tasks.attribute_level import (
     AttributeLevelRecognizer,
     build_attribute_level_recognizer_profile,
 )
+from .tasks.delivery_job_reward import (
+    DeliveryJobRewardLabel,
+    build_delivery_job_reward_profile,
+)
+from .tasks.delivery_ui import (
+    DeliverySceneLabel,
+    build_delivery_scene_profile,
+)
 from .tasks.ui import (
     UISceneLabel,
     build_ui_scene_profile,
@@ -41,6 +49,12 @@ type LockStatusRecognizer = Recognizer[LockStatusLabel]
 
 type UISceneRecognizer = Recognizer[UISceneLabel]
 """识别UI场景的识别器类型别名，返回 UISceneLabel 标签"""
+
+type DeliverySceneRecognizer = Recognizer[DeliverySceneLabel]
+"""识别派遣场景的识别器类型别名，返回 DeliverySceneLabel 标签"""
+
+type DeliveryJobRewardRecognizer = Recognizer[DeliveryJobRewardLabel]
+"""识别派遣奖励的识别器类型别名，返回 DeliveryJobRewardLabel 标签"""
 
 # Factory functions
 
@@ -75,6 +89,18 @@ def prepare_ui_scene_recognizer() -> UISceneRecognizer:
 
 
 @lru_cache()
+def prepare_delivery_scene_recognizer() -> DeliverySceneRecognizer:
+    return prepare_recognizer("DeliverySceneRecognizer", build_delivery_scene_profile())
+
+
+@lru_cache()
+def prepare_delivery_job_reward_recognizer() -> DeliveryJobRewardRecognizer:
+    return prepare_recognizer(
+        "DeliveryJobRewardRecognizer", build_delivery_job_reward_profile()
+    )
+
+
+@lru_cache()
 def prepare_attribute_level_recognizer() -> AttributeLevelRecognizer:
     return AttributeLevelRecognizer(
         "AttributeLevelRecognizer", build_attribute_level_recognizer_profile()
@@ -86,10 +112,14 @@ __all__ = [
     "AbandonStatusLabel",
     "LockStatusLabel",
     "UISceneLabel",
+    "DeliverySceneLabel",
+    "DeliveryJobRewardLabel",
     "AttributeRecognizer",
     "AbandonStatusRecognizer",
     "LockStatusRecognizer",
     "UISceneRecognizer",
+    "DeliverySceneRecognizer",
+    "DeliveryJobRewardRecognizer",
     "AttributeLevelRecognizer",
     "TemplateDescriptor",
     "RecognitionProfile",
@@ -101,5 +131,7 @@ __all__ = [
     "prepare_abandon_status_recognizer",
     "prepare_lock_status_recognizer",
     "prepare_ui_scene_recognizer",
+    "prepare_delivery_scene_recognizer",
+    "prepare_delivery_job_reward_recognizer",
     "prepare_attribute_level_recognizer",
 ]

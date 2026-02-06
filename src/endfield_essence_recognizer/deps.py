@@ -14,11 +14,15 @@ from endfield_essence_recognizer.core.recognition import (
     AbandonStatusRecognizer,
     AttributeLevelRecognizer,
     AttributeRecognizer,
+    DeliveryJobRewardRecognizer,
+    DeliverySceneRecognizer,
     LockStatusRecognizer,
     UISceneRecognizer,
     prepare_abandon_status_recognizer,
     prepare_attribute_level_recognizer,
     prepare_attribute_recognizer,
+    prepare_delivery_job_reward_recognizer,
+    prepare_delivery_scene_recognizer,
     prepare_lock_status_recognizer,
     prepare_ui_scene_recognizer,
 )
@@ -176,6 +180,20 @@ def get_ui_scene_recognizer_dep() -> UISceneRecognizer:
     Get the default UI scene Recognizer instance.
     """
     return prepare_ui_scene_recognizer()
+
+
+def get_delivery_scene_recognizer_dep() -> DeliverySceneRecognizer:
+    """
+    Get the default delivery scene Recognizer instance.
+    """
+    return prepare_delivery_scene_recognizer()
+
+
+def get_delivery_job_reward_recognizer_dep() -> DeliveryJobRewardRecognizer:
+    """
+    Get the default delivery job reward Recognizer instance.
+    """
+    return prepare_delivery_job_reward_recognizer()
 
 
 # Scanner-related dependencies
