@@ -87,7 +87,8 @@ class UserSettingManager:
         result = _load_user_setting_from_file(UserSetting, target_path)
         if result is not None:
             self._user_setting = result
-            logger.info("已加载配置文件：{}", self._user_setting.model_dump())
+            logger.info("加载配置成功。")
+            logger.debug("当前配置内容：{}", self._user_setting.model_dump())
             return
         # Handle invalid or non-existing file
         if target_path.is_file():
@@ -100,12 +101,11 @@ class UserSettingManager:
             logger.warning(
                 "配置文件版本不匹配或无效，已备份旧配置到：{}", backup_path.resolve()
             )
+            logger.info("创建并使用默认配置。")
         else:
             logger.info("未找到配置文件，使用默认配置。")
         # Use default settings
         self._user_setting = UserSetting()
-        logger.info("使用默认配置：{}", self._user_setting.model_dump())
-
         # Save default settings to disk
         self.save_user_setting(target_path)
 

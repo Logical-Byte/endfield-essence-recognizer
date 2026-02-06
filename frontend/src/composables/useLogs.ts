@@ -7,6 +7,9 @@ const ansiConverter = new Convert({
   newline: false,
   escapeXML: false,
   stream: false,
+  colors: {
+    4: '#49a4ff',
+  },
 })
 
 export const logs = ref<string[]>([])

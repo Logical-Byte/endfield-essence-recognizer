@@ -30,8 +30,12 @@ class BrightnessDetector:
     一个简单的亮度检测器，用于判断图像中某个点周围的区域是否“足够亮”。
     """
 
-    def __init__(self, profile: BrightnessDetectorProfile) -> None:
+    def __init__(self, name: str, profile: BrightnessDetectorProfile) -> None:
+        self.name = name
         self.profile = profile
+
+    def __str__(self) -> str:
+        return f"[{self.name}]"
 
     def is_bright(self, image: MatLike, point: Point) -> bool:
         """
@@ -47,7 +51,7 @@ class BrightnessDetector:
         height, width = image.shape[:2]
         region = make_region_from_center(point, self.profile.sample_radius)
         if region_out_of_bounds(region, width, height):
-            logger.warning(f"坐标点 {point} 超出图像范围")
+            logger.warning(f"{self}坐标点 {point} 超出图像范围")
             return False
 
         roi_image = image[region.y0 : region.y1, region.x0 : region.x1]
@@ -55,6 +59,6 @@ class BrightnessDetector:
 
         is_active = avg_brightness > self.profile.threshold
         logger.trace(
-            f"坐标点 {point} 亮度={avg_brightness:.1f}, 状态={'亮色' if is_active else '暗色'}"
+            f"{self}坐标点 {point} 亮度={avg_brightness:.1f}, 状态={'亮色' if is_active else '暗色'}"
         )
         return is_active

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from collections import deque
 from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING
 
@@ -60,13 +61,19 @@ class LogService:
 
     """
 
-    def __init__(self, batch_size: int = 32, batch_timeout: float = 0.05) -> None:
+    def __init__(
+        self,
+        batch_size: int = 32,
+        batch_timeout: float = 0.05,
+        history_size: int = 1000,
+    ) -> None:
         self._connections: set[WebSocket] = set()
         self._queue: asyncio.Queue[str] = asyncio.Queue()
         self._broadcast_task: asyncio.Task[None] | None = None
         self._handler_id: int | None = None
         self.batch_size = batch_size
         self.batch_timeout = batch_timeout
+        self._history: deque[str] = deque(maxlen=history_size)
 
     def log_sink(self, message: str) -> None:
         """
@@ -74,11 +81,21 @@ class LogService:
         """
         self._queue.put_nowait(message)
 
-    def add_connection(self, websocket: WebSocket) -> None:
+    async def add_connection(self, websocket: WebSocket) -> None:
         """
         Register a new WebSocket connection for log broadcasting. This should be called
         when a new client connects to a specific endpoint of the server.
         """
+        # Replay history before adding to connections to ensure order
+        if self._history:
+            try:
+                history_data = "".join(self._history)
+                await websocket.send_text(history_data)
+            except Exception as e:
+                logger.error(f"Error replaying log history: {e}")
+                # If we can't send history, the connection is probably dead
+                return
+
         self._connections.add(websocket)
         logger.debug(f"Log WebSocket connection added. Total: {len(self._connections)}")
 
@@ -100,6 +117,9 @@ class LogService:
                 batch: list[str] = await _collect_batch(
                     self._queue, self.batch_size, self.batch_timeout
                 )
+
+                # Store in history regardless of whether connections exist
+                self._history.extend(batch)
 
                 if not self._connections:
                     for _ in batch:
@@ -136,7 +156,7 @@ class LogService:
         """
         if self._broadcast_task is None or self._broadcast_task.done():
             self._broadcast_task = asyncio.create_task(self.broadcast_loop())
-            logger.info("Log broadcast service started.")
+            logger.debug("Log broadcast service started.")
 
     async def stop(self) -> None:
         """
@@ -158,7 +178,7 @@ class LogService:
             except Exception as e:
                 logger.warning(f"Error while closing WebSocket connection: {e}")
         self._connections.clear()
-        logger.info("Log broadcast service stopped.")
+        logger.debug("Log broadcast service stopped.")
 
     @asynccontextmanager
     async def scope(self, config: ServerConfig):

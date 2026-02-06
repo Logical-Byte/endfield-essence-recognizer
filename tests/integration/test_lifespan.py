@@ -32,7 +32,7 @@ async def test_lifespan_integration_log_service():
 
             # Verify log capture works by adding a mock connection
             mock_ws = AsyncMock()
-            log_service.add_connection(mock_ws)
+            await log_service.add_connection(mock_ws)
 
             logger.info("Integration test log message")
 

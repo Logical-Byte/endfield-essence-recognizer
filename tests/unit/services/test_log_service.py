@@ -1,5 +1,5 @@
 import asyncio
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
 
 import pytest
 from loguru import logger
@@ -26,8 +26,8 @@ async def test_log_sink_puts_in_queue(log_service: LogService):
 @pytest.mark.asyncio
 async def test_add_remove_connection(log_service: LogService):
     """Test adding and removing WebSocket connections from the service."""
-    mock_ws = MagicMock()
-    log_service.add_connection(mock_ws)
+    mock_ws = AsyncMock()
+    await log_service.add_connection(mock_ws)
     assert mock_ws in log_service._connections
 
     log_service.remove_connection(mock_ws)
@@ -42,7 +42,7 @@ async def test_broadcast_loop_sends_to_websockets(log_service: LogService):
     sent_event = asyncio.Event()
     mock_ws.send_text.side_effect = lambda *args, **kwargs: sent_event.set()
 
-    log_service.add_connection(mock_ws)
+    await log_service.add_connection(mock_ws)
 
     # Start broadcast loop in background
     task = asyncio.create_task(log_service.broadcast_loop())
@@ -84,7 +84,7 @@ async def test_broadcast_multiple_messages(log_service: LogService):
             all_found_event.set()
 
     mock_ws.send_text.side_effect = mock_send_text
-    log_service.add_connection(mock_ws)
+    await log_service.add_connection(mock_ws)
 
     # Start broadcast loop
     task = asyncio.create_task(log_service.broadcast_loop())
@@ -221,7 +221,7 @@ async def test_scope_context_manager(log_service: LogService):
     sent_event = asyncio.Event()
     mock_ws.send_text.side_effect = lambda *args, **kwargs: sent_event.set()
 
-    log_service.add_connection(mock_ws)
+    await log_service.add_connection(mock_ws)
 
     async with log_service.scope(config):
         assert log_service._broadcast_task is not None
@@ -242,3 +242,57 @@ async def test_scope_context_manager(log_service: LogService):
 
     assert log_service._broadcast_task is None
     assert log_service._handler_id is None
+
+
+@pytest.mark.asyncio
+async def test_log_history_replay(log_service: LogService):
+    """Test that connections receive existing history upon joining."""
+    messages = ["Log 1\n", "Log 2\n", "Log 3\n"]
+
+    # 1. Fill history without any connections
+    # We need to run broadcast_loop to move items from queue to history
+    task = asyncio.create_task(log_service.broadcast_loop())
+
+    for msg in messages:
+        log_service.log_sink(msg)
+
+    # Wait for processing
+    await asyncio.sleep(0.1)
+
+    # 2. Add a new connection and verify history is replayed
+    mock_ws = AsyncMock()
+    await log_service.add_connection(mock_ws)
+
+    # Verify send_text was called with combined history
+    mock_ws.send_text.assert_called_with("".join(messages))
+
+    task.cancel()
+    try:
+        await task
+    except asyncio.CancelledError:
+        pass
+
+
+@pytest.mark.asyncio
+async def test_log_history_size_limit():
+    """Test that history size is correctly capped."""
+    history_size = 5
+    log_service = LogService(history_size=history_size)
+
+    task = asyncio.create_task(log_service.broadcast_loop())
+
+    # Send more than history_size messages
+    for i in range(10):
+        log_service.log_sink(f"msg{i}")
+
+    await asyncio.sleep(0.1)
+
+    assert len(log_service._history) == history_size
+    # Should contain the LAST 5 messages
+    assert list(log_service._history) == [f"msg{i}" for i in range(5, 10)]
+
+    task.cancel()
+    try:
+        await task
+    except asyncio.CancelledError:
+        pass

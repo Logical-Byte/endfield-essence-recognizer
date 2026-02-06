@@ -27,7 +27,7 @@ def profile(mock_template_path):
 
 @pytest.fixture
 def recognizer(profile):
-    return Recognizer(profile)
+    return Recognizer("TestRecognizer", profile)
 
 
 def test_load_templates(recognizer, mock_template_path):
