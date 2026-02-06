@@ -121,3 +121,57 @@ def test_mixed_actions_unlock_undeprecate(default_data, default_eval, default_se
     types = [a.type for a in actions]
     assert ActionType.CLICK_LOCK in types  # To unlock
     assert ActionType.CLICK_ABANDON in types  # To undeprecate
+
+
+def test_deprecate_if_not_locked(default_data, default_eval, default_settings):
+    """
+    Test DEPRECATE_IF_NOT_LOCKED logic.
+    """
+    default_eval.quality = EssenceQuality.TRASH
+    default_settings.trash_action = Action.DEPRECATE_IF_NOT_LOCKED
+
+    # Case 1: Unlocked -> Should deprecate
+    default_data.lock_label = LockStatusLabel.NOT_LOCKED
+    default_data.abandon_label = AbandonStatusLabel.NOT_ABANDONED
+    actions = decide_actions(default_data, default_eval, default_settings)
+    assert len(actions) == 1
+    assert actions[0].type == ActionType.CLICK_ABANDON
+
+    # Case 2: Locked -> Should NOT deprecate
+    default_data.lock_label = LockStatusLabel.LOCKED
+    default_data.abandon_label = AbandonStatusLabel.NOT_ABANDONED
+    actions = decide_actions(default_data, default_eval, default_settings)
+    assert len(actions) == 0
+
+    # Case 3: Unlocked but ALREADY abandoned -> Should NOT deprecate (no action needed)
+    default_data.lock_label = LockStatusLabel.NOT_LOCKED
+    default_data.abandon_label = AbandonStatusLabel.ABANDONED
+    actions = decide_actions(default_data, default_eval, default_settings)
+    assert len(actions) == 0
+
+
+def test_lock_if_not_deprecated(default_data, default_eval, default_settings):
+    """
+    Test LOCK_IF_NOT_DEPRECATED logic.
+    """
+    default_eval.quality = EssenceQuality.TREASURE
+    default_settings.treasure_action = Action.LOCK_IF_NOT_DEPRECATED
+
+    # Case 1: Not abandoned -> Should lock
+    default_data.abandon_label = AbandonStatusLabel.NOT_ABANDONED
+    default_data.lock_label = LockStatusLabel.NOT_LOCKED
+    actions = decide_actions(default_data, default_eval, default_settings)
+    assert len(actions) == 1
+    assert actions[0].type == ActionType.CLICK_LOCK
+
+    # Case 2: Abandoned -> Should NOT lock
+    default_data.abandon_label = AbandonStatusLabel.ABANDONED
+    default_data.lock_label = LockStatusLabel.NOT_LOCKED
+    actions = decide_actions(default_data, default_eval, default_settings)
+    assert len(actions) == 0
+
+    # Case 3: Not abandoned but ALREADY locked -> Should NOT lock (no action needed)
+    default_data.abandon_label = AbandonStatusLabel.NOT_ABANDONED
+    default_data.lock_label = LockStatusLabel.LOCKED
+    actions = decide_actions(default_data, default_eval, default_settings)
+    assert len(actions) == 0
