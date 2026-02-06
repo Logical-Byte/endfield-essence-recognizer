@@ -14,6 +14,10 @@ class ScreenshotRequest(BaseModel):
         default="Endfield",
         description="截图的标题，最终会作为文件名的一部分",
     )
+    format: str = Field(
+        default="png",
+        description="截图的文件格式，支持 png、jpg",
+    )
 
 
 class ScreenshotResponse(BaseModel):
