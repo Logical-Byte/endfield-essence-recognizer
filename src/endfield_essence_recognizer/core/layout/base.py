@@ -122,3 +122,8 @@ class ResolutionProfile(Protocol):
     def DELIVERY_JOB_REWARD_ROI(self) -> Region:
         """派遣任务奖励扫描区域。"""
         ...
+
+    @property
+    def DELIVERY_JOB_REFRESH_BUTTON_POINT(self) -> Point:
+        """运送委托列表刷新按钮坐标。"""
+        ...

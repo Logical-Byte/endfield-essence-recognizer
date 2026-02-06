@@ -69,3 +69,7 @@ class Resolution1080p(ResolutionProfile):
     @property
     def DELIVERY_JOB_REWARD_ROI(self) -> Region:
         return Region(Point(100, 150), Point(1820, 950))
+
+    @property
+    def DELIVERY_JOB_REFRESH_BUTTON_POINT(self) -> Point:
+        return Point(1745, 1003)
