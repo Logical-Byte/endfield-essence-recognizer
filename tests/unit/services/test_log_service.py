@@ -5,7 +5,7 @@ import pytest
 from loguru import logger
 
 from endfield_essence_recognizer.core.config import ServerConfig
-from endfield_essence_recognizer.services.log_service import LogService
+from endfield_essence_recognizer.services.log_service import LogService, _collect_batch
 
 
 @pytest.fixture
@@ -63,6 +63,153 @@ async def test_broadcast_loop_sends_to_websockets(log_service: LogService):
         await task
     except asyncio.CancelledError:
         pass
+
+
+@pytest.mark.asyncio
+async def test_broadcast_multiple_messages(log_service: LogService):
+    """Test that the broadcast loop correctly sends multiple messages in sequence."""
+    mock_ws = AsyncMock()
+    received_messages = []
+
+    test_messages = [f"Message {i}" for i in range(5)]
+
+    # Event to trigger when we found all messages
+    all_found_event = asyncio.Event()
+
+    async def mock_send_text(msg):
+        received_messages.append(msg)
+        # Check if we have found all test messages in the received data
+        count = sum(1 for m in test_messages if any(m in r for r in received_messages))
+        if count == len(test_messages):
+            all_found_event.set()
+
+    mock_ws.send_text.side_effect = mock_send_text
+    log_service.add_connection(mock_ws)
+
+    # Start broadcast loop
+    task = asyncio.create_task(log_service.broadcast_loop())
+
+    # Send messages
+    for msg in test_messages:
+        log_service.log_sink(msg)
+
+    try:
+        await asyncio.wait_for(all_found_event.wait(), timeout=2.0)
+    except asyncio.TimeoutError:
+        pytest.fail(f"Did not receive all messages. Received: {received_messages}")
+
+    task.cancel()
+    try:
+        await task
+    except asyncio.CancelledError:
+        pass
+
+
+@pytest.mark.asyncio
+async def test_collect_batch_immediate_full():
+    """Test _collect_batch returns immediately when enough items are available."""
+    queue = asyncio.Queue()
+    for i in range(5):
+        queue.put_nowait(f"msg{i}")
+
+    batch = await _collect_batch(queue, max_batch_size=3, max_timeout=1.0)
+
+    assert len(batch) == 3
+    assert batch == ["msg0", "msg1", "msg2"]
+    assert queue.qsize() == 2
+
+
+@pytest.mark.asyncio
+async def test_collect_batch_timeout_partial():
+    """Test _collect_batch returns partial batch after timeout."""
+    queue = asyncio.Queue()
+    queue.put_nowait("msg0")
+    queue.put_nowait("msg1")
+
+    # We ask for 5 items, but only 2 are available.
+    # The function should collect the 2, then wait for timeout.
+
+    batch = await _collect_batch(queue, max_batch_size=5, max_timeout=0.1)
+
+    assert len(batch) == 2
+    assert batch == ["msg0", "msg1"]
+    assert queue.empty()
+
+
+@pytest.mark.asyncio
+async def test_collect_batch_single_item():
+    """Test _collect_batch respects max_batch_size=1."""
+    queue = asyncio.Queue()
+    queue.put_nowait("msg0")
+    queue.put_nowait("msg1")
+
+    batch = await _collect_batch(queue, max_batch_size=1, max_timeout=1.0)
+
+    assert len(batch) == 1
+    assert batch == ["msg0"]
+    assert queue.qsize() == 1
+
+
+@pytest.mark.asyncio
+async def test_collect_batch_waits_for_first_item():
+    """Test _collect_batch blocks strictly for the first item."""
+    queue = asyncio.Queue()
+
+    task = asyncio.create_task(_collect_batch(queue, max_batch_size=3, max_timeout=0.1))
+
+    # Quick sleep to ensure task is running and waiting
+    await asyncio.sleep(0.05)
+    assert not task.done()
+
+    queue.put_nowait("msg0")
+
+    # It should finish successfully after receiving msg0, then waiting timeout for more
+    batch = await task
+    assert batch == ["msg0"]
+
+
+@pytest.mark.asyncio
+async def test_collect_batch_accumulates_slowly():
+    """Test _collect_batch accumulates items that arrive within the timeout window."""
+    queue = asyncio.Queue()
+    queue.put_nowait("msg0")
+
+    task = asyncio.create_task(_collect_batch(queue, max_batch_size=3, max_timeout=0.2))
+
+    await asyncio.sleep(0.05)
+    queue.put_nowait("msg1")
+
+    await asyncio.sleep(0.05)
+    queue.put_nowait("msg2")
+
+    # By now (approx 0.1s elapsed), we hit max_batch_size=3, so it should return before timeout (0.2s)
+    batch = await task
+    assert batch == ["msg0", "msg1", "msg2"]
+
+
+@pytest.mark.asyncio
+async def test_collect_batch_timeout_before_second_msg():
+    """Test _collect_batch returns partial batch if next message arrives too late."""
+    queue = asyncio.Queue()
+    queue.put_nowait("msg0")
+
+    # Set timeout to 0.1s, request batch size 2
+    task = asyncio.create_task(
+        _collect_batch(queue, max_batch_size=2, max_timeout=0.05)
+    )
+
+    # Wait longer than timeout (0.1s)
+    await asyncio.sleep(0.1)
+    queue.put_nowait("msg1")
+
+    # Task should have finished by now with only the first message
+    assert task.done()
+    batch = await task
+    assert batch == ["msg0"]
+
+    # msg1 should still be in the queue
+    assert queue.qsize() == 1
+    assert await queue.get() == "msg1"
 
 
 @pytest.mark.asyncio

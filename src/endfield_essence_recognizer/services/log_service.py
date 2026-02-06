@@ -13,6 +13,43 @@ if TYPE_CHECKING:
     from endfield_essence_recognizer.core.config import ServerConfig
 
 
+async def _collect_batch(
+    queue: asyncio.Queue[str], max_batch_size: int, max_timeout: float
+) -> list[str]:
+    """
+    Collects a batch of items from the queue.
+    Returns as soon as max_batch_size is reached OR max_timeout has passed
+    since the first item was received.
+    """
+    batch = []
+    # 1. Block until the very first item is available
+    first_item = await queue.get()
+    batch.append(first_item)
+
+    if max_batch_size <= 1:
+        return batch
+
+    # Start the clock after the first item arrives
+    loop = asyncio.get_running_loop()
+    start_time = loop.time()
+
+    while len(batch) < max_batch_size:
+        remaining_time = max_timeout - (loop.time() - start_time)
+
+        if remaining_time <= 0:
+            break
+
+        try:
+            # Try to get the next item within the remaining window
+            item = await asyncio.wait_for(queue.get(), timeout=remaining_time)
+            batch.append(item)
+        except asyncio.TimeoutError:
+            # Time is up, return what we have
+            break
+
+    return batch
+
+
 class LogService:
     """
     Service responsible for broadcasting logs to all connected WebSocket clients.
@@ -23,11 +60,13 @@ class LogService:
 
     """
 
-    def __init__(self) -> None:
+    def __init__(self, batch_size: int = 32, batch_timeout: float = 0.05) -> None:
         self._connections: set[WebSocket] = set()
         self._queue: asyncio.Queue[str] = asyncio.Queue()
         self._broadcast_task: asyncio.Task[None] | None = None
         self._handler_id: int | None = None
+        self.batch_size = batch_size
+        self.batch_timeout = batch_timeout
 
     def log_sink(self, message: str) -> None:
         """
@@ -58,15 +97,22 @@ class LogService:
         """
         while True:
             try:
-                message = await self._queue.get()
+                batch: list[str] = await _collect_batch(
+                    self._queue, self.batch_size, self.batch_timeout
+                )
+
                 if not self._connections:
-                    self._queue.task_done()
+                    for _ in batch:
+                        self._queue.task_done()
                     continue
+
+                # the messages already have newlines, so we just join them directly
+                combined_message = "".join(batch)
 
                 disconnected = set()
                 for connection in self._connections:
                     try:
-                        await connection.send_text(message)
+                        await connection.send_text(combined_message)
                     except (WebSocketDisconnect, RuntimeError):
                         disconnected.add(connection)
                     except Exception as e:
@@ -76,7 +122,8 @@ class LogService:
                 for conn in disconnected:
                     self.remove_connection(conn)
 
-                self._queue.task_done()
+                for _ in batch:
+                    self._queue.task_done()
             except asyncio.CancelledError:
                 break
             except Exception as e:

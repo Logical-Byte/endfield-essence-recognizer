@@ -37,7 +37,7 @@ async def test_lifespan_integration_log_service():
             logger.info("Integration test log message")
 
             # Wait for the broadcast loop to process the message
-            await asyncio.sleep(0.05)
+            await asyncio.sleep(log_service.batch_timeout + 0.05)
             assert mock_ws.send_text.called
 
             log_service.remove_connection(mock_ws)
