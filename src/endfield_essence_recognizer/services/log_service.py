@@ -155,8 +155,8 @@ class LogService:
         for connection in list(self._connections):
             try:
                 await connection.close()
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"Error while closing WebSocket connection: {e}")
         self._connections.clear()
         logger.info("Log broadcast service stopped.")
 
