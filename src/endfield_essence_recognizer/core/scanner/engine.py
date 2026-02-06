@@ -169,6 +169,17 @@ class ScannerEngine:
         )
 
     def execute(self, stop_event: threading.Event) -> None:
+        """
+        Run the 9*5 grid scanning process with start/end logging.
+        """
+        logger.debug("ScannerEngine started execution.")
+        self._execute_grid_scan(stop_event)
+        logger.debug("ScannerEngine finished execution.")
+
+    def _execute_grid_scan(self, stop_event: threading.Event) -> None:
+        """
+        Actual execution logic for a 9*5 grid pass.
+        """
         if not self._window_actions.target_exists:
             logger.info("未找到终末地窗口，停止基质扫描。")
             return
