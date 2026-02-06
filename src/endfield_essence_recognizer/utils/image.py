@@ -2,6 +2,7 @@
 Utils for image processing.
 """
 
+import base64
 from collections.abc import Sequence
 from pathlib import Path
 
@@ -54,6 +55,45 @@ def save_image(
     success, buffer = cv2.imencode(ext, image, params or [])
     path.write_bytes(buffer)
     return success
+
+
+def image_to_data_uri(
+    image: MatLike,
+    fmt: str = "jpg",
+    quality: int = 75,
+) -> str:
+    """
+    将图像转换为 base64 编码的 data URI 字符串。
+
+    Args:
+        image: 要转换的图像。
+        fmt: 图像格式 (jpg, jpeg, png, webp)。
+        quality: 编码质量 (0-100)。
+
+    Returns:
+        base64 编码的 data URI 字符串。
+    """
+    if fmt.lower() == "png":
+        encode_param = []
+        ext = ".png"
+        mime_type = "image/png"
+    elif fmt.lower() == "webp":
+        encode_param = [cv2.IMWRITE_WEBP_QUALITY, min(100, max(0, quality))]
+        ext = ".webp"
+        mime_type = "image/webp"
+    elif fmt.lower() in ("jpg", "jpeg"):
+        encode_param = [cv2.IMWRITE_JPEG_QUALITY, min(100, max(0, quality))]
+        ext = ".jpg"
+        mime_type = "image/jpeg"
+    else:
+        raise ValueError(f"Unsupported image format: {fmt}")
+
+    success, encoded_bytes = cv2.imencode(ext, image, encode_param)
+    if not success:
+        raise ValueError("Failed to encode image.")
+
+    base64_string = base64.b64encode(encoded_bytes.tobytes()).decode("utf-8")
+    return f"data:{mime_type};base64,{base64_string}"
 
 
 def linear_operation(image: MatLike, min_value: int, max_value: int) -> MatLike:

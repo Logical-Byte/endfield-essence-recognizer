@@ -1,4 +1,26 @@
+from enum import StrEnum
+
 from pydantic import BaseModel, Field
+
+
+class ScreenshotSaveFormat(StrEnum):
+    """
+    用于指定截图保存格式的枚举。
+    """
+
+    JPG = "jpg"
+    PNG = "png"
+
+
+class ImageFormat(StrEnum):
+    """
+    用于监控截图请求中指定图像格式的枚举。
+    """
+
+    JPG = "jpg"
+    JPEG = "jpeg"
+    PNG = "png"
+    WEBP = "webp"
 
 
 class ScreenshotRequest(BaseModel):
@@ -14,8 +36,8 @@ class ScreenshotRequest(BaseModel):
         default="Endfield",
         description="截图的标题，最终会作为文件名的一部分",
     )
-    format: str = Field(
-        default="png",
+    format: ScreenshotSaveFormat = Field(
+        default=ScreenshotSaveFormat.PNG,
         description="截图的文件格式，支持 png、jpg",
     )
 

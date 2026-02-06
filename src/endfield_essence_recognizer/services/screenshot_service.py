@@ -1,7 +1,5 @@
 import asyncio
-import base64
 import datetime
-from typing import Literal
 
 import cv2
 
@@ -10,7 +8,15 @@ from endfield_essence_recognizer.core.layout.base import (
 )
 from endfield_essence_recognizer.core.path import get_root_dir
 from endfield_essence_recognizer.core.window import WindowManager
-from endfield_essence_recognizer.utils.image import mask_region, save_image
+from endfield_essence_recognizer.models.screenshot import (
+    ImageFormat,
+    ScreenshotSaveFormat,
+)
+from endfield_essence_recognizer.utils.image import (
+    image_to_data_uri,
+    mask_region,
+    save_image,
+)
 from endfield_essence_recognizer.utils.log import logger
 
 
@@ -24,7 +30,7 @@ class ScreenshotService:
         self,
         width: int = 1920,
         height: int = 1080,
-        format: Literal["jpg", "jpeg", "png", "webp"] = "jpg",  # noqa: A002
+        format: ImageFormat = ImageFormat.JPG,  # noqa: A002
         quality: int = 75,
     ) -> str | None:
         """
@@ -33,7 +39,7 @@ class ScreenshotService:
         Args:
             width: The desired width of the image.
             height: The desired height of the image.
-            format: The image format (e.g., "png", "jpg", "webp").
+            format: The image format.
             quality: The quality of the encoded image (for lossy formats).
 
         Returns:
@@ -48,27 +54,7 @@ class ScreenshotService:
         image = cv2.resize(image, (width, height))
         logger.debug("[ScreenshotService] Successfully captured and resized window.")
 
-        if format.lower() == "png":
-            encode_param = []  # PNG compression defaults
-            ext = ".png"
-            mime_type = "image/png"
-        elif format.lower() == "webp":
-            encode_param = [cv2.IMWRITE_WEBP_QUALITY, min(100, max(0, quality))]
-            ext = ".webp"
-            mime_type = "image/webp"
-        elif format.lower() == "jpg" or format.lower() == "jpeg":
-            encode_param = [cv2.IMWRITE_JPEG_QUALITY, min(100, max(0, quality))]
-            ext = ".jpg"
-            mime_type = "image/jpeg"
-        else:
-            return None
-
-        _, encoded_bytes = cv2.imencode(ext, image, encode_param)
-
-        # Encode to base64
-        base64_string = base64.b64encode(encoded_bytes.tobytes()).decode("utf-8")
-
-        return f"data:{mime_type};base64,{base64_string}"
+        return image_to_data_uri(image, fmt=format, quality=quality)
 
     async def capture_and_save(
         self,
@@ -76,7 +62,7 @@ class ScreenshotService:
         should_focus: bool = True,
         post_process: bool = True,
         title: str = "Endfield",
-        fmt: str = "png",
+        fmt: ScreenshotSaveFormat = ScreenshotSaveFormat.PNG,
     ) -> tuple[str, str]:
         """
         Takes a screenshot of the game window and saves it to the root directory.

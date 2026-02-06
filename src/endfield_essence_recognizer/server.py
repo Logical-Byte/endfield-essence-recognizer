@@ -3,7 +3,6 @@ import importlib.resources
 import os
 from contextlib import asynccontextmanager, contextmanager
 from pathlib import Path
-from typing import Literal
 
 import keyboard
 import uvicorn
@@ -34,8 +33,10 @@ from endfield_essence_recognizer.deps import (
     get_window_manager_singleton,
 )
 from endfield_essence_recognizer.models.screenshot import (
+    ImageFormat,
     ScreenshotRequest,
     ScreenshotResponse,
+    ScreenshotSaveFormat,
 )
 from endfield_essence_recognizer.models.user_setting import UserSetting
 from endfield_essence_recognizer.services.log_service import LogService
@@ -119,7 +120,7 @@ def temp_handle_keyboard_save_screenshot_for_debug():
                 should_focus=True,
                 post_process=True,
                 title="Debug",
-                fmt="png",
+                fmt=ScreenshotSaveFormat.PNG,
             )
         )
         logger.info(f"截图已保存到 {full_path}")
@@ -258,13 +259,17 @@ async def post_config(
 async def get_screenshot(
     width: int = 1920,
     height: int = 1080,
-    format: Literal["jpg", "jpeg", "png", "webp"] = "jpg",  # noqa: A002
+    format: ImageFormat = ImageFormat.JPG,  # noqa: A002
     quality: int = 75,
     screenshot_service: ScreenshotService = Depends(get_screenshot_service),
 ) -> str | None:
-    return await screenshot_service.capture_as_data_uri(
-        width=width, height=height, format=format, quality=quality
-    )
+    try:
+        return await screenshot_service.capture_as_data_uri(
+            width=width, height=height, format=format, quality=quality
+        )
+    except Exception as e:
+        logger.exception(f"Failed to capture screenshot: {e}")
+        return None
 
 
 @app.post(
