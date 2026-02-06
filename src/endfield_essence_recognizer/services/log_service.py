@@ -156,7 +156,7 @@ class LogService:
         """
         if self._broadcast_task is None or self._broadcast_task.done():
             self._broadcast_task = asyncio.create_task(self.broadcast_loop())
-            logger.info("Log broadcast service started.")
+            logger.debug("Log broadcast service started.")
 
     async def stop(self) -> None:
         """
@@ -177,7 +177,7 @@ class LogService:
             except Exception:
                 pass
         self._connections.clear()
-        logger.info("Log broadcast service stopped.")
+        logger.debug("Log broadcast service stopped.")
 
     @asynccontextmanager
     async def scope(self, config: ServerConfig):

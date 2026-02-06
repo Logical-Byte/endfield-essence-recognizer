@@ -47,7 +47,7 @@ class ScannerService:
             if self._thread is not None:
                 self._thread.join()
 
-            logger.info("正在启动扫描服务...")
+            logger.debug("正在启动扫描服务...")
             self._stop_event.clear()
             scanner = scanner_factory()
 
@@ -72,7 +72,7 @@ class ScannerService:
                 logger.warning("扫描未在运行。")
                 return
 
-            logger.info("正在停止扫描服务...")
+            logger.debug("正在停止扫描服务...")
             self._stop_event.set()
             if self._thread is not None:
                 self._thread.join()
