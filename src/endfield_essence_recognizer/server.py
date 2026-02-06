@@ -24,6 +24,7 @@ from endfield_essence_recognizer.deps import (
     default_scanner_engine,
     default_user_setting_manager,
     get_audio_service,
+    get_log_service,
     get_resolution_profile,
     get_scanner_engine_dep,
     get_scanner_service,
@@ -32,6 +33,7 @@ from endfield_essence_recognizer.deps import (
     get_window_manager_singleton,
 )
 from endfield_essence_recognizer.models.user_setting import UserSetting
+from endfield_essence_recognizer.services.log_service import LogService
 from endfield_essence_recognizer.services.scanner_service import ScannerService
 from endfield_essence_recognizer.services.user_setting_manager import (
     UserSettingManager,
@@ -39,7 +41,6 @@ from endfield_essence_recognizer.services.user_setting_manager import (
 from endfield_essence_recognizer.utils.log import (
     LOGGING_CONFIG,
     logger,
-    websocket_handler,
 )
 from endfield_essence_recognizer.version import __version__
 
@@ -103,76 +104,43 @@ def handle_keyboard_on_exit():
     window.destroy()
 
 
-async def broadcast_logs():
-    """异步任务，持续监听日志队列并广播日志消息"""
-    await connection_event.wait()
-    while True:
-        message = await websocket_handler.log_queue.get()
-        disconnected_connections = set()
-        for connection in websocket_connections.copy():  # 防止在迭代时修改集合
-            try:
-                await connection.send_text(message)
-            except WebSocketDisconnect:
-                disconnected_connections.add(connection)
-            except Exception as e:
-                logger.exception(f"发送日志到 WebSocket 连接时出错：{e}")
-                disconnected_connections.add(connection)
-        for dc in disconnected_connections:
-            websocket_connections.discard(dc)
-
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global connection_event
-    connection_event = asyncio.Event()
-
     server_config = get_server_config()
     logger.success(f"Server configuration: {server_config.model_dump()}")
 
-    if not server_config.dev_mode:
-        if not server_config.dist_dir:
-            # use the default shipped build directory
-            dist_dir = (
-                Path(str(importlib.resources.files("endfield_essence_recognizer")))
-                / "webui_dist"
-            )
-        else:
-            # use the specified directory
-            dist_dir = Path(server_config.dist_dir)
-        # 挂载静态文件目录（生产环境）
-        if dist_dir.exists():
-            app.mount(
-                "/",
-                StaticFiles(directory=dist_dir, html=True),
-                name="dist",
-            )
-        else:
-            logger.error("未找到前端构建文件夹，请先执行前端构建！")
+    async with get_log_service().scope(server_config):
+        if not server_config.dev_mode:
+            if not server_config.dist_dir:
+                # use the default shipped build directory
+                dist_dir = (
+                    Path(str(importlib.resources.files("endfield_essence_recognizer")))
+                    / "webui_dist"
+                )
+            else:
+                # use the specified directory
+                dist_dir = Path(server_config.dist_dir)
+            # 挂载静态文件目录（生产环境）
+            if dist_dir.exists():
+                app.mount(
+                    "/",
+                    StaticFiles(directory=dist_dir, html=True),
+                    name="dist",
+                )
+            else:
+                logger.error("未找到前端构建文件夹，请先执行前端构建！")
 
-    # 注册热键
-    keyboard.add_hotkey("[", handle_keyboard_single_recognition)
-    keyboard.add_hotkey("]", handle_keyboard_auto_click)
-    keyboard.add_hotkey("alt+delete", handle_keyboard_on_exit)
-    logger.info("全局热键已注册")
+        # 注册热键
+        keyboard.add_hotkey("[", handle_keyboard_single_recognition)
+        keyboard.add_hotkey("]", handle_keyboard_auto_click)
+        keyboard.add_hotkey("alt+delete", handle_keyboard_on_exit)
+        logger.info("全局热键已注册")
 
-    global task
-    task = asyncio.create_task(broadcast_logs())
-    yield
-    if task:
-        task.cancel()
-        try:
-            await task
-        except asyncio.CancelledError:
-            pass
+        yield
 
-    # 注销热键
-    keyboard.unhook_all()
-    logger.info("全局热键已注销")
-
-
-websocket_connections: set[WebSocket] = set()
-task: asyncio.Task | None = None
-connection_event: asyncio.Event
+        # 注销热键
+        keyboard.unhook_all()
+        logger.info("全局热键已注销")
 
 
 app = FastAPI(lifespan=lifespan)
@@ -281,19 +249,22 @@ async def open_logs_folder() -> None:
 
 
 @app.websocket("/ws/logs")
-async def websocket_logs(websocket: WebSocket):
+async def websocket_logs(
+    websocket: WebSocket,
+    log_service: LogService = Depends(get_log_service),
+):
     await websocket.accept()
-    websocket_connections.add(websocket)
-    connection_event.set()
+    log_service.add_connection(websocket)
     logger.info("WebSocket 日志连接已建立。")
     try:
         while True:
             await websocket.receive_text()
     except WebSocketDisconnect:
-        websocket_connections.remove(websocket)
         logger.info("WebSocket 日志连接已断开。")
     except Exception as e:
         logger.exception(f"WebSocket 日志连接出错：{e}")
+    finally:
+        log_service.remove_connection(websocket)
 
 
 app.mount(
