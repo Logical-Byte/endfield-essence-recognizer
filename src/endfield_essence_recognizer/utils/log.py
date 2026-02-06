@@ -6,7 +6,6 @@ Provides loguru logger configuration and a WebSocket log handler.
 
 from __future__ import annotations
 
-import asyncio
 import inspect
 import logging
 import sys
@@ -17,7 +16,7 @@ from loguru import logger
 from endfield_essence_recognizer.core.config import get_server_config
 from endfield_essence_recognizer.core.path import get_logs_dir
 
-file_log_format = (
+FILE_LOG_FORMAT = (
     '<dim>File <cyan>"{file.path}"</>, line <cyan>{line}</>, in <cyan>{function}</></>\n'
     "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</> "
     "[<level>{level}</>] "
@@ -31,11 +30,11 @@ file_log_format = (
 #     "<level><normal>{message}</></>"
 # )
 
-console_log_format = (
+CONSOLE_LOG_FORMAT = (
     "<green>{time:MM-DD HH:mm:ss}</> [<level>{level}</>] <level><normal>{message}</></>"
 )
 
-gui_log_format = file_log_format
+GUI_LOG_FORMAT = FILE_LOG_FORMAT
 
 
 # https://loguru.readthedocs.io/en/stable/overview.html#entirely-compatible-with-standard-logging
@@ -74,40 +73,19 @@ LOGGING_CONFIG = {
 }
 
 
-class WebSocketHandler:
-    """将日志发送到 WebSocket 连接的处理器"""
-
-    def __init__(self):
-        self.log_queue: asyncio.Queue[str] = asyncio.Queue()
-
-    def write(self, message: str):
-        self.log_queue.put_nowait(message)
-
-
-websocket_handler = WebSocketHandler()
-
-
 logger.remove()
 if sys.stderr:  # 打包后可能没有 stderr
     logger.add(
         sys.stderr,
         level=str(_config.log_level),
-        format=console_log_format,
+        format=CONSOLE_LOG_FORMAT,
         diagnose=True,
     )
 logger.add(
     get_logs_dir() / "log_{time:YYYY-MM-DD}.log",
     level="TRACE",
-    format=file_log_format,
+    format=FILE_LOG_FORMAT,
     diagnose=True,
-)
-logger.add(
-    websocket_handler,
-    level=str(_config.log_level),
-    format=console_log_format,
-    colorize=True,
-    diagnose=True,
-    filter=lambda record: record["extra"].get("module") != "uvicorn",
 )
 
 logger.debug("Logger initialized with level: {}", _config.log_level)

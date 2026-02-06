@@ -35,6 +35,7 @@ from endfield_essence_recognizer.services.audio_service import (
     AudioService,
     build_audio_service_profile,
 )
+from endfield_essence_recognizer.services.log_service import LogService
 from endfield_essence_recognizer.services.scanner_service import ScannerService
 from endfield_essence_recognizer.services.user_setting_manager import UserSettingManager
 
@@ -246,3 +247,8 @@ def default_scanner_engine() -> ScannerEngine:
 @lru_cache()
 def get_scanner_service() -> ScannerService:
     return ScannerService()
+
+
+@lru_cache()
+def get_log_service() -> LogService:
+    return LogService()
