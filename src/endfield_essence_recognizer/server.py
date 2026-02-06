@@ -110,12 +110,32 @@ def handle_keyboard_on_exit():
     window.destroy()
 
 
+def temp_handle_keyboard_save_screenshot_for_debug():
+    screenshot_service = get_screenshot_service()
+    try:
+        full_path, file_name = asyncio.run(
+            screenshot_service.capture_and_save(
+                should_focus=True,
+                post_process=False,
+                title="Debug",
+                fmt="png",
+            )
+        )
+        logger.info(f"截图已保存到 {full_path}")
+        logger.info(f"截图文件名: {file_name}")
+    except Exception as e:
+        logger.exception(f"截图失败: {e}")
+
+
 @contextmanager
 def bind_hotkeys():
     """Context manager to bind and unbind global hotkeys."""
     keyboard.add_hotkey("[", handle_keyboard_single_recognition)
     keyboard.add_hotkey("]", handle_keyboard_auto_click)
     keyboard.add_hotkey("alt+delete", handle_keyboard_on_exit)
+    keyboard.add_hotkey(
+        "=", temp_handle_keyboard_save_screenshot_for_debug
+    )  # 临时热键，用于调试截图功能
     logger.info("全局热键已注册")
     try:
         yield

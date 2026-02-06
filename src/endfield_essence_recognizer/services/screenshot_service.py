@@ -1,8 +1,10 @@
+import asyncio
 import datetime
 
 from endfield_essence_recognizer.core.path import get_root_dir
 from endfield_essence_recognizer.core.window import WindowManager
 from endfield_essence_recognizer.utils.image import save_image
+from endfield_essence_recognizer.utils.log import logger
 
 
 class ScreenshotService:
@@ -34,14 +36,24 @@ class ScreenshotService:
             raise RuntimeError("Game window not found.")
 
         if should_focus:
+            logger.debug(
+                "[ScreenshotService] Activating game window before screenshot."
+            )
             self._window_manager.activate()
+            await asyncio.sleep(0.2)
 
         # Capture screenshot
+        logger.debug("[ScreenshotService] Capturing screenshot of the game window.")
         image = self._window_manager.screenshot()
         height, width = image.shape[:2]
+        logger.debug("[ScreenshotService] Resolution: {} x {}", width, height)
 
         if post_process:
+            logger.debug(
+                "[ScreenshotService] Applying post-processing to the screenshot."
+            )
             # TODO: Implementation of post_process logic (masking bottom-left corner)
+            logger.warning("Unimplemented")
             pass
 
         # Generate filename
@@ -50,8 +62,9 @@ class ScreenshotService:
         ext = f".{fmt.lower()}"
         file_name = f"{title}_{resolution}_{timestamp}{ext}"
 
-        # Save to root directory
-        save_path = get_root_dir() / file_name
+        logger.debug("[ScreenshotService] Saving screenshot as {}", file_name)
+        # Save to screenshots directory under root
+        save_path = get_root_dir() / "screenshots" / file_name
         save_image(image, save_path, ext=ext)
 
         return str(save_path), file_name
