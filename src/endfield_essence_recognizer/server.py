@@ -12,6 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from endfield_essence_recognizer.core.config import ServerConfig, get_server_config
+from endfield_essence_recognizer.core.layout import ResolutionProfile
 from endfield_essence_recognizer.core.path import get_logs_dir
 from endfield_essence_recognizer.core.scanner.context import ScannerContext
 from endfield_essence_recognizer.core.scanner.engine import (
@@ -115,6 +116,7 @@ def temp_handle_keyboard_save_screenshot_for_debug():
     try:
         full_path, file_name = asyncio.run(
             screenshot_service.capture_and_save(
+                resolution_profile=get_resolution_profile(),
                 should_focus=True,
                 post_process=True,
                 title="Debug",
@@ -304,11 +306,13 @@ async def get_screenshot(
 )
 async def take_and_save_screenshot(
     request: ScreenshotRequest,
+    resolution_profile: ResolutionProfile = Depends(get_resolution_profile),
     screenshot_service: ScreenshotService = Depends(get_screenshot_service),
 ) -> ScreenshotResponse:
     """Takes a screenshot and saves it to a local directory."""
     try:
         full_path, file_name = await screenshot_service.capture_and_save(
+            resolution_profile=resolution_profile,
             should_focus=request.should_focus,
             post_process=request.post_process,
             title=request.title,

@@ -53,3 +53,11 @@ class Resolution1080p(ResolutionProfile):
     @property
     def STATS_2_ROI(self) -> Region:
         return Region(Point(1508, 468), Point(1700, 500))
+
+    @property
+    def MASK_ESSENCE_REGION_UID(self) -> Region:
+        return Region(Point(0, 1040), Point(270, 1080))
+
+    @property
+    def MASK_ESSENCE_REGION_CURRENCY(self) -> Region:
+        return Region(Point(1340, 20), Point(1810, 70))

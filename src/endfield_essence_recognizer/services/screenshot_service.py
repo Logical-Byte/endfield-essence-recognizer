@@ -1,7 +1,9 @@
 import asyncio
 import datetime
 
-from endfield_essence_recognizer.core.layout.base import Point, Region
+from endfield_essence_recognizer.core.layout.base import (
+    ResolutionProfile,
+)
 from endfield_essence_recognizer.core.path import get_root_dir
 from endfield_essence_recognizer.core.window import WindowManager
 from endfield_essence_recognizer.utils.image import mask_region, save_image
@@ -16,6 +18,7 @@ class ScreenshotService:
 
     async def capture_and_save(
         self,
+        resolution_profile: ResolutionProfile,
         should_focus: bool = True,
         post_process: bool = True,
         title: str = "Endfield",
@@ -25,6 +28,7 @@ class ScreenshotService:
         Takes a screenshot of the game window and saves it to the root directory.
 
         Args:
+            resolution_profile: The resolution profile to determine the masking regions.
             should_focus: Whether to focus the game window before taking the screenshot.
             post_process: Whether to apply post-processing (e.g., masking privacy info).
             title: The title prefix for the filename.
@@ -57,14 +61,8 @@ class ScreenshotService:
             logger.debug(
                 "[ScreenshotService] Applying post-processing to the screenshot."
             )
-            # uid area to mask: (0-270, 1040-1080) for 1080p
-            # currency area to mask: 1340,20 - 1810,70
-            # We hardcode this for now as requested.
-            uid_mask_region = Region(Point(0, 1040), Point(270, 1080))
-            currency_mask_region = Region(Point(1340, 20), Point(1810, 70))
-
-            mask_region(image, uid_mask_region)
-            mask_region(image, currency_mask_region)
+            mask_region(image, resolution_profile.MASK_ESSENCE_REGION_UID)
+            mask_region(image, resolution_profile.MASK_ESSENCE_REGION_CURRENCY)
 
         # Generate filename
         timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
