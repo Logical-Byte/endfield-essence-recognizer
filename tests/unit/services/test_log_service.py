@@ -193,12 +193,12 @@ async def test_collect_batch_timeout_before_second_msg():
     queue = asyncio.Queue()
     queue.put_nowait("msg0")
 
-    # Set timeout to 0.1s, request batch size 2
+    # Set timeout to 0.05s, request batch size 2
     task = asyncio.create_task(
         _collect_batch(queue, max_batch_size=2, max_timeout=0.05)
     )
 
-    # Wait longer than timeout (0.1s)
+    # Wait longer than timeout (0.05s)
     await asyncio.sleep(0.1)
     queue.put_nowait("msg1")
 
