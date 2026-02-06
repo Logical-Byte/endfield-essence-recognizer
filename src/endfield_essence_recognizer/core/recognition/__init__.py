@@ -45,36 +45,40 @@ type UISceneRecognizer = Recognizer[UISceneLabel]
 # Factory functions
 
 
-def prepare_recognizer(profile: RecognitionProfile[LabelT]) -> Recognizer[LabelT]:
+def prepare_recognizer(
+    name: str, profile: RecognitionProfile[LabelT]
+) -> Recognizer[LabelT]:
     """构造并返回一个识别器实例，并加载其模板。"""
-    recognizer = Recognizer(profile)
+    recognizer = Recognizer(name, profile)
     recognizer.load_templates()
     return recognizer
 
 
 @lru_cache()
 def prepare_attribute_recognizer() -> AttributeRecognizer:
-    return prepare_recognizer(build_attribute_profile())
+    return prepare_recognizer("AttributeRecognizer", build_attribute_profile())
 
 
 @lru_cache()
 def prepare_abandon_status_recognizer() -> AbandonStatusRecognizer:
-    return prepare_recognizer(build_abandon_status_profile())
+    return prepare_recognizer("AbandonStatusRecognizer", build_abandon_status_profile())
 
 
 @lru_cache()
 def prepare_lock_status_recognizer() -> LockStatusRecognizer:
-    return prepare_recognizer(build_lock_status_profile())
+    return prepare_recognizer("LockStatusRecognizer", build_lock_status_profile())
 
 
 @lru_cache()
 def prepare_ui_scene_recognizer() -> UISceneRecognizer:
-    return prepare_recognizer(build_ui_scene_profile())
+    return prepare_recognizer("UISceneRecognizer", build_ui_scene_profile())
 
 
 @lru_cache()
 def prepare_attribute_level_recognizer() -> AttributeLevelRecognizer:
-    return AttributeLevelRecognizer(build_attribute_level_recognizer_profile())
+    return AttributeLevelRecognizer(
+        "AttributeLevelRecognizer", build_attribute_level_recognizer_profile()
+    )
 
 
 __all__ = [

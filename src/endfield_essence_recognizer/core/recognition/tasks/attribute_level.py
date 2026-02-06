@@ -9,6 +9,7 @@ from endfield_essence_recognizer.core.recognition.brightness_detector import (
     BrightnessDetectorProfile,
 )
 from endfield_essence_recognizer.utils.image import to_gray_image
+from endfield_essence_recognizer.utils.log import logger
 
 # Hardcoded 1080p coordinates for attribute level icons
 _STATS_LEVEL_ICONS: list[Sequence[Point]] = [
@@ -66,9 +67,17 @@ class AttributeLevelRecognizer:
     a series of icons.
     """
 
-    def __init__(self, profile: AttributeLevelRecognizerProfile) -> None:
+    def __init__(self, name: str, profile: AttributeLevelRecognizerProfile) -> None:
+        self.name = name
         self.profile = profile
-        self._brightness_detector = BrightnessDetector(profile.brightness_profile)
+        self._brightness_detector = BrightnessDetector(
+            f"{self.name}.BrightnessDetector", profile.brightness_profile
+        )
+
+        logger.debug(f"Created {self} with profile: {profile}")
+
+    def __str__(self) -> str:
+        return f"[{self.name}]"
 
     def recognize_level(self, image: MatLike, stat_index: int) -> int | None:
         """

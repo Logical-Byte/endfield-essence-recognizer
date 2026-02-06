@@ -18,31 +18,37 @@ class Recognizer(Generic[LabelT]):
     value of `recognize_roi` aligns with this type.
     """
 
-    def __init__(self, profile: RecognitionProfile[LabelT]) -> None:
+    def __init__(self, name: str, profile: RecognitionProfile[LabelT]) -> None:
+        self.name = name
         self.profile = profile
         self._templates: defaultdict[LabelT, list[MatLike]] = defaultdict(list)
 
         logger.opt(lazy=True).debug(
-            "Created Recognizer with profile: {}",
+            "Created {} with profile: {}",
+            # Use lambdas for lazy evaluation
+            lambda: str(self),
             lambda: str_properties_and_attrs(profile),
         )
 
+    def __str__(self) -> str:
+        return f"[{self.name}]"
+
     def load_templates(self) -> None:
         """从 profile 中加载所有模板。"""
-        logger.debug(f"正在加载 {len(self.profile.templates)} 个模板...")
+        logger.debug(f"{self}正在加载 {len(self.profile.templates)} 个模板...")
         for descriptor in self.profile.templates:
             try:
                 # 模板通常以灰度图加载
                 with importlib.resources.as_file(descriptor.path) as path:
                     image = load_image(path, cv2.IMREAD_GRAYSCALE)
                     if image is None:
-                        logger.error(f"无法加载模板图像: {descriptor.path}")
+                        logger.error(f"{self}无法加载模板图像: {descriptor.path}")
                         continue
 
                     processed_image = self.profile.preprocess_template(image)
                     self._templates[descriptor.label].append(processed_image)
             except Exception as e:
-                logger.error(f"加载模板图像失败 {descriptor.path}: {e}")
+                logger.error(f"{self}加载模板图像失败 {descriptor.path}: {e}")
 
     def recognize_roi(self, roi_image: MatLike) -> tuple[LabelT | None, float]:
         """
@@ -68,7 +74,7 @@ class Recognizer(Generic[LabelT]):
                     or template.shape[1] > processed_roi.shape[1]
                 ):
                     logger.warning(
-                        f"标签 '{label}' 的 ROI 图像小于模板: "
+                        f"{self}标签 '{label}' 的 ROI 图像小于模板: "
                         f"ROI 尺寸={processed_roi.shape[::-1]}, 模板尺寸={template.shape[::-1]}"
                     )
                     continue
@@ -83,10 +89,14 @@ class Recognizer(Generic[LabelT]):
         if best_score >= self.profile.high_threshold:
             return best_label, best_score
         elif best_score >= self.profile.low_threshold:
-            logger.warning(f"匹配分数较低: 最佳匹配={best_label} 分数={best_score:.3f}")
+            logger.warning(
+                f"{self}匹配分数较低: 最佳匹配={best_label} 分数={best_score:.3f}"
+            )
             return best_label, best_score
         else:
-            logger.warning(f"匹配分数很低: 最佳匹配={best_label} 分数={best_score:.3f}")
+            logger.warning(
+                f"{self}匹配分数很低: 最佳匹配={best_label} 分数={best_score:.3f}"
+            )
             return None, best_score
 
     def recognize_roi_fallback(
