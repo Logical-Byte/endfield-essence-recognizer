@@ -1,7 +1,7 @@
 import asyncio
 import importlib.resources
 import os
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, contextmanager
 from pathlib import Path
 from typing import Literal
 
@@ -104,43 +104,99 @@ def handle_keyboard_on_exit():
     window.destroy()
 
 
+@contextmanager
+def bind_hotkeys():
+    """Context manager to bind and unbind global hotkeys."""
+    keyboard.add_hotkey("[", handle_keyboard_single_recognition)
+    keyboard.add_hotkey("]", handle_keyboard_auto_click)
+    keyboard.add_hotkey("alt+delete", handle_keyboard_on_exit)
+    logger.info("全局热键已注册")
+    try:
+        yield
+    finally:
+        keyboard.unhook_all()
+        logger.info("全局热键已注销")
+
+
+def log_welcome_message():
+    # 打印欢迎信息
+    message = """
+==================================================
+<green><bold>终末地基质妙妙小工具已启动</></>
+==================================================
+<green><bold>使用前阅读：</></>
+  - 请使用<yellow><bold>管理员权限</></>运行本工具，否则无法捕获全局热键
+  - 请在终末地的设置中将分辨率调整为 <yellow><bold>1920×1080 窗口</></>
+  - 请按 "<green><bold>N</></>" 键打开终末地<yellow><bold>贵重品库</></>并切换到<yellow><bold>武器基质</></>页面
+  - 在运行过程中，请确保终末地窗口<yellow><bold>置于前台</></>
+
+<green><bold>功能介绍：</></>
+  - 按 "<green><bold>[</></>" 键识别当前基质，仅识别不操作
+  - 按 "<green><bold>]</></>" 键扫描所有基质，并根据设置，自动锁定或者解锁基质
+    基质扫描过程中再次按 "<green><bold>]</></>" 键中断扫描
+  - 按 "<green><bold>Alt+Delete</></>" 退出程序
+
+  <cyan><bold>宝藏基质和养成材料：</></>可以在设置界面自定义。默认情况下，如果这个基质和任何一把武器能对上，则是宝藏，否则是养成材料。
+==================================================
+"""
+    logger.opt(colors=True).info(message)
+
+
+def init_load_user_setting():
+    """
+    Load user settings at startup.
+
+    Side effects:
+    - Loads settings into the UserSettingManager singleton, making them available for the rest of the application.
+    - If the settings file does not exist or is invalid, it will be created and/or backed up.
+    - Logs debug messages.
+    """
+    user_setting_manager = default_user_setting_manager()
+    user_setting_manager.load_user_setting()
+
+
+def init_mount_frontend_build(app: FastAPI, server_config: ServerConfig):
+    """
+    Mount the frontend build directory to serve static files.
+
+    This should be called during the application startup phase, after loading user settings and before registering hotkeys.
+
+    Args:
+        app: The FastAPI application instance to mount the static files on.
+    """
+    if server_config.dev_mode:
+        # dev mode uses Vite dev server, no need to mount static files
+        return
+    if not server_config.dist_dir:
+        # use the default shipped build directory
+        dist_dir = (
+            Path(str(importlib.resources.files("endfield_essence_recognizer")))
+            / "webui_dist"
+        )
+    else:
+        # use the specified directory
+        dist_dir = Path(server_config.dist_dir)
+    # 挂载静态文件目录（生产环境）
+    if dist_dir.exists():
+        app.mount(
+            "/",
+            StaticFiles(directory=dist_dir, html=True),
+            name="dist",
+        )
+    else:
+        logger.error("未找到前端构建文件夹，请先执行前端构建！")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     server_config = get_server_config()
-    logger.success(f"Server configuration: {server_config.model_dump()}")
-
     async with get_log_service().scope(server_config):
-        if not server_config.dev_mode:
-            if not server_config.dist_dir:
-                # use the default shipped build directory
-                dist_dir = (
-                    Path(str(importlib.resources.files("endfield_essence_recognizer")))
-                    / "webui_dist"
-                )
-            else:
-                # use the specified directory
-                dist_dir = Path(server_config.dist_dir)
-            # 挂载静态文件目录（生产环境）
-            if dist_dir.exists():
-                app.mount(
-                    "/",
-                    StaticFiles(directory=dist_dir, html=True),
-                    name="dist",
-                )
-            else:
-                logger.error("未找到前端构建文件夹，请先执行前端构建！")
-
-        # 注册热键
-        keyboard.add_hotkey("[", handle_keyboard_single_recognition)
-        keyboard.add_hotkey("]", handle_keyboard_auto_click)
-        keyboard.add_hotkey("alt+delete", handle_keyboard_on_exit)
-        logger.info("全局热键已注册")
-
-        yield
-
-        # 注销热键
-        keyboard.unhook_all()
-        logger.info("全局热键已注销")
+        logger.success(f"Server configuration: {server_config.model_dump()}")
+        init_mount_frontend_build(app, server_config)
+        init_load_user_setting()
+        log_welcome_message()
+        with bind_hotkeys():
+            yield
 
 
 app = FastAPI(lifespan=lifespan)
