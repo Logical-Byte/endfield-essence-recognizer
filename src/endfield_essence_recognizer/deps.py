@@ -7,6 +7,9 @@ from pathlib import Path
 
 from fastapi import Depends
 
+from endfield_essence_recognizer.core.delivery_claimer.engine import (
+    DeliveryClaimerEngine,
+)
 from endfield_essence_recognizer.core.layout.base import ResolutionProfile
 from endfield_essence_recognizer.core.layout.res_1080p import Resolution1080p
 from endfield_essence_recognizer.core.path import get_config_path, get_screenshots_dir
@@ -277,6 +280,22 @@ def default_scanner_engine() -> ScannerEngine:
         window_actions=adapter,
         user_setting_manager=default_user_setting_manager(),
         profile=get_resolution_profile(),
+    )
+
+
+def default_delivery_claimer_engine() -> DeliveryClaimerEngine:
+    """
+    Get the default DeliveryClaimerEngine instance.
+    """
+    window_manager = get_window_manager_singleton()
+    adapter = WindowActionsAdapter(window_manager)
+    return DeliveryClaimerEngine(
+        image_source=adapter,
+        window_actions=adapter,
+        profile=get_resolution_profile(),
+        delivery_scene_recognizer=get_delivery_scene_recognizer_dep(),
+        delivery_job_reward_recognizer=get_delivery_job_reward_recognizer_dep(),
+        audio_service=get_audio_service(),
     )
 
 

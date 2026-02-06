@@ -12,6 +12,7 @@ from endfield_essence_recognizer.core.scanner.engine import (
 )
 from endfield_essence_recognizer.core.window import WindowManager
 from endfield_essence_recognizer.deps import (
+    default_delivery_claimer_engine,
     default_scanner_context,
     default_scanner_engine,
     default_user_setting_manager,
@@ -155,6 +156,27 @@ def handle_keyboard_auto_click(key: str):
     handle_keyboard_toggle_scan()
 
 
+@hotkey_handler(
+    require_game_exists=True,
+    require_game_or_webview_active=True,
+)
+def handle_keyboard_delivery_claim(key: str):
+    """切换自动抢单状态"""
+    scanner_service = get_scanner_service()
+    audio_service = get_audio_service()
+
+    if not scanner_service.is_running():
+        try:
+            logger.info(f'检测到 "{key}" 键，开始自动抢单')
+            engine = default_delivery_claimer_engine()
+            scanner_service.start_scan(scanner_factory=lambda: engine)
+            audio_service.play_enable()
+        except Exception as e:
+            logger.exception(f"启动自动抢单失败: {e}")
+    else:
+        logger.warning("已有其他扫描任务在运行，无法启动自动抢单。")
+
+
 @hotkey_handler(require_game_exists=False, require_game_or_webview_active=False)
 def handle_keyboard_on_exit(key: str):
     """处理 Alt+Delete 按下事件 - 退出程序"""
@@ -199,6 +221,7 @@ def bind_hotkeys(server_config: ServerConfig):
     """Context manager to bind and unbind global hotkeys."""
     keyboard.add_hotkey("[", handle_keyboard_single_recognition, args=("[",))
     keyboard.add_hotkey("]", handle_keyboard_auto_click, args=("]",))
+    keyboard.add_hotkey("\\", handle_keyboard_delivery_claim, args=("\\",))
     keyboard.add_hotkey("alt+delete", handle_keyboard_on_exit, args=("alt+delete",))
     if server_config.dev_mode:
         logger.debug("开发模式下，启用截图调试热键 `=`")

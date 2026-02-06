@@ -55,7 +55,7 @@ from endfield_essence_recognizer.version import __version__
 
 def log_welcome_message():
     """Log a formatted welcome and usage guide message to the logger."""
-    message = """
+    message = r"""
 ==================================================
 <green><bold>终末地基质妙妙小工具已启动</></>
 ==================================================
@@ -69,6 +69,7 @@ def log_welcome_message():
   - 按 "<green><bold>[</></>" 键识别当前基质，仅识别不操作
   - 按 "<green><bold>]</></>" 键扫描所有基质，并根据设置，自动锁定或者解锁基质
     基质扫描过程中再次按 "<green><bold>]</></>" 键中断扫描
+  - 按 "<green><bold>\\</bold></green>" 键自动抢单（务邻委托任务列表页，仅支持特定券）
   - 按 "<green><bold>Alt+Delete</></>" 退出程序
 
   <cyan><bold>宝藏基质和养成材料：</></>可以在设置界面自定义。默认情况下，如果这个基质和任何一把武器能对上，则是宝藏，否则是养成材料。
