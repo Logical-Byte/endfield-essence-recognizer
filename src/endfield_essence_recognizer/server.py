@@ -254,7 +254,7 @@ async def websocket_logs(
     log_service: LogService = Depends(get_log_service),
 ):
     await websocket.accept()
-    log_service.add_connection(websocket)
+    await log_service.add_connection(websocket)
     logger.info("WebSocket 日志连接已建立。")
     try:
         while True:
