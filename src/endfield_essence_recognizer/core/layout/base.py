@@ -102,3 +102,13 @@ class ResolutionProfile(Protocol):
     def STATS_2_ROI(self) -> Region:
         """第三个属性词条的识别区域。"""
         ...
+
+    @property
+    def MASK_ESSENCE_REGION_UID(self) -> Region:
+        """在基质界面截图中需要遮罩的 UID 区域。"""
+        ...
+
+    @property
+    def MASK_ESSENCE_REGION_CURRENCY(self) -> Region:
+        """在基质界面截图中需要遮罩的货币区区域。"""
+        ...

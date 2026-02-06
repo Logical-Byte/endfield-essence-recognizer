@@ -29,3 +29,8 @@ def get_config_path() -> Path:
 def get_logs_dir() -> Path:
     """Get the path to the logs directory in the root directory."""
     return get_root_dir() / "logs"
+
+
+def get_screenshots_dir() -> Path:
+    """Get the path to the screenshots directory in the root directory."""
+    return get_root_dir() / "screenshots"

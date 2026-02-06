@@ -9,7 +9,7 @@ from fastapi import Depends
 
 from endfield_essence_recognizer.core.layout.base import ResolutionProfile
 from endfield_essence_recognizer.core.layout.res_1080p import Resolution1080p
-from endfield_essence_recognizer.core.path import get_config_path
+from endfield_essence_recognizer.core.path import get_config_path, get_screenshots_dir
 from endfield_essence_recognizer.core.recognition import (
     AbandonStatusRecognizer,
     AttributeLevelRecognizer,
@@ -37,6 +37,7 @@ from endfield_essence_recognizer.services.audio_service import (
 )
 from endfield_essence_recognizer.services.log_service import LogService
 from endfield_essence_recognizer.services.scanner_service import ScannerService
+from endfield_essence_recognizer.services.screenshot_service import ScreenshotService
 from endfield_essence_recognizer.services.user_setting_manager import UserSettingManager
 
 
@@ -77,7 +78,7 @@ def get_window_manager_dep() -> WindowManager:
     return get_window_manager_singleton()
 
 
-# Config path dependency
+# Path dependency
 
 
 def get_config_path_dep() -> Path:
@@ -85,6 +86,13 @@ def get_config_path_dep() -> Path:
     The dependency to get the config path.
     """
     return get_config_path()
+
+
+def get_screenshots_dir_dep() -> Path:
+    """
+    The dependency to get the screenshots directory path.
+    """
+    return get_screenshots_dir()
 
 
 # UserSettingManager dependency
@@ -252,3 +260,11 @@ def get_scanner_service() -> ScannerService:
 @lru_cache()
 def get_log_service() -> LogService:
     return LogService()
+
+
+@lru_cache()
+def get_screenshot_service() -> ScreenshotService:
+    """
+    Get the ScreenshotService singleton.
+    """
+    return ScreenshotService(get_window_manager_singleton())

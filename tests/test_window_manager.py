@@ -68,13 +68,39 @@ def test_restore(window_manager, mock_window):
 
         # Test already restored
         mock_window.isMinimized = False
+        mock_window.isMaximized = False
         assert window_manager.restore() is False
         mock_window.restore.assert_not_called()
 
-        # Test needs restoring
+        # Test needs restoring (minimized)
         mock_window.isMinimized = True
+        mock_window.isMaximized = False
         assert window_manager.restore() is True
         mock_window.restore.assert_called_once()
+        mock_window.restore.reset_mock()
+
+        # Test needs restoring (maximized)
+        mock_window.isMinimized = False
+        mock_window.isMaximized = True
+        assert window_manager.restore() is True
+        mock_window.restore.assert_called_once()
+
+
+def test_show(window_manager, mock_window):
+    with patch(
+        "endfield_essence_recognizer.core.window.manager.get_support_window"
+    ) as mock_get_support:
+        mock_get_support.return_value = mock_window
+
+        # Test already visible
+        mock_window.visible = True
+        assert window_manager.show() is False
+        mock_window.show.assert_not_called()
+
+        # Test needs showing
+        mock_window.visible = False
+        assert window_manager.show() is True
+        mock_window.show.assert_called_once()
 
 
 def test_activate(window_manager, mock_window):

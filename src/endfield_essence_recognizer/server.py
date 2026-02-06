@@ -3,7 +3,6 @@ import importlib.resources
 import os
 from contextlib import asynccontextmanager, contextmanager
 from pathlib import Path
-from typing import Literal
 
 import keyboard
 import uvicorn
@@ -12,6 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from endfield_essence_recognizer.core.config import ServerConfig, get_server_config
+from endfield_essence_recognizer.core.layout import ResolutionProfile
 from endfield_essence_recognizer.core.path import get_logs_dir
 from endfield_essence_recognizer.core.scanner.context import ScannerContext
 from endfield_essence_recognizer.core.scanner.engine import (
@@ -28,13 +28,21 @@ from endfield_essence_recognizer.deps import (
     get_resolution_profile,
     get_scanner_engine_dep,
     get_scanner_service,
+    get_screenshot_service,
+    get_screenshots_dir_dep,
     get_user_setting_manager_dep,
-    get_window_manager_dep,
     get_window_manager_singleton,
+)
+from endfield_essence_recognizer.models.screenshot import (
+    ImageFormat,
+    ScreenshotRequest,
+    ScreenshotResponse,
+    ScreenshotSaveFormat,
 )
 from endfield_essence_recognizer.models.user_setting import UserSetting
 from endfield_essence_recognizer.services.log_service import LogService
 from endfield_essence_recognizer.services.scanner_service import ScannerService
+from endfield_essence_recognizer.services.screenshot_service import ScreenshotService
 from endfield_essence_recognizer.services.user_setting_manager import (
     UserSettingManager,
 )
@@ -104,12 +112,36 @@ def handle_keyboard_on_exit():
     window.destroy()
 
 
+def temp_handle_keyboard_save_screenshot_for_debug():
+    screenshot_service = get_screenshot_service()
+    try:
+        full_path, file_name = asyncio.run(
+            screenshot_service.capture_and_save(
+                screenshot_dir=get_screenshots_dir_dep(),
+                resolution_profile=get_resolution_profile(),
+                should_focus=True,
+                post_process=True,
+                title="Debug",
+                fmt=ScreenshotSaveFormat.PNG,
+            )
+        )
+        logger.info(f"截图已保存到 {full_path}")
+        logger.info(f"截图文件名: {file_name}")
+    except Exception as e:
+        logger.exception(f"截图失败: {e}")
+
+
 @contextmanager
-def bind_hotkeys():
+def bind_hotkeys(server_config: ServerConfig):
     """Context manager to bind and unbind global hotkeys."""
     keyboard.add_hotkey("[", handle_keyboard_single_recognition)
     keyboard.add_hotkey("]", handle_keyboard_auto_click)
     keyboard.add_hotkey("alt+delete", handle_keyboard_on_exit)
+    if server_config.dev_mode:
+        logger.debug("开发模式下，启用截图调试热键 `=`")
+        keyboard.add_hotkey(
+            "=", temp_handle_keyboard_save_screenshot_for_debug
+        )  # 临时热键，用于调试截图功能
     logger.info("全局热键已注册")
     try:
         yield
@@ -197,7 +229,7 @@ async def lifespan(app: FastAPI):
         init_mount_frontend_build(app, server_config)
         init_load_user_setting()
         log_welcome_message()
-        with bind_hotkeys():
+        with bind_hotkeys(server_config):
             yield
 
 
@@ -231,45 +263,53 @@ async def post_config(
 async def get_screenshot(
     width: int = 1920,
     height: int = 1080,
-    format: Literal["jpg", "jpeg", "png", "webp"] = "jpg",  # noqa: A002
+    format: ImageFormat = ImageFormat.JPG,  # noqa: A002
     quality: int = 75,
-    window_manager: WindowManager = Depends(get_window_manager_dep),
+    screenshot_service: ScreenshotService = Depends(get_screenshot_service),
 ) -> str | None:
-    import base64
-
-    import cv2
-
-    if not window_manager.target_is_active:
-        return None
-    else:
-        image = window_manager.screenshot()
-        image = cv2.resize(image, (width, height))
-        logger.success("成功截取终末地窗口截图。")
-
-    if format.lower() == "png":
-        encode_param = [
-            # cv2.IMWRITE_PNG_COMPRESSION,
-            # min(9, max(0, quality // 10)),
-        ]  # PNG compression 0-9
-        ext = ".png"
-        mime_type = "image/png"
-    elif format.lower() == "webp":
-        encode_param = [cv2.IMWRITE_WEBP_QUALITY, min(100, max(0, quality))]
-        ext = ".webp"
-        mime_type = "image/webp"
-    elif format.lower() == "jpg" or format.lower() == "jpeg":
-        encode_param = [cv2.IMWRITE_JPEG_QUALITY, min(100, max(0, quality))]
-        ext = ".jpg"
-        mime_type = "image/jpeg"
-    else:
+    try:
+        return await screenshot_service.capture_as_data_uri(
+            width=width, height=height, format=format, quality=quality
+        )
+    except Exception as e:
+        logger.exception(f"Failed to capture screenshot: {e}")
         return None
 
-    _, encoded_bytes = cv2.imencode(ext, image, encode_param)
 
-    # 返回 base64 编码的字符串
-    base64_string = base64.b64encode(encoded_bytes.tobytes()).decode("utf-8")
-
-    return f"data:{mime_type};base64,{base64_string}"
+@app.post(
+    "/api/take_and_save_screenshot",
+    description="后端截图并保存到本地，返回文件路径和文件名",
+)
+async def take_and_save_screenshot(
+    request: ScreenshotRequest,
+    screenshot_dir: Path = Depends(get_screenshots_dir_dep),
+    resolution_profile: ResolutionProfile = Depends(get_resolution_profile),
+    screenshot_service: ScreenshotService = Depends(get_screenshot_service),
+) -> ScreenshotResponse:
+    """Takes a screenshot and saves it to a local directory."""
+    try:
+        full_path, file_name = await screenshot_service.capture_and_save(
+            screenshot_dir=screenshot_dir,
+            resolution_profile=resolution_profile,
+            should_focus=request.should_focus,
+            post_process=request.post_process,
+            title=request.title,
+            fmt=request.format,
+        )
+        return ScreenshotResponse(
+            success=True,
+            message="Screenshot saved successfully.",
+            file_path=full_path,
+            file_name=file_name,
+        )
+    except Exception as e:
+        logger.exception(f"Failed to take and save screenshot: {e}")
+        return ScreenshotResponse(
+            success=False,
+            message=str(e),
+            file_path=None,
+            file_name=None,
+        )
 
 
 @app.get("/api/version")
