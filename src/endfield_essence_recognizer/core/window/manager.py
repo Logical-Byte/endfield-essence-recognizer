@@ -50,12 +50,23 @@ class WindowManager:
 
     def restore(self) -> bool:
         """
-        Restore the window if it is minimized.
+        Restore the window to normal size if it is minimized / maximized.
         Returns True if an operation was performed, False otherwise.
         """
         window = self._get_window()
-        if window and window.isMinimized:
+        if window and (window.isMinimized or window.isMaximized):
             window.restore()
+            return True
+        return False
+
+    def show(self) -> bool:
+        """
+        Show the window if it is not visible.
+        Returns True if an operation was performed, False otherwise.
+        """
+        window = self._get_window()
+        if window and not window.visible:
+            window.show()
             return True
         return False
 
