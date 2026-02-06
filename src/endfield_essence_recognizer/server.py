@@ -50,10 +50,10 @@ def handle_keyboard_single_recognition():
     window_manager: WindowManager = get_window_manager_singleton()
     scanner_ctx: ScannerContext = default_scanner_context()
     if not window_manager.target_is_active:
-        logger.debug("终末地窗口不在前台，忽略 '[' 键。")
+        logger.debug('终末地窗口不在前台，忽略 "[" 键。')
         return
     else:
-        logger.info("检测到 '[' 键，开始识别基质")
+        logger.info('检测到 "[" 键，开始识别基质')
         recognize_once(
             window_manager,
             scanner_ctx,
