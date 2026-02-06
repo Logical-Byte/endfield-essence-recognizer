@@ -90,3 +90,19 @@ def region_out_of_bounds(
         0 <= region.x0 < region.x1 <= image_width
         and 0 <= region.y0 < region.y1 <= image_height
     )
+
+
+def mask_region(
+    image: MatLike,
+    region: Region,
+    color: tuple[int, int, int] = (0, 0, 0),
+) -> MatLike:
+    """用指定颜色遮罩图像中的特定区域。这是一个原地操作。"""
+    cv2.rectangle(
+        image,
+        (region.x0, region.y0),
+        (region.x1, region.y1),
+        color,
+        -1,
+    )
+    return image

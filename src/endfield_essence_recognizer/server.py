@@ -116,7 +116,7 @@ def temp_handle_keyboard_save_screenshot_for_debug():
         full_path, file_name = asyncio.run(
             screenshot_service.capture_and_save(
                 should_focus=True,
-                post_process=False,
+                post_process=True,
                 title="Debug",
                 fmt="png",
             )

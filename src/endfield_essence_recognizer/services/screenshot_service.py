@@ -1,9 +1,10 @@
 import asyncio
 import datetime
 
+from endfield_essence_recognizer.core.layout.base import Point, Region
 from endfield_essence_recognizer.core.path import get_root_dir
 from endfield_essence_recognizer.core.window import WindowManager
-from endfield_essence_recognizer.utils.image import save_image
+from endfield_essence_recognizer.utils.image import mask_region, save_image
 from endfield_essence_recognizer.utils.log import logger
 
 
@@ -52,9 +53,14 @@ class ScreenshotService:
             logger.debug(
                 "[ScreenshotService] Applying post-processing to the screenshot."
             )
-            # TODO: Implementation of post_process logic (masking bottom-left corner)
-            logger.warning("Unimplemented")
-            pass
+            # uid area to mask: (0-270, 1040-1080) for 1080p
+            # currency area to mask: 1340,20 - 1810,70
+            # We hardcode this for now as requested.
+            uid_mask_region = Region(Point(0, 1040), Point(270, 1080))
+            currency_mask_region = Region(Point(1340, 20), Point(1810, 70))
+
+            mask_region(image, uid_mask_region)
+            mask_region(image, currency_mask_region)
 
         # Generate filename
         timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
