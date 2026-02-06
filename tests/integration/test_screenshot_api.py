@@ -95,3 +95,24 @@ def test_take_and_save_screenshot_error(client, mock_screenshot_service):
     data = response.json()
     assert data["success"] is False
     assert "Unexpected Error" in data["message"]
+
+
+def test_take_and_save_screenshot_invalid_title(client):
+    """Test POST /api/take_and_save_screenshot with invalid title characters."""
+    # Test with underscore (explicitly forbidden), space, and path traversal
+    for invalid_title in [
+        "Endfield_1",
+        "My Screenshot",
+        "../traversal",
+        "test_title",
+        "!",
+        "@",
+    ]:
+        payload = {
+            "should_focus": True,
+            "post_process": True,
+            "title": invalid_title,
+            "format": "png",
+        }
+        response = client.post("/api/take_and_save_screenshot", json=payload)
+        assert response.status_code == 422

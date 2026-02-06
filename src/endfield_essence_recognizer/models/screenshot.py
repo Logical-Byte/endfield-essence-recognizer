@@ -34,7 +34,8 @@ class ScreenshotRequest(BaseModel):
     )
     title: str = Field(
         default="Endfield",
-        description="截图的标题，最终会作为文件名的一部分",
+        description="截图的标题，最终会作为文件名的一部分 (仅允许字母、数字、连字符)",
+        pattern=r"^[a-zA-Z0-9-]+$",
     )
     format: ScreenshotSaveFormat = Field(
         default=ScreenshotSaveFormat.PNG,
