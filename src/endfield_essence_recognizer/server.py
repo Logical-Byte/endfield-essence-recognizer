@@ -28,6 +28,7 @@ from endfield_essence_recognizer.deps import (
     get_resolution_profile,
     get_scanner_engine_dep,
     get_scanner_service,
+    get_screenshot_service,
     get_user_setting_manager_dep,
     get_window_manager_dep,
     get_window_manager_singleton,
@@ -39,6 +40,7 @@ from endfield_essence_recognizer.models.screenshot import (
 from endfield_essence_recognizer.models.user_setting import UserSetting
 from endfield_essence_recognizer.services.log_service import LogService
 from endfield_essence_recognizer.services.scanner_service import ScannerService
+from endfield_essence_recognizer.services.screenshot_service import ScreenshotService
 from endfield_essence_recognizer.services.user_setting_manager import (
     UserSettingManager,
 )
@@ -282,17 +284,30 @@ async def get_screenshot(
 )
 async def take_and_save_screenshot(
     request: ScreenshotRequest,
+    screenshot_service: ScreenshotService = Depends(get_screenshot_service),
 ) -> ScreenshotResponse:
     """Takes a screenshot and saves it to a local directory."""
-    # TODO: Implementation
-    _ = request
-    dummy_response = ScreenshotResponse(
-        success=True,
-        message="截图成功",
-        file_path="C:/dummy/path/Endfield_screenshot.png",
-        file_name="Endfield_screenshot.png",
-    )
-    return dummy_response
+    try:
+        full_path, file_name = await screenshot_service.capture_and_save(
+            should_focus=request.should_focus,
+            post_process=request.post_process,
+            title=request.title,
+            fmt=request.format,
+        )
+        return ScreenshotResponse(
+            success=True,
+            message="Screenshot saved successfully.",
+            file_path=full_path,
+            file_name=file_name,
+        )
+    except Exception as e:
+        logger.exception(f"Failed to take and save screenshot: {e}")
+        return ScreenshotResponse(
+            success=False,
+            message=str(e),
+            file_path=None,
+            file_name=None,
+        )
 
 
 @app.get("/api/version")
