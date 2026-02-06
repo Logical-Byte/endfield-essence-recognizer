@@ -132,14 +132,16 @@ def temp_handle_keyboard_save_screenshot_for_debug():
 
 
 @contextmanager
-def bind_hotkeys():
+def bind_hotkeys(server_config: ServerConfig):
     """Context manager to bind and unbind global hotkeys."""
     keyboard.add_hotkey("[", handle_keyboard_single_recognition)
     keyboard.add_hotkey("]", handle_keyboard_auto_click)
     keyboard.add_hotkey("alt+delete", handle_keyboard_on_exit)
-    keyboard.add_hotkey(
-        "=", temp_handle_keyboard_save_screenshot_for_debug
-    )  # 临时热键，用于调试截图功能
+    if server_config.dev_mode:
+        logger.debug("开发模式下，启用截图调试热键 `=`")
+        keyboard.add_hotkey(
+            "=", temp_handle_keyboard_save_screenshot_for_debug
+        )  # 临时热键，用于调试截图功能
     logger.info("全局热键已注册")
     try:
         yield
@@ -227,7 +229,7 @@ async def lifespan(app: FastAPI):
         init_mount_frontend_build(app, server_config)
         init_load_user_setting()
         log_welcome_message()
-        with bind_hotkeys():
+        with bind_hotkeys(server_config):
             yield
 
 
