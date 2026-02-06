@@ -147,6 +147,7 @@ class LogService:
             try:
                 await self._broadcast_task
             except asyncio.CancelledError:
+                # The task was cancelled as part of normal shutdown; this is expected.
                 pass
             self._broadcast_task = None
 
