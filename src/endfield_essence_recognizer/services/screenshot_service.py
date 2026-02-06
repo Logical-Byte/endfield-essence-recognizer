@@ -1,5 +1,9 @@
 import asyncio
+import base64
 import datetime
+from typing import Literal
+
+import cv2
 
 from endfield_essence_recognizer.core.layout.base import (
     ResolutionProfile,
@@ -15,6 +19,56 @@ class ScreenshotService:
 
     def __init__(self, window_manager: WindowManager):
         self._window_manager = window_manager
+
+    async def capture_as_data_uri(
+        self,
+        width: int = 1920,
+        height: int = 1080,
+        format: Literal["jpg", "jpeg", "png", "webp"] = "jpg",  # noqa: A002
+        quality: int = 75,
+    ) -> str | None:
+        """
+        Captures the game window and returns it as a base64 encoded data URI.
+
+        Args:
+            width: The desired width of the image.
+            height: The desired height of the image.
+            format: The image format (e.g., "png", "jpg", "webp").
+            quality: The quality of the encoded image (for lossy formats).
+
+        Returns:
+            A data URI string or None if the window is not active.
+        """
+        if not self._window_manager.target_is_active:
+            return None
+
+        # Capture screenshot
+        image = self._window_manager.screenshot()
+        # Resize to requested dimensions
+        image = cv2.resize(image, (width, height))
+        logger.debug("[ScreenshotService] Successfully captured and resized window.")
+
+        if format.lower() == "png":
+            encode_param = []  # PNG compression defaults
+            ext = ".png"
+            mime_type = "image/png"
+        elif format.lower() == "webp":
+            encode_param = [cv2.IMWRITE_WEBP_QUALITY, min(100, max(0, quality))]
+            ext = ".webp"
+            mime_type = "image/webp"
+        elif format.lower() == "jpg" or format.lower() == "jpeg":
+            encode_param = [cv2.IMWRITE_JPEG_QUALITY, min(100, max(0, quality))]
+            ext = ".jpg"
+            mime_type = "image/jpeg"
+        else:
+            return None
+
+        _, encoded_bytes = cv2.imencode(ext, image, encode_param)
+
+        # Encode to base64
+        base64_string = base64.b64encode(encoded_bytes.tobytes()).decode("utf-8")
+
+        return f"data:{mime_type};base64,{base64_string}"
 
     async def capture_and_save(
         self,

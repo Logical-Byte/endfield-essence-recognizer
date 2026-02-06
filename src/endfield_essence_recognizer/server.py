@@ -31,7 +31,6 @@ from endfield_essence_recognizer.deps import (
     get_scanner_service,
     get_screenshot_service,
     get_user_setting_manager_dep,
-    get_window_manager_dep,
     get_window_manager_singleton,
 )
 from endfield_essence_recognizer.models.screenshot import (
@@ -261,43 +260,11 @@ async def get_screenshot(
     height: int = 1080,
     format: Literal["jpg", "jpeg", "png", "webp"] = "jpg",  # noqa: A002
     quality: int = 75,
-    window_manager: WindowManager = Depends(get_window_manager_dep),
+    screenshot_service: ScreenshotService = Depends(get_screenshot_service),
 ) -> str | None:
-    import base64
-
-    import cv2
-
-    if not window_manager.target_is_active:
-        return None
-    else:
-        image = window_manager.screenshot()
-        image = cv2.resize(image, (width, height))
-        logger.success("成功截取终末地窗口截图。")
-
-    if format.lower() == "png":
-        encode_param = [
-            # cv2.IMWRITE_PNG_COMPRESSION,
-            # min(9, max(0, quality // 10)),
-        ]  # PNG compression 0-9
-        ext = ".png"
-        mime_type = "image/png"
-    elif format.lower() == "webp":
-        encode_param = [cv2.IMWRITE_WEBP_QUALITY, min(100, max(0, quality))]
-        ext = ".webp"
-        mime_type = "image/webp"
-    elif format.lower() == "jpg" or format.lower() == "jpeg":
-        encode_param = [cv2.IMWRITE_JPEG_QUALITY, min(100, max(0, quality))]
-        ext = ".jpg"
-        mime_type = "image/jpeg"
-    else:
-        return None
-
-    _, encoded_bytes = cv2.imencode(ext, image, encode_param)
-
-    # 返回 base64 编码的字符串
-    base64_string = base64.b64encode(encoded_bytes.tobytes()).decode("utf-8")
-
-    return f"data:{mime_type};base64,{base64_string}"
+    return await screenshot_service.capture_as_data_uri(
+        width=width, height=height, format=format, quality=quality
+    )
 
 
 @app.post(
