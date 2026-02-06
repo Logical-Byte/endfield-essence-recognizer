@@ -1,12 +1,12 @@
 import asyncio
 import datetime
+from pathlib import Path
 
 import cv2
 
 from endfield_essence_recognizer.core.layout.base import (
     ResolutionProfile,
 )
-from endfield_essence_recognizer.core.path import get_root_dir
 from endfield_essence_recognizer.core.window import WindowManager
 from endfield_essence_recognizer.models.screenshot import (
     ImageFormat,
@@ -58,6 +58,7 @@ class ScreenshotService:
 
     async def capture_and_save(
         self,
+        screenshot_dir: Path,
         resolution_profile: ResolutionProfile,
         should_focus: bool = True,
         post_process: bool = True,
@@ -112,7 +113,7 @@ class ScreenshotService:
 
         logger.debug("[ScreenshotService] Saving screenshot as {}", file_name)
         # Save to screenshots directory under root
-        save_path = get_root_dir() / "screenshots" / file_name
+        save_path = screenshot_dir / file_name
         save_image(image, save_path, ext=ext)
 
         return str(save_path), file_name

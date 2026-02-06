@@ -29,6 +29,7 @@ from endfield_essence_recognizer.deps import (
     get_scanner_engine_dep,
     get_scanner_service,
     get_screenshot_service,
+    get_screenshots_dir_dep,
     get_user_setting_manager_dep,
     get_window_manager_singleton,
 )
@@ -116,6 +117,7 @@ def temp_handle_keyboard_save_screenshot_for_debug():
     try:
         full_path, file_name = asyncio.run(
             screenshot_service.capture_and_save(
+                screenshot_dir=get_screenshots_dir_dep(),
                 resolution_profile=get_resolution_profile(),
                 should_focus=True,
                 post_process=True,
@@ -278,12 +280,14 @@ async def get_screenshot(
 )
 async def take_and_save_screenshot(
     request: ScreenshotRequest,
+    screenshot_dir: Path = Depends(get_screenshots_dir_dep),
     resolution_profile: ResolutionProfile = Depends(get_resolution_profile),
     screenshot_service: ScreenshotService = Depends(get_screenshot_service),
 ) -> ScreenshotResponse:
     """Takes a screenshot and saves it to a local directory."""
     try:
         full_path, file_name = await screenshot_service.capture_and_save(
+            screenshot_dir=screenshot_dir,
             resolution_profile=resolution_profile,
             should_focus=request.should_focus,
             post_process=request.post_process,
