@@ -54,20 +54,29 @@ from endfield_essence_recognizer.utils.log import (
 from endfield_essence_recognizer.version import __version__
 
 
+def check_game_window_exists() -> bool:
+    """
+    检查终末地游戏窗口是否存在。
+
+    Returns:
+        bool: 如果游戏窗口存在则返回 True，否则返回 False。
+    """
+    window_manager: WindowManager = get_window_manager_singleton()
+    if not window_manager.target_exists:
+        logger.warning("未检测到终末地窗口，停止快捷键操作。")
+        return False
+    return True
+
+
 def check_game_or_webview_is_active() -> bool:
     """
     检查终末地游戏窗口或 WebView 窗口是否在前台，打印相关日志。
 
-    允许继续触发操作的条件是同时满足下面的条件：
-    1. 终末地游戏窗口存在。
-    2. 终末地游戏窗口在前台，或者 WebView 窗口在前台。
+    Returns:
+        bool: 如果游戏窗口或 WebView 窗口在前台则返回 True，否则返回 False。
     """
     window_manager: WindowManager = get_window_manager_singleton()
     webview_window_manager: WindowManager = get_webview_window_manager()
-
-    if not window_manager.target_exists:
-        logger.warning("未检测到终末地窗口，停止快捷键操作。")
-        return False
 
     if window_manager.target_is_active:
         logger.debug("终末地窗口在前台，允许快捷键操作。")
@@ -82,6 +91,7 @@ def check_game_or_webview_is_active() -> bool:
 
 def on_hotkey_triggered_hook(
     key: str = "",
+    require_game_exists: bool = True,
     require_game_or_webview_active: bool = True,
 ) -> bool:
     """
@@ -89,14 +99,20 @@ def on_hotkey_triggered_hook(
 
     Args:
         key: 被触发的热键字符串，用于日志记录
+        require_game_exists: 是否要求终末地游戏窗口存在。
+            如果为 True，则调用 `check_game_window_exists` 进行检查。
         require_game_or_webview_active: 是否要求终末地游戏窗口或 WebView 窗口在前台。
             如果为 True，则调用 `check_game_or_webview_is_active` 进行检查。
-            如果为 False，则不进行前台窗口检查，直接返回 True。
     Returns:
         bool: 是否允许继续处理热键事件
     """
     if key:
         logger.info(f'检测到热键 "{key}" 被按下。')
+
+    if require_game_exists:
+        if not check_game_window_exists():
+            return False
+
     if require_game_or_webview_active:
         return check_game_or_webview_is_active()
     return True
@@ -154,7 +170,9 @@ def handle_keyboard_auto_click(key: str):
 
 def handle_keyboard_on_exit(key: str):
     """处理 Alt+Delete 按下事件 - 退出程序"""
-    if not on_hotkey_triggered_hook(key, require_game_or_webview_active=False):
+    if not on_hotkey_triggered_hook(
+        key, require_game_exists=False, require_game_or_webview_active=False
+    ):
         return
 
     logger.info('检测到 "Alt+Delete"，正在退出程序...')
