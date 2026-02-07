@@ -106,19 +106,27 @@ def check_game_or_webview_is_active() -> bool:
 )
 def handle_keyboard_single_recognition(key: str):
     """处理 "[" 键按下事件 - 仅识别不操作"""
+    import time
+
     window_manager: WindowManager = get_window_manager_singleton()
     scanner_ctx: ScannerContext = default_scanner_context()
     if not window_manager.target_is_active:
-        logger.debug(f'终末地窗口不在前台，忽略 "{key}" 键。')
-        return
-    else:
-        logger.info(f'检测到 "{key}" 键，开始识别基质')
-        recognize_once(
-            window_manager,
-            scanner_ctx,
-            default_user_setting_manager().get_user_setting(),
-            get_resolution_profile(),
+        logger.debug(
+            f'终末地窗口不在前台，尝试切换到前台以进行识别基质操作 "{key}" 键。'
         )
+        if window_manager.activate():
+            time.sleep(0.3)
+        if window_manager.show():
+            # make sure the window is visible
+            time.sleep(0.3)
+
+    logger.info(f'检测到 "{key}" 键，开始识别基质')
+    recognize_once(
+        window_manager,
+        scanner_ctx,
+        default_user_setting_manager().get_user_setting(),
+        get_resolution_profile(),
+    )
 
 
 def handle_keyboard_toggle_scan():
@@ -143,14 +151,8 @@ def handle_keyboard_toggle_scan():
 )
 def handle_keyboard_auto_click(key: str):
     """处理 "]" 键按下事件 - 切换自动点击"""
-    window_manager: WindowManager = get_window_manager_singleton()
-
-    if not window_manager.target_is_active:
-        logger.debug(f'终末地窗口不在前台，忽略 "{key}" 键。')
-        return
-    else:
-        logger.info(f'检测到 "{key}" 键，切换自动点击状态')
-        handle_keyboard_toggle_scan()
+    logger.info(f'检测到 "{key}" 键，切换自动点击状态')
+    handle_keyboard_toggle_scan()
 
 
 @hotkey_handler(require_game_exists=False, require_game_or_webview_active=False)

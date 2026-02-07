@@ -36,6 +36,9 @@ class WindowActionsAdapter(WindowActions, ImageSource):
     def activate(self) -> bool:
         return self._window_manager.activate()
 
+    def show(self) -> bool:
+        return self._window_manager.show()
+
     def click(self, relative_x: int, relative_y: int) -> None:
         self._window_manager.click(relative_x, relative_y)
 
