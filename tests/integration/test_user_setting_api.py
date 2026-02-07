@@ -73,3 +73,19 @@ def test_post_config_invalid_data(client):
     response = client.post("/api/config", json=invalid_config)
     # FastAPI returns 422 Unprocessable Entity for Pydantic validation errors
     assert response.status_code == 422
+
+
+def test_post_config_version_mismatch(client, test_manager):
+    """Test the POST /api/config endpoint with a version mismatch."""
+    from endfield_essence_recognizer.models.user_setting import UserSetting
+
+    config_with_wrong_version = {
+        "version": -1,
+        "trash_weapon_ids": ["test"],
+    }
+
+    response = client.post("/api/config", json=config_with_wrong_version)
+    assert response.status_code == 400
+    assert "version mismatch" in response.json()["detail"].lower()
+    assert str(UserSetting._VERSION) in response.json()["detail"]
+    assert "-1" in response.json()["detail"]
