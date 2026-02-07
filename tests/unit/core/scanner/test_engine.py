@@ -56,6 +56,9 @@ class MockWindowActions:
     def activate(self):
         return True
 
+    def show(self):
+        return True
+
     def click(self, x, y):
         self.click_calls.append((x, y))
 

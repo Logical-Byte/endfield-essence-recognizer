@@ -151,14 +151,8 @@ def handle_keyboard_toggle_scan():
 )
 def handle_keyboard_auto_click(key: str):
     """处理 "]" 键按下事件 - 切换自动点击"""
-    window_manager: WindowManager = get_window_manager_singleton()
-
-    if not window_manager.target_is_active:
-        logger.debug(f'终末地窗口不在前台，忽略 "{key}" 键。')
-        return
-    else:
-        logger.info(f'检测到 "{key}" 键，切换自动点击状态')
-        handle_keyboard_toggle_scan()
+    logger.info(f'检测到 "{key}" 键，切换自动点击状态')
+    handle_keyboard_toggle_scan()
 
 
 @hotkey_handler(require_game_exists=False, require_game_or_webview_active=False)

@@ -190,6 +190,12 @@ class ScannerEngine:
         if self._window_actions.activate():
             self._window_actions.wait(0.5)
 
+        if self._window_actions.show():
+            # make the window visible in the beginning
+            self._window_actions.wait(0.5)
+
+        logger.debug("Made the window visible and active.")
+
         check_scene_result = check_scene(self._image_source, self.ctx, self._profile)
         if not check_scene_result:
             return
