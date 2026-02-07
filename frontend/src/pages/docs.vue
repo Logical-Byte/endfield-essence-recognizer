@@ -7,7 +7,7 @@
         append-icon="mdi-open-in-new"
         color="primary"
         href="https://ef.yituliu.cn/resources/essence-recognizer"
-        rel="noopener"
+        rel="noopener noreferrer"
         target="_blank"
       >
         官网
@@ -15,7 +15,7 @@
       <v-btn
         append-icon="mdi-open-in-new"
         href="https://github.com/Logical-Byte/endfield-essence-recognizer"
-        rel="noopener"
+        rel="noopener noreferrer"
         target="_blank"
       >
         项目地址
@@ -24,7 +24,7 @@
       <v-btn
         prepend-icon="mdi-qqchat"
         href="https://qm.qq.com/cgi-bin/qm/qr?k=1xqRp7JwQHwGswa-8_SMFuAsRYYRnF8J"
-        rel="noopener"
+        rel="noopener noreferrer"
         target="_blank"
       >
         反馈交流①群：486622964
@@ -33,7 +33,7 @@
         prepend-icon="mdi-qqchat"
         color="primary"
         href="https://qm.qq.com/cgi-bin/qm/qr?k=qAmvmHCc3HuESiJhZVe6Ytgj7foOxXx9"
-        rel="noopener"
+        rel="noopener noreferrer"
         target="_blank"
       >
         反馈交流②群：1082880855
@@ -134,7 +134,7 @@
           class="text-primary text-decoration-none"
           href="https://www.7-zip.org/"
           target="_blank"
-          rel="noopener"
+          rel="noopener noreferrer"
           >7zip</a
         >
         或者
@@ -142,7 +142,7 @@
           class="text-primary text-decoration-none"
           href="https://www.win-rar.com/"
           target="_blank"
-          rel="noopener"
+          rel="noopener noreferrer"
           >WinRAR</a
         >
         解压即可解决（其他解压软件也可以试试）。
@@ -161,7 +161,7 @@
         class="text-primary text-decoration-none"
         href="https://github.com/Logical-Byte/endfield-essence-recognizer/issues/24#issuecomment-3830421851"
         target="_blank"
-        rel="noopener"
+        rel="noopener noreferrer"
         >https://github.com/Logical-Byte/endfield-essence-recognizer/issues/24#issuecomment-3830421851</a
       >
     </p>
@@ -171,7 +171,7 @@
         class="text-primary text-decoration-none"
         href="http://127.0.0.1:325/"
         target="_blank"
-        rel="noopener"
+        rel="noopener noreferrer"
         >http://127.0.0.1:325/</a
       >
     </p>
@@ -218,14 +218,14 @@
         class="text-primary text-decoration-none"
         href="https://github.com/Logical-Byte/endfield-essence-recognizer"
         target="_blank"
-        rel="noopener"
+        rel="noopener noreferrer"
         ><strong>在 GitHub 上提 Issue</strong></a
       >，或者加入反馈交流群：<v-chip
         class="mr-1"
         prepend-icon="mdi-qqchat"
         href="https://qm.qq.com/cgi-bin/qm/qr?k=1xqRp7JwQHwGswa-8_SMFuAsRYYRnF8J"
         target="_blank"
-        rel="noopener"
+        rel="noopener noreferrer"
       >
         ①群：486622964
       </v-chip>
@@ -233,7 +233,7 @@
         prepend-icon="mdi-qqchat"
         color="primary"
         href="https://qm.qq.com/cgi-bin/qm/qr?k=qAmvmHCc3HuESiJhZVe6Ytgj7foOxXx9"
-        rel="noopener"
+        rel="noopener noreferrer"
         target="_blank"
       >
         ②群：1082880855
