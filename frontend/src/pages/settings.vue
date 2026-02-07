@@ -464,7 +464,7 @@ function isTypePartiallySelected(groupId: string): boolean {
 
 const config = computed(() => {
   return {
-    version: 0,
+    version: 2,
     trash_weapon_ids: notSelectedWeaponIds.value,
     treasure_essence_stats: treasureEssenceStats.value,
     treasure_action: treasureAction.value,
