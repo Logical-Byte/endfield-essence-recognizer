@@ -86,3 +86,22 @@ class WindowActions(Protocol):
             seconds: The number of seconds to wait.
         """
         ...
+
+
+@runtime_checkable
+class HotkeyHandler(Protocol):
+    """
+    Protocol for hotkey handler functions.
+
+    The implementing function should accept a single string argument (the hotkey)
+    and return None.
+    """
+
+    def __call__(self, key: str) -> None:
+        """
+        Handle a hotkey trigger.
+
+        Args:
+            key: The hotkey string that triggered the handler.
+        """
+        ...

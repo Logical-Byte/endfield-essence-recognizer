@@ -17,7 +17,9 @@ async def test_lifespan_integration_log_service():
     log_service = get_log_service()
 
     # We patch keyboard to avoid side effects on the host OS during integration tests
-    with patch("endfield_essence_recognizer.server.keyboard") as mock_keyboard:
+    with patch(
+        "endfield_essence_recognizer.hotkey_entrypoints.keyboard"
+    ) as mock_keyboard:
         # Use FastAPI's lifespan context directly to ensure it runs
         async with app.router.lifespan_context(app):
             # --- Startup phase complete (yield reached) ---

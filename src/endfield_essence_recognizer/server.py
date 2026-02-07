@@ -1,10 +1,9 @@
 import asyncio
 import importlib.resources
 import os
-from contextlib import asynccontextmanager, contextmanager
+from contextlib import asynccontextmanager
 from pathlib import Path
 
-import keyboard
 import uvicorn
 from fastapi import Body, Depends, FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
@@ -13,17 +12,11 @@ from fastapi.staticfiles import StaticFiles
 from endfield_essence_recognizer.core.config import ServerConfig, get_server_config
 from endfield_essence_recognizer.core.layout import ResolutionProfile
 from endfield_essence_recognizer.core.path import get_logs_dir
-from endfield_essence_recognizer.core.scanner.context import ScannerContext
 from endfield_essence_recognizer.core.scanner.engine import (
     ScannerEngine,
-    recognize_once,
 )
-from endfield_essence_recognizer.core.window import WindowManager
 from endfield_essence_recognizer.deps import (
-    default_scanner_context,
-    default_scanner_engine,
     default_user_setting_manager,
-    get_audio_service,
     get_log_service,
     get_resolution_profile,
     get_scanner_engine_dep,
@@ -31,13 +24,12 @@ from endfield_essence_recognizer.deps import (
     get_screenshot_service,
     get_screenshots_dir_dep,
     get_user_setting_manager_dep,
-    get_window_manager_singleton,
 )
+from endfield_essence_recognizer.hotkey_entrypoints import bind_hotkeys
 from endfield_essence_recognizer.models.screenshot import (
     ImageFormat,
     ScreenshotRequest,
     ScreenshotResponse,
-    ScreenshotSaveFormat,
 )
 from endfield_essence_recognizer.models.user_setting import UserSetting
 from endfield_essence_recognizer.services.log_service import LogService
@@ -51,103 +43,6 @@ from endfield_essence_recognizer.utils.log import (
     logger,
 )
 from endfield_essence_recognizer.version import __version__
-
-
-def handle_keyboard_single_recognition():
-    """处理 "[" 键按下事件 - 仅识别不操作"""
-    window_manager: WindowManager = get_window_manager_singleton()
-    scanner_ctx: ScannerContext = default_scanner_context()
-    if not window_manager.target_is_active:
-        logger.debug('终末地窗口不在前台，忽略 "[" 键。')
-        return
-    else:
-        logger.info('检测到 "[" 键，开始识别基质')
-        recognize_once(
-            window_manager,
-            scanner_ctx,
-            default_user_setting_manager().get_user_setting(),
-            get_resolution_profile(),
-        )
-
-
-def handle_keyboard_toggle_scan():
-    """切换基质扫描状态"""
-    scanner_service = get_scanner_service()
-    audio_service = get_audio_service()
-
-    if not scanner_service.is_running():
-        logger.info("开始扫描基质")
-        scanner = default_scanner_engine()
-        scanner_service.start_scan(scanner_factory=lambda: scanner)
-        audio_service.play_enable()
-    else:
-        logger.info("停止扫描基质")
-        scanner_service.stop_scan()
-        audio_service.play_disable()
-
-
-def handle_keyboard_auto_click():
-    """处理 "]" 键按下事件 - 切换自动点击"""
-    window_manager: WindowManager = get_window_manager_singleton()
-
-    if not window_manager.target_is_active:
-        logger.debug('终末地窗口不在前台，忽略 "]" 键。')
-        return
-    else:
-        handle_keyboard_toggle_scan()
-
-
-def handle_keyboard_on_exit():
-    """处理 Alt+Delete 按下事件 - 退出程序"""
-    logger.info('检测到 "Alt+Delete"，正在退出程序...')
-
-    # 停止扫描器
-    scanner_service = get_scanner_service()
-    if scanner_service.is_running():
-        scanner_service.stop_scan()
-
-    # 关闭 webview 窗口，剩下的清理工作交给 main 函数
-    from endfield_essence_recognizer.webui import window
-
-    window.destroy()
-
-
-def temp_handle_keyboard_save_screenshot_for_debug():
-    screenshot_service = get_screenshot_service()
-    try:
-        full_path, file_name = asyncio.run(
-            screenshot_service.capture_and_save(
-                screenshot_dir=get_screenshots_dir_dep(),
-                resolution_profile=get_resolution_profile(),
-                should_focus=True,
-                post_process=True,
-                title="Debug",
-                fmt=ScreenshotSaveFormat.PNG,
-            )
-        )
-        logger.info(f"截图已保存到 {full_path}")
-        logger.info(f"截图文件名: {file_name}")
-    except Exception as e:
-        logger.exception(f"截图失败: {e}")
-
-
-@contextmanager
-def bind_hotkeys(server_config: ServerConfig):
-    """Context manager to bind and unbind global hotkeys."""
-    keyboard.add_hotkey("[", handle_keyboard_single_recognition)
-    keyboard.add_hotkey("]", handle_keyboard_auto_click)
-    keyboard.add_hotkey("alt+delete", handle_keyboard_on_exit)
-    if server_config.dev_mode:
-        logger.debug("开发模式下，启用截图调试热键 `=`")
-        keyboard.add_hotkey(
-            "=", temp_handle_keyboard_save_screenshot_for_debug
-        )  # 临时热键，用于调试截图功能
-    logger.info("全局热键已注册")
-    try:
-        yield
-    finally:
-        keyboard.unhook_all()
-        logger.info("全局热键已注销")
 
 
 def log_welcome_message():
