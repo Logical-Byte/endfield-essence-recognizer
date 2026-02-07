@@ -80,11 +80,24 @@ def check_game_or_webview_is_active() -> bool:
         return False
 
 
-def on_hotkey_triggered_hook(key: str = "") -> bool:
-    """Hotkey 触发时的钩子函数，用于日志记录等通用操作"""
+def on_hotkey_triggered_hook(
+    key: str = "",
+    require_game_or_webview_active: bool = True,
+) -> bool:
+    """
+    Hotkey 触发时的钩子函数，用于日志记录等通用操作
+
+    Args:
+        key: 被触发的热键字符串，用于日志记录
+        require_game_or_webview_active: 是否要求终末地游戏窗口或 WebView 窗口在前台。
+            如果为 True，则调用 `check_game_or_webview_is_active` 进行检查。
+            如果为 False，则不进行前台窗口检查，直接返回 True。
+    """
     if key:
         logger.info(f'检测到热键 "{key}" 被按下。')
-    return check_game_or_webview_is_active()
+    if require_game_or_webview_active:
+        return check_game_or_webview_is_active()
+    return True
 
 
 def handle_keyboard_single_recognition(key: str):
@@ -139,7 +152,7 @@ def handle_keyboard_auto_click(key: str):
 
 def handle_keyboard_on_exit(key: str):
     """处理 Alt+Delete 按下事件 - 退出程序"""
-    if not on_hotkey_triggered_hook(key):
+    if not on_hotkey_triggered_hook(key, require_game_or_webview_active=False):
         return
 
     logger.info('检测到 "Alt+Delete"，正在退出程序...')
