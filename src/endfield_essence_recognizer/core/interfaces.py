@@ -68,6 +68,15 @@ class WindowActions(Protocol):
         """
         ...
 
+    def show(self) -> bool:
+        """
+        Show the window if it is hidden.
+
+        Returns:
+            True if the window was shown, False otherwise.
+        """
+        ...
+
     def click(self, relative_x: int, relative_y: int) -> None:
         """
         Perform a left mouse click at the specified relative coordinates.
