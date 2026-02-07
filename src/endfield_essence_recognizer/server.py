@@ -92,6 +92,8 @@ def on_hotkey_triggered_hook(
         require_game_or_webview_active: 是否要求终末地游戏窗口或 WebView 窗口在前台。
             如果为 True，则调用 `check_game_or_webview_is_active` 进行检查。
             如果为 False，则不进行前台窗口检查，直接返回 True。
+    Returns:
+        bool: 是否允许继续处理热键事件
     """
     if key:
         logger.info(f'检测到热键 "{key}" 被按下。')
