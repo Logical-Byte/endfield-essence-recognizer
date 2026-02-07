@@ -2,6 +2,7 @@ import asyncio
 import importlib.resources
 import os
 from contextlib import asynccontextmanager, contextmanager
+from functools import wraps
 from pathlib import Path
 
 import keyboard
@@ -11,6 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from endfield_essence_recognizer.core.config import ServerConfig, get_server_config
+from endfield_essence_recognizer.core.interfaces import HotkeyHandler
 from endfield_essence_recognizer.core.layout import ResolutionProfile
 from endfield_essence_recognizer.core.path import get_logs_dir
 from endfield_essence_recognizer.core.scanner.context import ScannerContext
@@ -89,40 +91,47 @@ def check_game_or_webview_is_active() -> bool:
         return False
 
 
-def on_hotkey_triggered_hook(
-    key: str = "",
+def hotkey_handler(
     require_game_exists: bool = True,
     require_game_or_webview_active: bool = True,
-) -> bool:
+):
     """
-    Hotkey 触发时的钩子函数，用于日志记录等通用操作
+    Hotkey 触发时的装饰器，用于日志记录和窗口状态检查。
 
     Args:
-        key: 被触发的热键字符串，用于日志记录
         require_game_exists: 是否要求终末地游戏窗口存在。
-            如果为 True，则调用 `check_game_window_exists` 进行检查。
         require_game_or_webview_active: 是否要求终末地游戏窗口或 WebView 窗口在前台。
-            如果为 True，则调用 `check_game_or_webview_is_active` 进行检查。
-    Returns:
-        bool: 是否允许继续处理热键事件
     """
-    if key:
-        logger.info(f'检测到热键 "{key}" 被按下。')
 
-    if require_game_exists:
-        if not check_game_window_exists():
-            return False
+    def decorator(func: HotkeyHandler) -> HotkeyHandler:
+        @wraps(func)
+        def wrapper(key: str) -> None:
+            if key:
+                logger.info(f'检测到热键 "{key}" 被按下。')
 
-    if require_game_or_webview_active:
-        return check_game_or_webview_is_active()
-    return True
+            # 如果需要，检查游戏窗口是否存在
+            if require_game_exists:
+                if not check_game_window_exists():
+                    return
+
+            # 如果需要，检查游戏窗口或 WebView 窗口是否在前台
+            if require_game_or_webview_active:
+                if not check_game_or_webview_is_active():
+                    return
+
+            return func(key)
+
+        return wrapper
+
+    return decorator
 
 
+@hotkey_handler(
+    require_game_exists=True,
+    require_game_or_webview_active=True,
+)
 def handle_keyboard_single_recognition(key: str):
     """处理 "[" 键按下事件 - 仅识别不操作"""
-    if not on_hotkey_triggered_hook(key):
-        return
-
     window_manager: WindowManager = get_window_manager_singleton()
     scanner_ctx: ScannerContext = default_scanner_context()
     if not window_manager.target_is_active:
@@ -154,11 +163,12 @@ def handle_keyboard_toggle_scan():
         audio_service.play_disable()
 
 
+@hotkey_handler(
+    require_game_exists=True,
+    require_game_or_webview_active=True,
+)
 def handle_keyboard_auto_click(key: str):
     """处理 "]" 键按下事件 - 切换自动点击"""
-    if not on_hotkey_triggered_hook(key):
-        return
-
     window_manager: WindowManager = get_window_manager_singleton()
 
     if not window_manager.target_is_active:
@@ -168,13 +178,9 @@ def handle_keyboard_auto_click(key: str):
         handle_keyboard_toggle_scan()
 
 
+@hotkey_handler(require_game_exists=False, require_game_or_webview_active=False)
 def handle_keyboard_on_exit(key: str):
     """处理 Alt+Delete 按下事件 - 退出程序"""
-    if not on_hotkey_triggered_hook(
-        key, require_game_exists=False, require_game_or_webview_active=False
-    ):
-        return
-
     logger.info('检测到 "Alt+Delete"，正在退出程序...')
 
     # 停止扫描器
@@ -188,10 +194,11 @@ def handle_keyboard_on_exit(key: str):
     window.destroy()
 
 
+@hotkey_handler(
+    require_game_exists=True,
+    require_game_or_webview_active=True,
+)
 def temp_handle_keyboard_save_screenshot_for_debug(key: str):
-    if not on_hotkey_triggered_hook(key):
-        return
-
     screenshot_service = get_screenshot_service()
     try:
         full_path, file_name = asyncio.run(
