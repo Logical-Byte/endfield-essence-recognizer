@@ -67,7 +67,7 @@ def check_game_or_webview_is_active() -> bool:
 
     if not window_manager.target_exists:
         logger.warning("未检测到终末地窗口，停止快捷键操作。")
-        return False  # for dev, temporarily allow
+        return False
 
     if window_manager.target_is_active:
         logger.debug("终末地窗口在前台，允许快捷键操作。")
