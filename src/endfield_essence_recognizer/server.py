@@ -31,6 +31,7 @@ from endfield_essence_recognizer.deps import (
     get_screenshot_service,
     get_screenshots_dir_dep,
     get_user_setting_manager_dep,
+    get_webview_window_manager,
     get_window_manager_singleton,
 )
 from endfield_essence_recognizer.models.screenshot import (
@@ -53,8 +54,44 @@ from endfield_essence_recognizer.utils.log import (
 from endfield_essence_recognizer.version import __version__
 
 
-def handle_keyboard_single_recognition():
+def check_game_or_webview_is_active() -> bool:
+    """
+    检查终末地游戏窗口或 WebView 窗口是否在前台，打印相关日志。
+
+    允许继续触发操作的条件是同时满足下面的条件：
+    1. 终末地游戏窗口存在。
+    2. 终末地游戏窗口在前台，或者 WebView 窗口在前台。
+    """
+    window_manager: WindowManager = get_window_manager_singleton()
+    webview_window_manager: WindowManager = get_webview_window_manager()
+
+    if not window_manager.target_exists:
+        logger.warning("未检测到终末地窗口，停止快捷键操作。")
+        return False  # for dev, temporarily allow
+
+    if window_manager.target_is_active:
+        logger.debug("终末地窗口在前台，允许快捷键操作。")
+        return True
+    elif webview_window_manager.target_is_active:
+        logger.debug("WebView 窗口在前台，允许快捷键操作。")
+        return True
+    else:
+        logger.warning("前台窗口不是终末地或 WebView，停止快捷键操作。")
+        return False
+
+
+def on_hotkey_triggered_hook(key: str = "") -> bool:
+    """Hotkey 触发时的钩子函数，用于日志记录等通用操作"""
+    if key:
+        logger.info(f'检测到热键 "{key}" 被按下。')
+    return check_game_or_webview_is_active()
+
+
+def handle_keyboard_single_recognition(key: str):
     """处理 "[" 键按下事件 - 仅识别不操作"""
+    if not on_hotkey_triggered_hook(key):
+        return
+
     window_manager: WindowManager = get_window_manager_singleton()
     scanner_ctx: ScannerContext = default_scanner_context()
     if not window_manager.target_is_active:
@@ -86,8 +123,11 @@ def handle_keyboard_toggle_scan():
         audio_service.play_disable()
 
 
-def handle_keyboard_auto_click():
+def handle_keyboard_auto_click(key: str):
     """处理 "]" 键按下事件 - 切换自动点击"""
+    if not on_hotkey_triggered_hook(key):
+        return
+
     window_manager: WindowManager = get_window_manager_singleton()
 
     if not window_manager.target_is_active:
@@ -97,8 +137,11 @@ def handle_keyboard_auto_click():
         handle_keyboard_toggle_scan()
 
 
-def handle_keyboard_on_exit():
+def handle_keyboard_on_exit(key: str):
     """处理 Alt+Delete 按下事件 - 退出程序"""
+    if not on_hotkey_triggered_hook(key):
+        return
+
     logger.info('检测到 "Alt+Delete"，正在退出程序...')
 
     # 停止扫描器
@@ -112,7 +155,10 @@ def handle_keyboard_on_exit():
     window.destroy()
 
 
-def temp_handle_keyboard_save_screenshot_for_debug():
+def temp_handle_keyboard_save_screenshot_for_debug(key: str):
+    if not on_hotkey_triggered_hook(key):
+        return
+
     screenshot_service = get_screenshot_service()
     try:
         full_path, file_name = asyncio.run(
@@ -134,13 +180,13 @@ def temp_handle_keyboard_save_screenshot_for_debug():
 @contextmanager
 def bind_hotkeys(server_config: ServerConfig):
     """Context manager to bind and unbind global hotkeys."""
-    keyboard.add_hotkey("[", handle_keyboard_single_recognition)
-    keyboard.add_hotkey("]", handle_keyboard_auto_click)
-    keyboard.add_hotkey("alt+delete", handle_keyboard_on_exit)
+    keyboard.add_hotkey("[", handle_keyboard_single_recognition, args=("[",))
+    keyboard.add_hotkey("]", handle_keyboard_auto_click, args=("]",))
+    keyboard.add_hotkey("alt+delete", handle_keyboard_on_exit, args=("alt+delete",))
     if server_config.dev_mode:
         logger.debug("开发模式下，启用截图调试热键 `=`")
         keyboard.add_hotkey(
-            "=", temp_handle_keyboard_save_screenshot_for_debug
+            "=", temp_handle_keyboard_save_screenshot_for_debug, args=("=",)
         )  # 临时热键，用于调试截图功能
     logger.info("全局热键已注册")
     try:

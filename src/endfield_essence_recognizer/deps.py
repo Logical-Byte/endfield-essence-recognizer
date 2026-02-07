@@ -26,6 +26,7 @@ from endfield_essence_recognizer.core.scanner.context import (
     ScannerContext,
 )
 from endfield_essence_recognizer.core.scanner.engine import ScannerEngine
+from endfield_essence_recognizer.core.webui import get_webview_title
 from endfield_essence_recognizer.core.window import (
     SUPPORTED_WINDOW_TITLES,
     WindowManager,
@@ -76,6 +77,15 @@ def get_window_manager_dep() -> WindowManager:
     Get the WindowManager dependency.
     """
     return get_window_manager_singleton()
+
+
+@lru_cache()
+def get_webview_window_manager() -> WindowManager:
+    """
+    Get the singleton WindowManager instance for the webview window.
+    """
+    # Only contain the single webview title
+    return WindowManager([get_webview_title()])
 
 
 # Path dependency
