@@ -112,7 +112,7 @@ class DeliveryClaimer(threading.Thread):
                 break
             else:
                 logger.info("未检测到武陵调度券，继续抢单...")
-                time.sleep(4)
+                time.sleep(3)
                 self._window_manager.click(1745, 1003)
                 time.sleep(2)
 
