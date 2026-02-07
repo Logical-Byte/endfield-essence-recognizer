@@ -5,7 +5,14 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 import uvicorn
-from fastapi import Body, Depends, FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import (
+    Body,
+    Depends,
+    FastAPI,
+    HTTPException,
+    WebSocket,
+    WebSocketDisconnect,
+)
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
@@ -25,6 +32,7 @@ from endfield_essence_recognizer.deps import (
     get_screenshots_dir_dep,
     get_user_setting_manager_dep,
 )
+from endfield_essence_recognizer.exceptions import ConfigVersionMismatchError
 from endfield_essence_recognizer.hotkey_entrypoints import bind_hotkeys
 from endfield_essence_recognizer.models.screenshot import (
     ImageFormat,
@@ -150,7 +158,10 @@ async def post_config(
     new_config: UserSetting = Body(),
     user_setting_manager: UserSettingManager = Depends(get_user_setting_manager_dep),
 ) -> UserSetting:
-    user_setting_manager.update_from_user_setting(new_config)
+    try:
+        user_setting_manager.update_from_user_setting(new_config)
+    except ConfigVersionMismatchError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
     return user_setting_manager.get_user_setting_ref()
 
 

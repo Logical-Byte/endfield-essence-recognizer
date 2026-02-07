@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from endfield_essence_recognizer.exceptions import ConfigVersionMismatchError
 from endfield_essence_recognizer.models.user_setting import UserSetting
 from endfield_essence_recognizer.utils.log import logger
 
@@ -124,6 +125,8 @@ class UserSettingManager:
         """
         Update the in-memory UserSetting from a dictionary and save to disk.
         """
+        if "version" in data and data["version"] != UserSetting._VERSION:
+            raise ConfigVersionMismatchError(UserSetting._VERSION, data["version"])
         self._user_setting.update_from_dict(data)
         self.save_user_setting()
 
@@ -132,5 +135,7 @@ class UserSettingManager:
         Update the in-memory UserSetting from another UserSetting instance
         and save to disk.
         """
+        if other.version != UserSetting._VERSION:
+            raise ConfigVersionMismatchError(UserSetting._VERSION, other.version)
         self._user_setting.update_from_model(other)
         self.save_user_setting()

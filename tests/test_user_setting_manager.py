@@ -3,8 +3,11 @@ import json
 import pytest
 from pydantic import ValidationError
 
+from endfield_essence_recognizer.exceptions import ConfigVersionMismatchError
 from endfield_essence_recognizer.models.user_setting import UserSetting
-from endfield_essence_recognizer.services.user_setting_manager import UserSettingManager
+from endfield_essence_recognizer.services.user_setting_manager import (
+    UserSettingManager,
+)
 
 
 @pytest.fixture
@@ -96,6 +99,25 @@ def test_load_user_setting_corrupt_json_backups_file(manager, settings_file):
     assert backup_file.read_text(encoding="utf-8") == "not a json"
 
     assert manager.get_user_setting().version == UserSetting._VERSION
+
+
+def test_update_from_dict_version_mismatch(manager):
+    """Test that update_from_dict raises ConfigVersionMismatchError on version mismatch."""
+    data = {"version": -1, "trash_weapon_ids": ["test"]}
+    with pytest.raises(ConfigVersionMismatchError) as excinfo:
+        manager.update_from_dict(data)
+    assert excinfo.value.expected == UserSetting._VERSION
+    assert excinfo.value.got == -1
+
+
+def test_update_from_user_setting_version_mismatch(manager):
+    """Test that update_from_user_setting raises ConfigVersionMismatchError on version mismatch."""
+    other = UserSetting()
+    other.version = -1
+    with pytest.raises(ConfigVersionMismatchError) as excinfo:
+        manager.update_from_user_setting(other)
+    assert excinfo.value.expected == UserSetting._VERSION
+    assert excinfo.value.got == -1
 
 
 def test_save_user_setting(manager, settings_file):
