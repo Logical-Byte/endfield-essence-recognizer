@@ -64,11 +64,11 @@ class Resolution1080p(ResolutionProfile):
 
     @property
     def LIST_OF_DELIVERY_JOBS_SCENE_CHECK_ROI(self) -> Region:
-        return Region(Point(38, 66), Point(143, 106))
+        return Region(Point(340, 68), Point(702, 208))
 
     @property
     def DELIVERY_JOB_REWARD_ROI(self) -> Region:
-        return Region(Point(100, 150), Point(1820, 950))
+        return Region(Point(1251, 252), Point(1413, 989))
 
     @property
     def DELIVERY_JOB_REFRESH_BUTTON_POINT(self) -> Point:
