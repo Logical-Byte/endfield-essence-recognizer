@@ -35,6 +35,7 @@ class DeliveryClaimerEngine(AutomationEngine):
         delivery_scene_recognizer: Recognizer[DeliverySceneLabel],
         delivery_job_reward_recognizer: Recognizer[DeliveryJobRewardLabel],
         audio_service: AudioService,
+        click_interval: float = 5.0,
     ) -> None:
         self._image_source = image_source
         self._window_actions = window_actions
@@ -42,6 +43,8 @@ class DeliveryClaimerEngine(AutomationEngine):
         self._delivery_scene_recognizer = delivery_scene_recognizer
         self._delivery_job_reward_recognizer = delivery_job_reward_recognizer
         self._audio_service = audio_service
+
+        self._click_interval = click_interval
 
     def execute(self, stop_event: threading.Event) -> None:
         """
@@ -51,11 +54,20 @@ class DeliveryClaimerEngine(AutomationEngine):
         self._execute(stop_event)
         logger.debug("DeliveryClaimerEngine execution finished.")
 
+    def _check_window_and_scene(self) -> bool:
+        if not self._window_actions.target_is_active:
+            logger.info("终末地窗口不在前台，停止抢单。")
+            return False
+        if not self._check_scene():
+            logger.warning("窗口检查或场景检查失败，停止抢单。")
+            return False
+        return True
+
     def _execute(self, stop_event: threading.Event) -> None:
         """
         Execute the delivery claiming loop.
         """
-        logger.info("初始化抢单引擎...")
+        logger.info("开始抢单...")
 
         logger.info("将窗口置于前台...")
         if self._window_actions.activate():
@@ -63,15 +75,16 @@ class DeliveryClaimerEngine(AutomationEngine):
         if self._window_actions.show():
             self._window_actions.wait(0.5)
 
+        time_after_refresh = 2.0
+
+        real_interval = max(self._click_interval - time_after_refresh, 1.0)
+
         logger.info("开始抢单循环...")
         while not stop_event.is_set():
             logger.debug("Start of delivery claiming loop iteration.")
-            if not self._window_actions.target_is_active:
-                logger.info("终末地窗口不在前台，停止抢单。")
+
+            if not self._check_window_and_scene():
                 break
-            if not self._check_scene():
-                logger.warning("窗口检查或场景检查失败，停止抢单。")
-                return
 
             # 3. Scan
             label = self._scan_for_reward()
@@ -84,14 +97,18 @@ class DeliveryClaimerEngine(AutomationEngine):
 
             # 5. If Not Found
             logger.info("未检测到武陵调度券，正在刷新...")
-            self._window_actions.wait(4)
+            logger.warning(
+                f"在{real_interval}秒后即将进行点击，请注意光标位置。若要停止抢单，请使用热键或将游戏窗口切换至后台。"
+            )
+            self._window_actions.wait(real_interval)
             if stop_event.is_set():
                 break
-
+            if not self._check_window_and_scene():
+                break
             refresh_point = self._profile.DELIVERY_JOB_REFRESH_BUTTON_POINT
             self._window_actions.click(refresh_point.x, refresh_point.y)
 
-            self._window_actions.wait(2)
+            self._window_actions.wait(time_after_refresh)  # Wait after click
 
         logger.info("抢单引擎已停止。")
 

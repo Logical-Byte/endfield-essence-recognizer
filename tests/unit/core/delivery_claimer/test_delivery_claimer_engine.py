@@ -177,9 +177,10 @@ def test_execute_retry_then_success(
 ):
     """Test the retry flow when ticket is not found on first attempt.
 
-    Verifies that when the initial scan finds no ticket, the engine waits 4 seconds,
-    clicks the refresh button, waits 2 seconds, and retries the scan. On the second
-    attempt, the ticket is found and the success notification plays.
+    Verifies that when the initial scan finds no ticket, the engine waits for the
+    click interval (minus safety buffer), clicks the refresh button, waits a short
+    buffer, and retries the scan. On the second attempt, the ticket is found and
+    the success notification plays.
     """
     mock_delivery_job_reward_recognizer.recognize_roi_fallback.side_effect = [
         (DeliveryJobRewardLabel.UNKNOWN, 0.5),
@@ -193,9 +194,11 @@ def test_execute_retry_then_success(
         mock_profile.DELIVERY_JOB_REFRESH_BUTTON_POINT.x,
         mock_profile.DELIVERY_JOB_REFRESH_BUTTON_POINT.y,
     )
-    mock_window_actions.wait.assert_has_calls([call(0.5), call(0.5), call(4), call(2)])
+    mock_window_actions.wait.assert_has_calls(
+        [call(0.5), call(0.5), call(3.0), call(2.0)]
+    )
     mock_audio_service.play_enable.assert_called_once()
-    assert mock_image_source.screenshot.call_count == 4
+    assert mock_image_source.screenshot.call_count == 5
 
 
 def test_execute_stop_event(
@@ -203,7 +206,7 @@ def test_execute_stop_event(
 ):
     """Test that execution respects the stop_event during the retry loop.
 
-    Simulates the stop event being set during the 4-second wait after an unsuccessful
+    Simulates the stop event being set during the wait after an unsuccessful
     scan. Verifies that the loop breaks before attempting the refresh click.
     """
     mock_delivery_job_reward_recognizer.recognize_roi_fallback.return_value = (
