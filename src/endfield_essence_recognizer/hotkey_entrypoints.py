@@ -46,8 +46,7 @@ def hotkey_handler(
     def decorator(func: HotkeyHandler) -> HotkeyHandler:
         @wraps(func)
         def wrapper(key: str) -> None:
-            if key:
-                logger.info(f'检测到热键 "{key}" 被按下。')
+            logger.debug(f'检测到热键 "{key}" 被按下。')
 
             # 如果需要，检查游戏窗口是否存在
             if require_game_exists:
@@ -75,7 +74,7 @@ def check_game_window_exists() -> bool:
     """
     window_manager: WindowManager = get_window_manager_singleton()
     if not window_manager.target_exists:
-        logger.warning("未检测到终末地窗口，停止快捷键操作。")
+        logger.debug("未检测到终末地窗口，停止快捷键操作。")
         return False
     return True
 
@@ -97,7 +96,7 @@ def check_game_or_webview_is_active() -> bool:
         logger.debug("WebView 窗口在前台，允许快捷键操作。")
         return True
     else:
-        logger.warning("前台窗口不是终末地或 WebView，停止快捷键操作。")
+        logger.debug("前台窗口不是终末地或 WebView，停止快捷键操作。")
         return False
 
 
@@ -110,10 +109,10 @@ def handle_keyboard_single_recognition(key: str):
     window_manager: WindowManager = get_window_manager_singleton()
     scanner_ctx: ScannerContext = default_scanner_context()
     if not window_manager.target_is_active:
-        logger.debug('终末地窗口不在前台，忽略 "[" 键。')
+        logger.debug(f'终末地窗口不在前台，忽略 "{key}" 键。')
         return
     else:
-        logger.info('检测到 "[" 键，开始识别基质')
+        logger.info(f'检测到 "{key}" 键，开始识别基质')
         recognize_once(
             window_manager,
             scanner_ctx,
@@ -147,16 +146,17 @@ def handle_keyboard_auto_click(key: str):
     window_manager: WindowManager = get_window_manager_singleton()
 
     if not window_manager.target_is_active:
-        logger.debug('终末地窗口不在前台，忽略 "]" 键。')
+        logger.debug(f'终末地窗口不在前台，忽略 "{key}" 键。')
         return
     else:
+        logger.info(f'检测到 "{key}" 键，切换自动点击状态')
         handle_keyboard_toggle_scan()
 
 
 @hotkey_handler(require_game_exists=False, require_game_or_webview_active=False)
 def handle_keyboard_on_exit(key: str):
     """处理 Alt+Delete 按下事件 - 退出程序"""
-    logger.info('检测到 "Alt+Delete"，正在退出程序...')
+    logger.info(f'检测到 "{key}"，正在退出程序...')
 
     # 停止扫描器
     scanner_service = get_scanner_service()
