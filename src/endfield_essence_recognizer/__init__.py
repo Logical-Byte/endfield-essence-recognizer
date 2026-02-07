@@ -13,8 +13,6 @@ from endfield_essence_recognizer.utils.log import logger
 from endfield_essence_recognizer.version import __version__ as __version__
 
 if TYPE_CHECKING:
-    import threading
-
     from endfield_essence_recognizer.core.scanner.context import ScannerContext
     from endfield_essence_recognizer.core.window import WindowManager
 
@@ -32,10 +30,6 @@ generated_template_dir = (
 screenshot_template_dir = (
     importlib.resources.files("endfield_essence_recognizer") / "templates/screenshot"
 )
-
-# 全局变量
-server_thread: threading.Thread | None = None
-"""后端服务器线程实例"""
 
 
 def on_bracket_left():
