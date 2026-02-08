@@ -1,8 +1,25 @@
+import threading
 from typing import Protocol, runtime_checkable
 
 from cv2.typing import MatLike
 
 from endfield_essence_recognizer.core.layout.base import Region
+
+
+@runtime_checkable
+class AutomationEngine(Protocol):
+    """
+    Protocol for automated task engines that operate on the target window.
+    """
+
+    def execute(self, stop_event: threading.Event) -> None:
+        """
+        Execute the automation loop.
+
+        Args:
+            stop_event: Event used to signal the engine to stop its operation.
+        """
+        ...
 
 
 @runtime_checkable

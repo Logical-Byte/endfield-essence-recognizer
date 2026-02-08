@@ -112,3 +112,18 @@ class ResolutionProfile(Protocol):
     def MASK_ESSENCE_REGION_CURRENCY(self) -> Region:
         """在基质界面截图中需要遮罩的货币区区域。"""
         ...
+
+    @property
+    def LIST_OF_DELIVERY_JOBS_SCENE_CHECK_ROI(self) -> Region:
+        """用于判定是否在派遣任务列表场景的 ROI 区域。"""
+        ...
+
+    @property
+    def DELIVERY_JOB_REWARD_ROI(self) -> Region:
+        """派遣任务奖励扫描区域。"""
+        ...
+
+    @property
+    def DELIVERY_JOB_REFRESH_BUTTON_POINT(self) -> Point:
+        """运送委托列表刷新按钮坐标。"""
+        ...

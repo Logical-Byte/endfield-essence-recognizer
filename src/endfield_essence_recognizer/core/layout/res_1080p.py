@@ -61,3 +61,15 @@ class Resolution1080p(ResolutionProfile):
     @property
     def MASK_ESSENCE_REGION_CURRENCY(self) -> Region:
         return Region(Point(1340, 20), Point(1810, 70))
+
+    @property
+    def LIST_OF_DELIVERY_JOBS_SCENE_CHECK_ROI(self) -> Region:
+        return Region(Point(340, 68), Point(702, 208))
+
+    @property
+    def DELIVERY_JOB_REWARD_ROI(self) -> Region:
+        return Region(Point(1251, 252), Point(1413, 989))
+
+    @property
+    def DELIVERY_JOB_REFRESH_BUTTON_POINT(self) -> Point:
+        return Point(1745, 1003)

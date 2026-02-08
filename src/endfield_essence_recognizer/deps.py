@@ -7,6 +7,9 @@ from pathlib import Path
 
 from fastapi import Depends
 
+from endfield_essence_recognizer.core.delivery_claimer.engine import (
+    DeliveryClaimerEngine,
+)
 from endfield_essence_recognizer.core.layout.base import ResolutionProfile
 from endfield_essence_recognizer.core.layout.res_1080p import Resolution1080p
 from endfield_essence_recognizer.core.path import get_config_path, get_screenshots_dir
@@ -14,11 +17,15 @@ from endfield_essence_recognizer.core.recognition import (
     AbandonStatusRecognizer,
     AttributeLevelRecognizer,
     AttributeRecognizer,
+    DeliveryJobRewardRecognizer,
+    DeliverySceneRecognizer,
     LockStatusRecognizer,
     UISceneRecognizer,
     prepare_abandon_status_recognizer,
     prepare_attribute_level_recognizer,
     prepare_attribute_recognizer,
+    prepare_delivery_job_reward_recognizer,
+    prepare_delivery_scene_recognizer,
     prepare_lock_status_recognizer,
     prepare_ui_scene_recognizer,
 )
@@ -178,6 +185,20 @@ def get_ui_scene_recognizer_dep() -> UISceneRecognizer:
     return prepare_ui_scene_recognizer()
 
 
+def get_delivery_scene_recognizer_dep() -> DeliverySceneRecognizer:
+    """
+    Get the default delivery scene Recognizer instance.
+    """
+    return prepare_delivery_scene_recognizer()
+
+
+def get_delivery_job_reward_recognizer_dep() -> DeliveryJobRewardRecognizer:
+    """
+    Get the default delivery job reward Recognizer instance.
+    """
+    return prepare_delivery_job_reward_recognizer()
+
+
 # Scanner-related dependencies
 
 
@@ -259,6 +280,22 @@ def default_scanner_engine() -> ScannerEngine:
         window_actions=adapter,
         user_setting_manager=default_user_setting_manager(),
         profile=get_resolution_profile(),
+    )
+
+
+def default_delivery_claimer_engine() -> DeliveryClaimerEngine:
+    """
+    Get the default DeliveryClaimerEngine instance.
+    """
+    window_manager = get_window_manager_singleton()
+    adapter = WindowActionsAdapter(window_manager)
+    return DeliveryClaimerEngine(
+        image_source=adapter,
+        window_actions=adapter,
+        profile=get_resolution_profile(),
+        delivery_scene_recognizer=get_delivery_scene_recognizer_dep(),
+        delivery_job_reward_recognizer=get_delivery_job_reward_recognizer_dep(),
+        audio_service=get_audio_service(),
     )
 
 
