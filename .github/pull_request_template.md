@@ -1,11 +1,3 @@
----
-name: '📝 Pull Request 模板'
-about: 提交代码前请确保已阅读并填写以下内容。
-title: ""
-labels: ''
-assignees: ''
----
-
 [ ] 我已经阅读并理解了项目的贡献指南（CONTRIBUTING.md）。
 
 ## 提交类型（必填）
