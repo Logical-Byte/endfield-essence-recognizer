@@ -20,6 +20,7 @@ from endfield_essence_recognizer.core.scanner.models import (
     EssenceData,
     EssenceQuality,
 )
+from endfield_essence_recognizer.core.window.adapter import InMemoryImageSource
 from endfield_essence_recognizer.models.user_setting import UserSetting
 from endfield_essence_recognizer.services.user_setting_manager import UserSettingManager
 from endfield_essence_recognizer.utils.log import logger
@@ -59,13 +60,14 @@ def recognize_essence(
     stats: list[str | None] = []
     levels: list[int | None] = []
 
-    # 截取客户区全局截图用于等级检测
-    full_screenshot = image_source.screenshot()
+    # 截取客户区全局截图用于等级检测和子区域裁剪
+    mem_source = InMemoryImageSource.cache_from(image_source)
+    full_screenshot = mem_source.screenshot()
 
     rois = [profile.STATS_0_ROI, profile.STATS_1_ROI, profile.STATS_2_ROI]
 
     for k, roi in enumerate(rois):
-        screenshot_image = image_source.screenshot(roi)
+        screenshot_image = mem_source.screenshot(roi)
         attr, max_val = ctx.attr_recognizer.recognize_roi(screenshot_image)
         stats.append(attr)
         logger.debug(f"属性 {k} 识别结果: {attr} (分数: {max_val:.3f})")
@@ -79,14 +81,14 @@ def recognize_essence(
         else:
             logger.debug(f"属性 {k} 等级识别结果: 无法识别")
 
-    screenshot_image = image_source.screenshot(profile.DEPRECATE_BUTTON_ROI)
+    screenshot_image = mem_source.screenshot(profile.DEPRECATE_BUTTON_ROI)
     abandon_label, max_val = ctx.abandon_status_recognizer.recognize_roi_fallback(
         screenshot_image,
         fallback_label=AbandonStatusLabel.MAYBE_ABANDONED,
     )
     logger.debug(f"弃用按钮识别结果: {abandon_label.value} (分数: {max_val:.3f})")
 
-    screenshot_image = image_source.screenshot(profile.LOCK_BUTTON_ROI)
+    screenshot_image = mem_source.screenshot(profile.LOCK_BUTTON_ROI)
     locked_label, max_val = ctx.lock_status_recognizer.recognize_roi_fallback(
         screenshot_image,
         fallback_label=LockStatusLabel.MAYBE_LOCKED,
@@ -118,12 +120,14 @@ def recognize_once(
     user_setting: UserSetting,
     profile: ResolutionProfile,
 ) -> None:
-    check_scene_result = check_scene(image_source, ctx, profile)
+    mem_source = InMemoryImageSource.cache_from(image_source)
+
+    check_scene_result = check_scene(mem_source, ctx, profile)
     if not check_scene_result:
         return
 
     data = recognize_essence(
-        image_source,
+        mem_source,
         ctx,
         profile,
     )
