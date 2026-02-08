@@ -194,3 +194,64 @@ def test_scanner_engine_stop_event(
 
     # If stopped immediately, it should loop but see stop_event.is_set() and break before clicking
     assert len(window_actions.click_calls) == 0
+
+
+def test_recognize_essence_screenshot_calls(mock_scanner_context, mock_profile):
+    from endfield_essence_recognizer.core.scanner.engine import recognize_essence
+
+    image_source = MagicMock()
+    # Mock screenshot to return a dummy image based on the profile resolution
+    image_source.screenshot.return_value = np.zeros(
+        (mock_profile.RESOLUTION[1], mock_profile.RESOLUTION[0], 3), dtype=np.uint8
+    )
+    image_source.get_client_size.return_value = mock_profile.RESOLUTION
+
+    recognize_essence(image_source, mock_scanner_context, mock_profile)
+
+    # It should only be called ONCE inside recognize_essence (by cache_from)
+    assert image_source.screenshot.call_count == 1
+
+
+def test_recognize_once_screenshot_calls(mock_scanner_context, mock_profile):
+    from endfield_essence_recognizer.core.scanner.engine import recognize_once
+
+    image_source = MagicMock()
+    image_source.screenshot.return_value = np.zeros(
+        (mock_profile.RESOLUTION[1], mock_profile.RESOLUTION[0], 3), dtype=np.uint8
+    )
+    image_source.get_client_size.return_value = mock_profile.RESOLUTION
+
+    recognize_once(image_source, mock_scanner_context, UserSetting(), mock_profile)
+
+    # It should only be called ONCE inside recognize_once
+    assert image_source.screenshot.call_count == 1
+
+
+def test_scanner_engine_screenshot_count(
+    mock_scanner_context, mock_user_setting_manager, mock_profile
+):
+    image_source = MagicMock()
+    image_source.screenshot.return_value = np.zeros(
+        (mock_profile.RESOLUTION[1], mock_profile.RESOLUTION[0], 3), dtype=np.uint8
+    )
+    image_source.get_client_size.return_value = mock_profile.RESOLUTION
+
+    window_actions = MockWindowActions()
+
+    # Only 1 icon to scan
+    mock_profile.essence_icon_x_list = [100]
+    mock_profile.essence_icon_y_list = [200]
+
+    engine = ScannerEngine(
+        ctx=mock_scanner_context,
+        image_source=image_source,
+        window_actions=window_actions,
+        user_setting_manager=mock_user_setting_manager,
+        profile=mock_profile,
+    )
+
+    stop_event = threading.Event()
+    engine.execute(stop_event)
+
+    # 1 call for check_scene + 1 call for recognize_essence
+    assert image_source.screenshot.call_count == 2
