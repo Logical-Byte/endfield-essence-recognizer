@@ -142,8 +142,8 @@ def handle_keyboard_toggle_scan():
         audio_service.play_enable()
     else:
         logger.info("停止扫描基质")
-        scanner_service.stop_scan()
         audio_service.play_disable()
+        scanner_service.stop_scan()
 
 
 @hotkey_handler(
@@ -174,7 +174,9 @@ def handle_keyboard_delivery_claim(key: str):
         except Exception as e:
             logger.exception(f"启动自动抢单失败: {e}")
     else:
-        logger.warning("已有其他扫描任务在运行，无法启动自动抢单。")
+        logger.info(f'检测到 "{key}" 键，停止自动抢单')
+        audio_service.play_disable()
+        scanner_service.stop_scan()
 
 
 @hotkey_handler(require_game_exists=False, require_game_or_webview_active=False)

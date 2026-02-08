@@ -35,20 +35,20 @@ class Recognizer(Generic[LabelT]):
 
     def load_templates(self) -> None:
         """从 profile 中加载所有模板。"""
-        logger.debug(f"{self}正在加载 {len(self.profile.templates)} 个模板...")
+        logger.debug(f"{self} 正在加载 {len(self.profile.templates)} 个模板...")
         for descriptor in self.profile.templates:
             try:
                 # 模板通常以灰度图加载
                 with importlib.resources.as_file(descriptor.path) as path:
                     image = load_image(path, cv2.IMREAD_GRAYSCALE)
                     if image is None:
-                        logger.error(f"{self}无法加载模板图像: {descriptor.path}")
+                        logger.error(f"{self} 无法加载模板图像: {descriptor.path}")
                         continue
 
                     processed_image = self.profile.preprocess_template(image)
                     self._templates[descriptor.label].append(processed_image)
             except Exception as e:
-                logger.error(f"{self}加载模板图像失败 {descriptor.path}: {e}")
+                logger.error(f"{self} 加载模板图像失败 {descriptor.path}: {e}")
 
     def recognize_roi(self, roi_image: MatLike) -> tuple[LabelT | None, float]:
         """
@@ -74,7 +74,7 @@ class Recognizer(Generic[LabelT]):
                     or template.shape[1] > processed_roi.shape[1]
                 ):
                     logger.warning(
-                        f"{self}标签 '{label}' 的 ROI 图像小于模板: "
+                        f"{self} 标签 '{label}' 的 ROI 图像小于模板: "
                         f"ROI 尺寸={processed_roi.shape[::-1]}, 模板尺寸={template.shape[::-1]}"
                     )
                     continue
@@ -90,12 +90,12 @@ class Recognizer(Generic[LabelT]):
             return best_label, best_score
         elif best_score >= self.profile.low_threshold:
             logger.warning(
-                f"{self}匹配分数较低: 最佳匹配={best_label} 分数={best_score:.3f}"
+                f"{self} 匹配分数较低: 最佳匹配={best_label} 分数={best_score:.3f}"
             )
             return best_label, best_score
         else:
             logger.warning(
-                f"{self}匹配分数很低: 最佳匹配={best_label} 分数={best_score:.3f}"
+                f"{self} 匹配分数很低: 最佳匹配={best_label} 分数={best_score:.3f}"
             )
             return None, best_score
 

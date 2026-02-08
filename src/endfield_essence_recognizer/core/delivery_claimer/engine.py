@@ -35,7 +35,8 @@ class DeliveryClaimerEngine(AutomationEngine):
         delivery_scene_recognizer: Recognizer[DeliverySceneLabel],
         delivery_job_reward_recognizer: Recognizer[DeliveryJobRewardLabel],
         audio_service: AudioService,
-        click_interval: float = 5.0,
+        time_after_refresh: float = 3.0,
+        time_after_recognition: float = 2.5,
     ) -> None:
         self._image_source = image_source
         self._window_actions = window_actions
@@ -44,7 +45,8 @@ class DeliveryClaimerEngine(AutomationEngine):
         self._delivery_job_reward_recognizer = delivery_job_reward_recognizer
         self._audio_service = audio_service
 
-        self._click_interval = click_interval
+        self._time_after_refresh = time_after_refresh
+        self._time_after_recognition = time_after_recognition
 
     def execute(self, stop_event: threading.Event) -> None:
         """
@@ -69,17 +71,14 @@ class DeliveryClaimerEngine(AutomationEngine):
         """
         logger.info("开始抢单...")
 
-        logger.info("将窗口置于前台...")
-        if self._window_actions.activate():
+        if self._window_actions.restore():
             self._window_actions.wait(0.5)
         if self._window_actions.show():
             self._window_actions.wait(0.5)
+        if self._window_actions.activate():
+            self._window_actions.wait(0.5)
 
-        time_after_refresh = 2.0
-
-        real_interval = max(self._click_interval - time_after_refresh, 1.0)
-
-        logger.info("开始抢单循环...")
+        logger.debug("开始抢单循环...")
         while not stop_event.is_set():
             logger.debug("Start of delivery claiming loop iteration.")
 
@@ -97,18 +96,14 @@ class DeliveryClaimerEngine(AutomationEngine):
 
             # 5. If Not Found
             logger.info("未检测到武陵调度券，正在刷新...")
-            logger.warning(
-                f"在{real_interval}秒后即将进行点击，请注意光标位置。若要停止抢单，请使用热键或将游戏窗口切换至后台。"
-            )
-            self._window_actions.wait(real_interval)
+            self._window_actions.wait(self._time_after_recognition)
             if stop_event.is_set():
                 break
             if not self._check_window_and_scene():
                 break
             refresh_point = self._profile.DELIVERY_JOB_REFRESH_BUTTON_POINT
             self._window_actions.click(refresh_point.x, refresh_point.y)
-
-            self._window_actions.wait(time_after_refresh)  # Wait after click
+            self._window_actions.wait(self._time_after_refresh)
 
         logger.info("抢单引擎已停止。")
 

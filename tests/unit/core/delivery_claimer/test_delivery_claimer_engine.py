@@ -195,7 +195,7 @@ def test_execute_retry_then_success(
         mock_profile.DELIVERY_JOB_REFRESH_BUTTON_POINT.y,
     )
     mock_window_actions.wait.assert_has_calls(
-        [call(0.5), call(0.5), call(3.0), call(2.0)]
+        [call(0.5), call(0.5), call(0.5), call(2.5), call(3.0)]
     )
     mock_audio_service.play_enable.assert_called_once()
     assert mock_image_source.screenshot.call_count == 5
