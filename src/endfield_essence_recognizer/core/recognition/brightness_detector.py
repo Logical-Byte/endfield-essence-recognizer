@@ -22,7 +22,7 @@ class BrightnessDetectorProfile:
     threshold: int = 200
     """亮度阈值 (0-255)。当区域平均亮度超过此值时视为“激活”。"""
     sample_radius: int = 3
-    """采样半径。以给定点为中心，采样 (2*radius+1)^2 个像素。"""
+    """采样半径。采样区域为以给定点为中心，边长为 `(2 * sample_radius + 1)` 的正方形区域。"""
 
 
 class BrightnessDetector:
