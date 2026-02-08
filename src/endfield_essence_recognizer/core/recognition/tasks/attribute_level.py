@@ -4,11 +4,11 @@ from dataclasses import dataclass
 from cv2.typing import MatLike
 
 from endfield_essence_recognizer.core.layout.base import Point
+from endfield_essence_recognizer.core.layout.res_1080p import Resolution1080p
 from endfield_essence_recognizer.core.recognition.brightness_detector import (
     BrightnessDetector,
     BrightnessDetectorProfile,
 )
-from endfield_essence_recognizer.deps import get_resolution_profile
 from endfield_essence_recognizer.utils.image import to_gray_image
 from endfield_essence_recognizer.utils.log import logger
 
@@ -27,10 +27,13 @@ class AttributeLevelRecognizerProfile:
 def build_attribute_level_recognizer_profile() -> AttributeLevelRecognizerProfile:
     """
     Builds the AttributeLevelRecognizerProfile with hardcoded 1080p settings.
+
+    TODO: This factory returns only 1080p profile for now. When we extend multi-resolution
+    support, the builder should depend on a current ResolutionProfile.
     """
     brightness_profile = BrightnessDetectorProfile(threshold=200, sample_radius=2)
 
-    stats_level_icon_points = get_resolution_profile().STATS_LEVEL_ICON_POINTS
+    stats_level_icon_points = Resolution1080p().STATS_LEVEL_ICON_POINTS
 
     return AttributeLevelRecognizerProfile(
         brightness_profile=brightness_profile,
