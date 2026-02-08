@@ -66,7 +66,7 @@ class Resolution1080p(ResolutionProfile):
     def STATS_LEVEL_ICON_POINTS(self) -> list[list[Point]]:
         xs = np.linspace(1503, 1588, 6)
         ys = np.linspace(395, 507, 3)
-        return [[Point(x, y) for x in xs] for y in ys]
+        return [[Point(round(x), round(y)) for x in xs] for y in ys]
 
     @property
     def LIST_OF_DELIVERY_JOBS_SCENE_CHECK_ROI(self) -> Region:
