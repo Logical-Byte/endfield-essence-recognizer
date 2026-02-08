@@ -44,7 +44,7 @@ async def _collect_batch(
             # Try to get the next item within the remaining window
             item = await asyncio.wait_for(queue.get(), timeout=remaining_time)
             batch.append(item)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             # Time is up, return what we have
             break
 

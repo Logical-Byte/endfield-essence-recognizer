@@ -53,7 +53,7 @@ async def test_broadcast_loop_sends_to_websockets(log_service: LogService):
     # Wait for the event instead of sleeping
     try:
         await asyncio.wait_for(sent_event.wait(), timeout=1.0)
-    except asyncio.TimeoutError:
+    except TimeoutError:
         pytest.fail("Broadcast loop did not send message within timeout")
 
     mock_ws.send_text.assert_called_with(message)
@@ -95,7 +95,7 @@ async def test_broadcast_multiple_messages(log_service: LogService):
 
     try:
         await asyncio.wait_for(all_found_event.wait(), timeout=2.0)
-    except asyncio.TimeoutError:
+    except TimeoutError:
         pytest.fail(f"Did not receive all messages. Received: {received_messages}")
 
     task.cancel()
@@ -235,7 +235,7 @@ async def test_scope_context_manager(log_service: LogService):
         # Wait for the event instead of sleeping
         try:
             await asyncio.wait_for(sent_event.wait(), timeout=1.0)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             pytest.fail("Log was not broadcasted via scope within timeout")
 
         assert mock_ws.send_text.called

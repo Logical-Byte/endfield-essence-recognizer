@@ -11,13 +11,18 @@ select = [
     "F",
     "I",
     "A", # flake8-builtins
+    "ASYNC", # flake8-async
     "B", # flake8-bugbear
     "C4", # flake8-comprehensions
     "PLC", # Pylint convention
     "PLE", # Pylint error
+    "RUF010", # explicit-f-string-type-conversion
+    "RUF022", # unsorted __all__
     "RUF059", # unused unpacked variable
     "RUF1", # noqa-related
     "RUF200", # invalid pyproject.toml
+    "TC", # flake8-type-checking
+    "UP", # pyupgrade
 ]
 ignore = [
     "PLC0415", # import should always be on top
@@ -27,6 +32,13 @@ ignore = [
 # Allow fix for all enabled rules (when `--fix`) is provided.
 fixable = ["ALL"]
 unfixable = []
+
+# these unsafe fixes are considered safe
+extend-safe-fixes = [
+    "TC001",
+    "TC002",
+    "TC003",
+]
 
 # Allow unused variables when underscore-prefixed.
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"

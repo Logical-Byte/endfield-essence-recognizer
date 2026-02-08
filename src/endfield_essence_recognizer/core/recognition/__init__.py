@@ -67,39 +67,39 @@ def prepare_recognizer[LabelT](
     return recognizer
 
 
-@lru_cache()
+@lru_cache
 def prepare_attribute_recognizer() -> AttributeRecognizer:
     return prepare_recognizer("AttributeRecognizer", build_attribute_profile())
 
 
-@lru_cache()
+@lru_cache
 def prepare_abandon_status_recognizer() -> AbandonStatusRecognizer:
     return prepare_recognizer("AbandonStatusRecognizer", build_abandon_status_profile())
 
 
-@lru_cache()
+@lru_cache
 def prepare_lock_status_recognizer() -> LockStatusRecognizer:
     return prepare_recognizer("LockStatusRecognizer", build_lock_status_profile())
 
 
-@lru_cache()
+@lru_cache
 def prepare_ui_scene_recognizer() -> UISceneRecognizer:
     return prepare_recognizer("UISceneRecognizer", build_ui_scene_profile())
 
 
-@lru_cache()
+@lru_cache
 def prepare_delivery_scene_recognizer() -> DeliverySceneRecognizer:
     return prepare_recognizer("DeliverySceneRecognizer", build_delivery_scene_profile())
 
 
-@lru_cache()
+@lru_cache
 def prepare_delivery_job_reward_recognizer() -> DeliveryJobRewardRecognizer:
     return prepare_recognizer(
         "DeliveryJobRewardRecognizer", build_delivery_job_reward_profile()
     )
 
 
-@lru_cache()
+@lru_cache
 def prepare_attribute_level_recognizer() -> AttributeLevelRecognizer:
     return AttributeLevelRecognizer(
         "AttributeLevelRecognizer", build_attribute_level_recognizer_profile()
@@ -108,28 +108,28 @@ def prepare_attribute_level_recognizer() -> AttributeLevelRecognizer:
 
 __all__ = [
     "AbandonStatusLabel",
-    "LockStatusLabel",
-    "UISceneLabel",
-    "DeliverySceneLabel",
-    "DeliveryJobRewardLabel",
-    "AttributeRecognizer",
     "AbandonStatusRecognizer",
-    "LockStatusRecognizer",
-    "UISceneRecognizer",
-    "DeliverySceneRecognizer",
-    "DeliveryJobRewardRecognizer",
     "AttributeLevelRecognizer",
-    "TemplateDescriptor",
-    "RecognitionProfile",
-    "BrightnessDetectorProfile",
-    "Recognizer",
+    "AttributeRecognizer",
     "BrightnessDetector",
-    "prepare_recognizer",
-    "prepare_attribute_recognizer",
+    "BrightnessDetectorProfile",
+    "DeliveryJobRewardLabel",
+    "DeliveryJobRewardRecognizer",
+    "DeliverySceneLabel",
+    "DeliverySceneRecognizer",
+    "LockStatusLabel",
+    "LockStatusRecognizer",
+    "RecognitionProfile",
+    "Recognizer",
+    "TemplateDescriptor",
+    "UISceneLabel",
+    "UISceneRecognizer",
     "prepare_abandon_status_recognizer",
-    "prepare_lock_status_recognizer",
-    "prepare_ui_scene_recognizer",
-    "prepare_delivery_scene_recognizer",
-    "prepare_delivery_job_reward_recognizer",
     "prepare_attribute_level_recognizer",
+    "prepare_attribute_recognizer",
+    "prepare_delivery_job_reward_recognizer",
+    "prepare_delivery_scene_recognizer",
+    "prepare_lock_status_recognizer",
+    "prepare_recognizer",
+    "prepare_ui_scene_recognizer",
 ]

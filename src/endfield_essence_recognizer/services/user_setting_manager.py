@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from endfield_essence_recognizer.exceptions import ConfigVersionMismatchError
 from endfield_essence_recognizer.models.user_setting import UserSetting
 from endfield_essence_recognizer.utils.log import logger
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 __all__ = ["UserSettingManager"]
 

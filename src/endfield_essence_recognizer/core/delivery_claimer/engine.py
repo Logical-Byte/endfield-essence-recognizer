@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import threading
 from typing import TYPE_CHECKING
 
 from endfield_essence_recognizer.core.interfaces import (
@@ -8,7 +7,6 @@ from endfield_essence_recognizer.core.interfaces import (
     ImageSource,
     WindowActions,
 )
-from endfield_essence_recognizer.core.layout.base import ResolutionProfile
 from endfield_essence_recognizer.core.recognition.tasks.delivery_job_reward import (
     DeliveryJobRewardLabel,
 )
@@ -18,6 +16,9 @@ from endfield_essence_recognizer.core.recognition.tasks.delivery_ui import (
 from endfield_essence_recognizer.utils.log import logger
 
 if TYPE_CHECKING:
+    import threading
+
+    from endfield_essence_recognizer.core.layout.base import ResolutionProfile
     from endfield_essence_recognizer.core.recognition.recognizer import Recognizer
     from endfield_essence_recognizer.services.audio_service import AudioService
 
