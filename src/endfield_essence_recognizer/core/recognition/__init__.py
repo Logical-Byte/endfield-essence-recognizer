@@ -1,7 +1,6 @@
 from functools import lru_cache
 
 from .base import (
-    LabelT,
     RecognitionProfile,
     TemplateDescriptor,
 )
@@ -59,7 +58,7 @@ type DeliveryJobRewardRecognizer = Recognizer[DeliveryJobRewardLabel]
 # Factory functions
 
 
-def prepare_recognizer(
+def prepare_recognizer[LabelT](
     name: str, profile: RecognitionProfile[LabelT]
 ) -> Recognizer[LabelT]:
     """构造并返回一个识别器实例，并加载其模板。"""
@@ -108,7 +107,6 @@ def prepare_attribute_level_recognizer() -> AttributeLevelRecognizer:
 
 
 __all__ = [
-    "LabelT",
     "AbandonStatusLabel",
     "LockStatusLabel",
     "UISceneLabel",

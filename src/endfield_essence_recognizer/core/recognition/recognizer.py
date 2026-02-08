@@ -1,16 +1,15 @@
 import importlib.resources
 from collections import defaultdict
-from typing import Generic
 
 import cv2
 from cv2.typing import MatLike
 
-from endfield_essence_recognizer.core.recognition.base import LabelT, RecognitionProfile
+from endfield_essence_recognizer.core.recognition.base import RecognitionProfile
 from endfield_essence_recognizer.utils.image import load_image
 from endfield_essence_recognizer.utils.log import logger, str_properties_and_attrs
 
 
-class Recognizer(Generic[LabelT]):
+class Recognizer[LabelT]:
     """
     通用图像识别类，使用模板匹配。
 
