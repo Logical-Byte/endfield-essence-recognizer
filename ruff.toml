@@ -16,9 +16,9 @@ select = [
     "C4", # flake8-comprehensions
     "PLC", # Pylint convention
     "PLE", # Pylint error
-    "RET501",
-    "RET502",
-    "RET503",
+    "RET501", # unnecessary-return-none
+    "RET502", # implicit-return-value
+    "RET503", # implicit-return
     "RUF010", # explicit-f-string-type-conversion
     "RUF022", # unsorted __all__
     "RUF059", # unused unpacked variable
