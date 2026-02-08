@@ -4,7 +4,11 @@ from unittest.mock import MagicMock
 import numpy as np
 import pytest
 
-from endfield_essence_recognizer.core.layout.base import ResolutionProfile
+from endfield_essence_recognizer.core.layout.base import (
+    Point,
+    Region,
+    ResolutionProfile,
+)
 from endfield_essence_recognizer.core.recognition import (
     AbandonStatusLabel,
     AttributeLevelRecognizer,
@@ -28,9 +32,9 @@ class MockImageSource:
 
     def screenshot(self, relative_region=None):
         # Return a dummy black image
-        if relative_region:
-            w = relative_region.w
-            h = relative_region.h
+        if relative_region is not None:
+            w = relative_region.x1 - relative_region.x0
+            h = relative_region.y1 - relative_region.y0
         else:
             w, h = self.width, self.height
         return np.zeros((h, w, 3), dtype=np.uint8)
@@ -113,31 +117,19 @@ def mock_user_setting_manager():
 def mock_profile():
     profile = MagicMock(spec=ResolutionProfile)
     profile.RESOLUTION = (1920, 1080)
-    profile.ESSENCE_UI_ROI = MagicMock()
-    profile.ESSENCE_UI_ROI.w = 100
-    profile.ESSENCE_UI_ROI.h = 100
+    # Use real Region/Point so InMemoryImageSource.screenshot(roi) crops correctly
+    profile.ESSENCE_UI_ROI = Region(Point(38, 66), Point(143, 106))
+    profile.STATS_0_ROI = Region(Point(1508, 358), Point(1700, 390))
+    profile.STATS_1_ROI = Region(Point(1508, 416), Point(1700, 448))
+    profile.STATS_2_ROI = Region(Point(1508, 468), Point(1700, 500))
+    profile.DEPRECATE_BUTTON_ROI = Region(Point(1790, 270), Point(1823, 302))
+    profile.LOCK_BUTTON_ROI = Region(Point(1825, 270), Point(1857, 302))
+    profile.LOCK_BUTTON_POS = Point(1839, 286)
+    profile.DEPRECATE_BUTTON_POS = Point(1807, 284)
 
     # Mock just one essence icon for simplicity
     profile.essence_icon_x_list = [100]
     profile.essence_icon_y_list = [200]
-    profile.STATS_0_ROI = MagicMock()
-    profile.STATS_0_ROI.w = 50
-    profile.STATS_0_ROI.h = 50
-    profile.STATS_1_ROI = MagicMock()
-    profile.STATS_1_ROI.w = 50
-    profile.STATS_1_ROI.h = 50
-    profile.STATS_2_ROI = MagicMock()
-    profile.STATS_2_ROI.w = 50
-    profile.STATS_2_ROI.h = 50
-    profile.DEPRECATE_BUTTON_ROI = MagicMock()
-    profile.DEPRECATE_BUTTON_ROI.w = 30
-    profile.DEPRECATE_BUTTON_ROI.h = 30
-    profile.LOCK_BUTTON_ROI = MagicMock()
-    profile.LOCK_BUTTON_ROI.w = 30
-    profile.LOCK_BUTTON_ROI.h = 30
-
-    profile.LOCK_BUTTON_POS = MagicMock(x=10, y=10)
-    profile.DEPRECATE_BUTTON_POS = MagicMock(x=20, y=20)
     return profile
 
 
