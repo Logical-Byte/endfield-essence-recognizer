@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import threading
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING
 
 from endfield_essence_recognizer.utils.log import logger
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from endfield_essence_recognizer.core.interfaces import AutomationEngine
 
 

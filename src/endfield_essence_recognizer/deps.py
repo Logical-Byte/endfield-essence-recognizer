@@ -49,7 +49,7 @@ from endfield_essence_recognizer.services.screenshot_service import ScreenshotSe
 from endfield_essence_recognizer.services.user_setting_manager import UserSettingManager
 
 
-@lru_cache()
+@lru_cache
 def get_resolution_profile() -> ResolutionProfile:
     """
     Get the ResolutionProfile instance.
@@ -60,7 +60,7 @@ def get_resolution_profile() -> ResolutionProfile:
 # AudioService dependency
 
 
-@lru_cache()
+@lru_cache
 def get_audio_service() -> AudioService:
     """
     Get the AudioService singleton.
@@ -71,7 +71,7 @@ def get_audio_service() -> AudioService:
 # WindowManager dependency
 
 
-@lru_cache()
+@lru_cache
 def get_window_manager_singleton() -> WindowManager:
     """
     Get the singleton WindowManager instance.
@@ -86,7 +86,7 @@ def get_window_manager_dep() -> WindowManager:
     return get_window_manager_singleton()
 
 
-@lru_cache()
+@lru_cache
 def get_webview_window_manager() -> WindowManager:
     """
     Get the singleton WindowManager instance for the webview window.
@@ -115,7 +115,7 @@ def get_screenshots_dir_dep() -> Path:
 # UserSettingManager dependency
 
 
-@lru_cache()
+@lru_cache
 def _get_user_setting_manager_cached(file: Path) -> UserSettingManager:
     return UserSettingManager(user_setting_file=file)
 
@@ -299,17 +299,17 @@ def default_delivery_claimer_engine() -> DeliveryClaimerEngine:
     )
 
 
-@lru_cache()
+@lru_cache
 def get_scanner_service() -> ScannerService:
     return ScannerService()
 
 
-@lru_cache()
+@lru_cache
 def get_log_service() -> LogService:
     return LogService()
 
 
-@lru_cache()
+@lru_cache
 def get_screenshot_service() -> ScreenshotService:
     """
     Get the ScreenshotService singleton.

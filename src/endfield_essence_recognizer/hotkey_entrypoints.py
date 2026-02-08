@@ -1,16 +1,15 @@
 import asyncio
 from contextlib import contextmanager
 from functools import wraps
+from typing import TYPE_CHECKING
 
 import keyboard
 
 from endfield_essence_recognizer.core.config import ServerConfig
 from endfield_essence_recognizer.core.interfaces import HotkeyHandler
-from endfield_essence_recognizer.core.scanner.context import ScannerContext
 from endfield_essence_recognizer.core.scanner.engine import (
     recognize_once,
 )
-from endfield_essence_recognizer.core.window import WindowManager
 from endfield_essence_recognizer.deps import (
     default_delivery_claimer_engine,
     default_scanner_context,
@@ -30,6 +29,10 @@ from endfield_essence_recognizer.models.screenshot import (
 from endfield_essence_recognizer.utils.log import (
     logger,
 )
+
+if TYPE_CHECKING:
+    from endfield_essence_recognizer.core.scanner.context import ScannerContext
+    from endfield_essence_recognizer.core.window import WindowManager
 
 
 def hotkey_handler(
@@ -52,12 +55,12 @@ def hotkey_handler(
             # 如果需要，检查游戏窗口是否存在
             if require_game_exists:
                 if not check_game_window_exists():
-                    return
+                    return None
 
             # 如果需要，检查游戏窗口或 WebView 窗口是否在前台
             if require_game_or_webview_active:
                 if not check_game_or_webview_is_active():
-                    return
+                    return None
 
             return func(key)
 
