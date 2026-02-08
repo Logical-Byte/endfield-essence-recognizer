@@ -23,11 +23,14 @@ from endfield_essence_recognizer.core.scanner.models import (
 )
 from endfield_essence_recognizer.models.user_setting import UserSetting
 from endfield_essence_recognizer.services.user_setting_manager import UserSettingManager
-from endfield_essence_recognizer.utils.image import resize_to_ref_roi
+from endfield_essence_recognizer.utils.image import crop_roi, resize_to_ref_roi
 from endfield_essence_recognizer.utils.log import logger
 
 # 模板均为 1080p，高分辨率下 ROI 截图需缩放到此尺寸再送入识别器
 _REF_PROFILE = Resolution1080p()
+
+# 点击基质图标或操作按钮后等待界面刷新的时间（秒），过短可能识别错，过长会降低扫描效率
+_SCAN_WAIT_AFTER_CLICK = 0.1
 
 
 def check_scene(
@@ -72,8 +75,7 @@ def recognize_essence(
     ref_rois = [_REF_PROFILE.STATS_0_ROI, _REF_PROFILE.STATS_1_ROI, _REF_PROFILE.STATS_2_ROI]
 
     for k, (roi, ref_roi) in enumerate(zip(rois, ref_rois)):
-        screenshot_image = image_source.screenshot(roi)
-        screenshot_image = resize_to_ref_roi(screenshot_image, ref_roi)
+        screenshot_image = resize_to_ref_roi(crop_roi(full_screenshot, roi), ref_roi)
         attr, max_val = ctx.attr_recognizer.recognize_roi(screenshot_image)
         stats.append(attr)
         logger.debug(f"属性 {k} 识别结果: {attr} (分数: {max_val:.3f})")
@@ -89,16 +91,20 @@ def recognize_essence(
         else:
             logger.debug(f"属性 {k} 等级识别结果: 无法识别")
 
-    screenshot_image = image_source.screenshot(profile.DEPRECATE_BUTTON_ROI)
-    screenshot_image = resize_to_ref_roi(screenshot_image, _REF_PROFILE.DEPRECATE_BUTTON_ROI)
+    screenshot_image = resize_to_ref_roi(
+        crop_roi(full_screenshot, profile.DEPRECATE_BUTTON_ROI),
+        _REF_PROFILE.DEPRECATE_BUTTON_ROI,
+    )
     abandon_label, max_val = ctx.abandon_status_recognizer.recognize_roi_fallback(
         screenshot_image,
         fallback_label=AbandonStatusLabel.MAYBE_ABANDONED,
     )
     logger.debug(f"弃用按钮识别结果: {abandon_label.value} (分数: {max_val:.3f})")
 
-    screenshot_image = image_source.screenshot(profile.LOCK_BUTTON_ROI)
-    screenshot_image = resize_to_ref_roi(screenshot_image, _REF_PROFILE.LOCK_BUTTON_ROI)
+    screenshot_image = resize_to_ref_roi(
+        crop_roi(full_screenshot, profile.LOCK_BUTTON_ROI),
+        _REF_PROFILE.LOCK_BUTTON_ROI,
+    )
     locked_label, max_val = ctx.lock_status_recognizer.recognize_roi_fallback(
         screenshot_image,
         fallback_label=LockStatusLabel.MAYBE_LOCKED,
@@ -233,9 +239,7 @@ class ScannerEngine:
 
             # 点击基质图标位置
             self._window_actions.click(relative_x, relative_y)
-
-            # 等待短暂时间以确保界面更新
-            self._window_actions.wait(0.3)
+            self._window_actions.wait(_SCAN_WAIT_AFTER_CLICK)
 
             # 识别基质信息
             data = recognize_essence(
@@ -274,7 +278,7 @@ class ScannerEngine:
                     pos = self._profile.DEPRECATE_BUTTON_POS
                     self._window_actions.click(pos.x, pos.y)
 
-                self._window_actions.wait(0.3)
+                self._window_actions.wait(_SCAN_WAIT_AFTER_CLICK)
                 logger.success(action.log_message)
 
         else:

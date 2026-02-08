@@ -122,6 +122,15 @@ def scope_to_slice(scope: Region | None) -> Slice:
     return slice(scope.y0, scope.y1), slice(scope.x0, scope.x1)
 
 
+def crop_roi(image: MatLike, region: Region) -> MatLike:
+    """
+    从整图中裁剪出指定 ROI 区域（客户区相对坐标）。
+    用于在已有一张全屏截图时在内存中切出各 ROI，避免多次调用截图接口。
+    """
+    sy, sx = scope_to_slice(region)
+    return image[sy, sx].copy()
+
+
 def make_region_from_center(center: Point, radius: int) -> Region:
     """
     从中心点和半径创建一个正方形区域。区域边长为 2*radius + 1。
