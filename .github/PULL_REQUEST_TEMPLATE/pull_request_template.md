@@ -6,6 +6,8 @@ labels: ''
 assignees: ''
 ---
 
+[ ] 我已经阅读并理解了项目的贡献指南（CONTRIBUTING.md）。
+
 ## 提交类型（必填）
 
 请确认本 PR 符合以下任意一项：
