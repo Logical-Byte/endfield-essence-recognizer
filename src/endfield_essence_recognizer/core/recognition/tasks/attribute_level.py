@@ -4,34 +4,13 @@ from dataclasses import dataclass
 from cv2.typing import MatLike
 
 from endfield_essence_recognizer.core.layout.base import Point
+from endfield_essence_recognizer.core.layout.res_1080p import Resolution1080p
 from endfield_essence_recognizer.core.recognition.brightness_detector import (
     BrightnessDetector,
     BrightnessDetectorProfile,
 )
 from endfield_essence_recognizer.utils.image import to_gray_image
 from endfield_essence_recognizer.utils.log import logger
-
-# Hardcoded 1080p coordinates for attribute level icons
-_STATS_LEVEL_ICONS: list[Sequence[Point]] = [
-    [
-        Point(1503, 395),  # +1
-        Point(1520, 395),  # +2
-        Point(1538, 395),  # +3
-        Point(1554, 395),  # +4
-    ],
-    [
-        Point(1503, 452),  # +1
-        Point(1520, 452),  # +2
-        Point(1538, 452),  # +3
-        Point(1554, 452),  # +4
-    ],
-    [
-        Point(1503, 507),  # +1
-        Point(1520, 507),  # +2
-        Point(1538, 507),  # +3
-        Point(1554, 507),  # +4
-    ],
-]
 
 
 @dataclass(frozen=True)
@@ -42,18 +21,19 @@ class AttributeLevelRecognizerProfile:
 
     brightness_profile: BrightnessDetectorProfile
 
-    stats_level_icon_points: list[Sequence[Point]]
+    stats_level_icon_points: Sequence[Sequence[Point]]
 
 
 def build_attribute_level_recognizer_profile() -> AttributeLevelRecognizerProfile:
     """
     Builds the AttributeLevelRecognizerProfile with hardcoded 1080p settings.
+
+    TODO: This factory returns only 1080p profile for now. When we extend multi-resolution
+    support, the builder should depend on a current ResolutionProfile.
     """
-    # config the brightness detector profile
     brightness_profile = BrightnessDetectorProfile(threshold=200, sample_radius=2)
 
-    # hardcode the 1080p icon points
-    stats_level_icon_points = _STATS_LEVEL_ICONS
+    stats_level_icon_points = Resolution1080p().STATS_LEVEL_ICON_POINTS
 
     return AttributeLevelRecognizerProfile(
         brightness_profile=brightness_profile,
@@ -88,7 +68,7 @@ class AttributeLevelRecognizer:
             stat_index: 属性索引 (0, 1, 2)。
 
         Returns:
-            等级 (1-4) 或 None（识别失败）。
+            等级 (1-6) 或 None（识别失败）。
         """
         gray = to_gray_image(image)
         icon_points = self.profile.stats_level_icon_points[stat_index]
@@ -104,6 +84,6 @@ class AttributeLevelRecognizer:
                 break
 
         # 根据激活图标数量返回等级
-        if 1 <= active_count <= 4:
+        if active_count > 0:
             return active_count
         return None

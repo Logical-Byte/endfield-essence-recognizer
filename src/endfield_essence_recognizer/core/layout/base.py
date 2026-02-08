@@ -114,6 +114,11 @@ class ResolutionProfile(Protocol):
         ...
 
     @property
+    def STATS_LEVEL_ICON_POINTS(self) -> list[list[Point]]:
+        """属性等级图标的坐标列表，按照属性索引和等级顺序排列。"""
+        ...
+
+    @property
     def LIST_OF_DELIVERY_JOBS_SCENE_CHECK_ROI(self) -> Region:
         """用于判定是否在派遣任务列表场景的 ROI 区域。"""
         ...
