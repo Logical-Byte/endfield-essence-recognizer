@@ -44,12 +44,7 @@ ul > li {
   padding-inline-start: 0.5em;
 }
 
-:is(dir, menu, ol, ul) ul {
-  list-style-type: disc;
-}
-
 ul > li::marker,
 ol > li::marker {
   font-family: $mono-font;
-  font-weight: 300;
 }

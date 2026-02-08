@@ -1,6 +1,6 @@
 [project]
 name = "endfield-essence-recognizer"
-version = "0.5.0"
+version = "0.6.0"
 description = "不知道哪些基质该留哪些该扔？逝逝这个妙妙小工具吧！"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -22,6 +22,8 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "fastapi[standard]>=0.127.0",
+    "httpx>=0.28.1",
     "pillow>=12.0.0",
     "pre-commit>=4.5.1",
     "pytest>=9.0.2",
@@ -32,8 +34,12 @@ build = [
 ]
 
 [project.scripts]
-eer = "endfield_essence_recognizer:main"
+eer = "endfield_essence_recognizer.__main__:main"
 
 [build-system]
 requires = ["uv_build>=0.9.3,<0.10.0"]
 build-backend = "uv_build"
+
+[pytest]
+junit_suite_name = "backend tests"
+junit_duration_report = "total"

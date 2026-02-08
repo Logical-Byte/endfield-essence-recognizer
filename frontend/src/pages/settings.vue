@@ -5,6 +5,24 @@
         <v-expansion-panel-title>武器基质预设</v-expansion-panel-title>
         <v-expansion-panel-text>
           <h2>将以下武器所对应的基质视为宝藏</h2>
+          <h3>按稀有度快捷选择</h3>
+          <div class="d-flex flex-row flex-wrap gc-4">
+            <v-checkbox
+              v-for="rarity in [3, 4, 5, 6]"
+              :key="rarity"
+              :color="`#${rarityColorTable[rarity]?.color}`"
+              density="compact"
+              hide-details
+              :indeterminate="isRarityPartiallySelected(rarity)"
+              :model-value="isRarityAllSelected(rarity)"
+              @click="raritySelectAll(rarity, !isRarityAllSelected(rarity))"
+            >
+              <template #label>
+                <span :style="{ color: `#${rarityColorTable[rarity]?.color}` }">{{ rarity }}★</span>
+              </template>
+            </v-checkbox>
+          </div>
+          <v-divider class="my-4" />
           <template
             v-for="{ groupId, groupName, iconId } in wikiGroupTable['wiki_type_weapon']?.list ?? []"
             :key="groupId"
@@ -13,9 +31,9 @@
               <v-checkbox
                 density="compact"
                 hide-details
-                :indeterminate="isPartiallySelected(groupId)"
-                :model-value="isAllSelected(groupId)"
-                @click="selectAllForGroup(groupId, !isAllSelected(groupId))"
+                :indeterminate="isTypePartiallySelected(groupId)"
+                :model-value="isTypeAllSelected(groupId)"
+                @click="typeSelectAll(groupId, !isTypeAllSelected(groupId))"
               >
                 <template #prepend>
                   <img
@@ -32,24 +50,27 @@
             </h3>
             <div class="weapon-grid">
               <div
-                v-for="[wikiEntryId, weaponId] in wikiEntryTable[groupId]!.list.map(
-                  (wikiEntryId) => [wikiEntryId, wikiEntryDataTable[wikiEntryId]!.refItemId],
+                v-for="{ wikiEntryId, weaponId } in wikiEntryTable[groupId]!.list.map(
+                  (wikiEntryId) => ({
+                    wikiEntryId,
+                    weaponId: wikiEntryDataTable[wikiEntryId]!.refItemId,
+                  }),
                 )"
                 :key="wikiEntryId"
                 class="d-flex flex-column align-center"
                 :class="{
-                  'opacity-50': !selectedWeaponIds.includes(weaponId!),
+                  'opacity-50': !selectedWeaponIds.includes(weaponId),
                 }"
               >
                 <div
                   class="weapon-item"
                   @click="
-                    selectedWeaponIds.includes(weaponId!)
-                      ? selectedWeaponIds.splice(selectedWeaponIds.indexOf(weaponId!), 1)
-                      : selectedWeaponIds.push(weaponId!)
+                    selectedWeaponIds.includes(weaponId)
+                      ? selectedWeaponIds.splice(selectedWeaponIds.indexOf(weaponId), 1)
+                      : selectedWeaponIds.push(weaponId)
                   "
                 >
-                  <item-icon :item-id="weaponId!" show-item-name />
+                  <item-icon :item-id="weaponId" show-item-name />
                 </div>
                 <v-checkbox-btn
                   v-model="selectedWeaponIds"
@@ -57,6 +78,9 @@
                   density="comfortable"
                   :value="weaponId"
                 />
+                <v-tooltip location="bottom" activator="parent">
+                  {{ getWeaponStatsDescription(weaponId) }}
+                </v-tooltip>
               </div>
             </div>
           </template>
@@ -67,7 +91,7 @@
         <v-expansion-panel-text>
           <h2>如果基质的某个词条初始属性较高，也将其视为宝藏</h2>
           <v-row align="center" class="my-4">
-            <v-col cols="12" md="6">
+            <v-col cols="12" md="4">
               <v-switch
                 v-model="highLevelTreasureEnabled"
                 color="primary"
@@ -76,22 +100,51 @@
                 label="启用高等级基质属性词条判定"
               />
             </v-col>
-            <v-col cols="4" md="6">
+            <v-col cols="12" md="8">
               <v-slider
-                v-model="highLevelTreasureThreshold"
+                v-model="highLevelTreasureAttributeThreshold"
                 :disabled="!highLevelTreasureEnabled"
-                :min="3"
-                :max="4"
+                :min="1"
+                :max="6"
                 :step="1"
-                :ticks="{ 3: '+3', 4: '+4' }"
+                :ticks="{ 1: '+1', 2: '+2', 3: '+3', 4: '+4', 5: '+5', 6: '+6' }"
+                label="基础属性"
                 show-ticks="always"
                 tick-size="4"
                 color="primary"
                 thumb-label
               >
-                <template #thumb-label="{ modelValue }">
-                  +{{ modelValue }}
-                </template>
+                <template #thumb-label="{ modelValue }">+{{ modelValue }}</template>
+              </v-slider>
+              <v-slider
+                v-model="highLevelTreasureSecondaryThreshold"
+                :disabled="!highLevelTreasureEnabled"
+                :min="1"
+                :max="6"
+                :step="1"
+                :ticks="{ 1: '+1', 2: '+2', 3: '+3', 4: '+4', 5: '+5', 6: '+6' }"
+                label="附加属性"
+                show-ticks="always"
+                tick-size="4"
+                color="primary"
+                thumb-label
+              >
+                <template #thumb-label="{ modelValue }">+{{ modelValue }}</template>
+              </v-slider>
+              <v-slider
+                v-model="highLevelTreasureSkillThreshold"
+                :disabled="!highLevelTreasureEnabled"
+                :min="1"
+                :max="3"
+                :step="1"
+                :ticks="{ 1: '+1', 2: '+2', 3: '+3' }"
+                label="技能属性"
+                show-ticks="always"
+                tick-size="4"
+                color="primary"
+                thumb-label
+              >
+                <template #thumb-label="{ modelValue }">+{{ modelValue }}</template>
               </v-slider>
               <v-alert
                 v-if="highLevelTreasureEnabled"
@@ -99,7 +152,12 @@
                 class="mt-2"
                 type="info"
                 variant="tonal"
-                >当前效果：如果基质的某个词条初始属性>={{ highLevelTreasureThreshold }}, 就视为宝藏</v-alert>
+              >
+                当前效果：如果基质的基础属性等级 ≥{{
+                  highLevelTreasureAttributeThreshold
+                }}，或者附加属性等级 ≥{{ highLevelTreasureSecondaryThreshold }}，或者技能属性等级
+                ≥{{ highLevelTreasureSkillThreshold }}，则也将其视为宝藏。
+              </v-alert>
             </v-col>
           </v-row>
           <v-divider class="my-4" />
@@ -159,10 +217,10 @@
                 icon="mdi-plus"
                 variant="text"
                 @click="
-                  treasureEssenceStats.splice(index + 1, 0, {
-                    attribute: '',
-                    secondary: '',
-                    skill: '',
+                  treasureEssenceStats.splice(index, 0, {
+                    attribute: null,
+                    secondary: null,
+                    skill: null,
                   })
                 "
               />
@@ -201,7 +259,9 @@
               <v-btn
                 color="primary"
                 prepend-icon="mdi-plus"
-                @click="treasureEssenceStats.push({ attribute: '', secondary: '', skill: '' })"
+                @click="
+                  treasureEssenceStats.push({ attribute: null, secondary: null, skill: null })
+                "
               >
                 添加自定义宝藏基质
               </v-btn>
@@ -214,7 +274,9 @@
                 color="primary"
                 icon="mdi-plus"
                 variant="text"
-                @click="treasureEssenceStats.push({ attribute: '', secondary: '', skill: '' })"
+                @click="
+                  treasureEssenceStats.push({ attribute: null, secondary: null, skill: null })
+                "
               />
             </v-col>
           </v-row>
@@ -224,6 +286,9 @@
         <v-expansion-panel-title>操作设置</v-expansion-panel-title>
         <v-expansion-panel-text>
           <h2>遇到宝藏基质或者养成材料时，该如何操作？</h2>
+          <v-alert border="start" class="mb-4" type="info" variant="tonal">
+            “宝藏基质”和“养成材料”仅为分类简称，不是宝藏的基质都视为养成材料。
+          </v-alert>
           <v-row>
             <v-col cols="12" md="6">
               <h3>对于<span class="text-success">宝藏基质</span>，我们</h3>
@@ -234,6 +299,8 @@
                 <v-radio label="如果锁着，则解锁" value="unlock"></v-radio>
                 <v-radio label="如果已标记为弃用，则取消弃用" value="undeprecate" />
                 <v-radio label="解锁且取消弃用" value="unlock_and_undeprecate"></v-radio>
+                <v-radio label="如果没有上锁，则弃用" value="deprecate_if_not_locked" disabled />
+                <v-radio label="如果没有弃用，则上锁" value="lock_if_not_deprecated" />
               </v-radio-group>
             </v-col>
             <v-col cols="12" md="6">
@@ -245,6 +312,8 @@
                 <v-radio label="如果锁着，则解锁" value="unlock" />
                 <v-radio label="如果已标记为弃用，则取消弃用" value="undeprecate" />
                 <v-radio label="解锁且取消弃用" value="unlock_and_undeprecate" />
+                <v-radio label="如果没有上锁，则弃用" value="deprecate_if_not_locked" />
+                <v-radio label="如果没有弃用，则上锁" value="lock_if_not_deprecated" />
               </v-radio-group>
             </v-col>
           </v-row>
@@ -259,11 +328,13 @@ import ItemIcon from '@/components/ItemIcon.vue'
 import {
   gemTable,
   getTranslation,
+  rarityColorTable,
   weaponBasicTable,
   wikiEntryDataTable,
   wikiEntryTable,
   wikiGroupTable,
 } from '@/utils/gameData/gameData'
+import { statsForWeapon } from '@/utils/gameData/weapon'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useTheme } from 'vuetify'
 
@@ -298,9 +369,9 @@ function getGroupIconUrl(iconId: string): string {
 }
 
 interface EssenceStat {
-  attribute: string
-  secondary: string
-  skill: string
+  attribute: string | null
+  secondary: string | null
+  skill: string | null
 }
 
 const selectedWeaponIds = ref<string[]>([])
@@ -308,7 +379,9 @@ const treasureEssenceStats = ref<EssenceStat[]>([])
 const treasureAction = ref('lock')
 const trashAction = ref('unlock')
 const highLevelTreasureEnabled = ref(false)
-const highLevelTreasureThreshold = ref(3)
+const highLevelTreasureAttributeThreshold = ref(3)
+const highLevelTreasureSecondaryThreshold = ref(3)
+const highLevelTreasureSkillThreshold = ref(3)
 
 const notSelectedWeaponIds = computed(() => {
   return Object.keys(weaponBasicTable.value).filter(
@@ -316,7 +389,51 @@ const notSelectedWeaponIds = computed(() => {
   )
 })
 
-function selectAllForGroup(groupId: string, select: boolean) {
+function getWeaponStatsDescription(weaponId: string): string {
+  const stats = statsForWeapon.value.get(weaponId)
+  if (!stats) {
+    return '无基质属性'
+  }
+  const parts: string[] = []
+  if (stats.attribute) {
+    parts.push(getGemTagName(stats.attribute))
+  }
+  if (stats.secondary) {
+    parts.push(getGemTagName(stats.secondary))
+  }
+  if (stats.skill) {
+    parts.push(getGemTagName(stats.skill))
+  }
+  return parts.join('、')
+}
+
+function raritySelectAll(rarity: number, select: boolean) {
+  const weaponIds = Object.values(weaponBasicTable.value)
+    .filter((weapon) => weapon.rarity === rarity)
+    .map((weapon) => weapon.weaponId)
+  if (select) {
+    selectedWeaponIds.value = [...new Set([...selectedWeaponIds.value, ...weaponIds])]
+  } else {
+    selectedWeaponIds.value = selectedWeaponIds.value.filter((id) => !weaponIds.includes(id))
+  }
+}
+
+function isRarityAllSelected(rarity: number): boolean {
+  const weaponIds = Object.values(weaponBasicTable.value)
+    .filter((weapon) => weapon.rarity === rarity)
+    .map((weapon) => weapon.weaponId)
+  return weaponIds.every((id) => selectedWeaponIds.value.includes(id))
+}
+
+function isRarityPartiallySelected(rarity: number): boolean {
+  const weaponIds = Object.values(weaponBasicTable.value)
+    .filter((weapon) => weapon.rarity === rarity)
+    .map((weapon) => weapon.weaponId)
+  const selectedCount = weaponIds.filter((id) => selectedWeaponIds.value.includes(id)).length
+  return selectedCount > 0 && selectedCount < weaponIds.length
+}
+
+function typeSelectAll(groupId: string, select: boolean) {
   const weaponIds =
     wikiEntryTable.value[groupId]?.list.map(
       (wikiEntryId) => wikiEntryDataTable.value[wikiEntryId]!.refItemId,
@@ -328,7 +445,7 @@ function selectAllForGroup(groupId: string, select: boolean) {
   }
 }
 
-function isAllSelected(groupId: string): boolean {
+function isTypeAllSelected(groupId: string): boolean {
   const weaponIds =
     wikiEntryTable.value[groupId]?.list.map(
       (wikiEntryId) => wikiEntryDataTable.value[wikiEntryId]!.refItemId,
@@ -336,7 +453,7 @@ function isAllSelected(groupId: string): boolean {
   return weaponIds.every((id) => selectedWeaponIds.value.includes(id))
 }
 
-function isPartiallySelected(groupId: string): boolean {
+function isTypePartiallySelected(groupId: string): boolean {
   const weaponIds =
     wikiEntryTable.value[groupId]?.list.map(
       (wikiEntryId) => wikiEntryDataTable.value[wikiEntryId]!.refItemId,
@@ -347,25 +464,38 @@ function isPartiallySelected(groupId: string): boolean {
 
 const config = computed(() => {
   return {
-    version: 0,
+    version: 2,
     trash_weapon_ids: notSelectedWeaponIds.value,
     treasure_essence_stats: treasureEssenceStats.value,
     treasure_action: treasureAction.value,
     trash_action: trashAction.value,
     high_level_treasure_enabled: highLevelTreasureEnabled.value,
-    high_level_treasure_threshold: highLevelTreasureThreshold.value,
+    high_level_treasure_attribute_threshold: highLevelTreasureAttributeThreshold.value,
+    high_level_treasure_secondary_threshold: highLevelTreasureSecondaryThreshold.value,
+    high_level_treasure_skill_threshold: highLevelTreasureSkillThreshold.value,
   }
 })
 
 async function getConfig() {
   const response = await fetch(`/api/config`)
   const result = await response.json()
-  const { trash_weapon_ids, treasure_essence_stats, treasure_action, trash_action, high_level_treasure_enabled, high_level_treasure_threshold } = result
+  const {
+    trash_weapon_ids,
+    treasure_essence_stats,
+    treasure_action,
+    trash_action,
+    high_level_treasure_enabled,
+    high_level_treasure_attribute_threshold,
+    high_level_treasure_secondary_threshold,
+    high_level_treasure_skill_threshold,
+  } = result
   treasureEssenceStats.value = treasure_essence_stats
   treasureAction.value = treasure_action
   trashAction.value = trash_action
-  highLevelTreasureEnabled.value = high_level_treasure_enabled ?? false
-  highLevelTreasureThreshold.value = high_level_treasure_threshold ?? 3
+  highLevelTreasureEnabled.value = high_level_treasure_enabled
+  highLevelTreasureAttributeThreshold.value = high_level_treasure_attribute_threshold
+  highLevelTreasureSecondaryThreshold.value = high_level_treasure_secondary_threshold
+  highLevelTreasureSkillThreshold.value = high_level_treasure_skill_threshold
   selectedWeaponIds.value = Object.keys(weaponBasicTable.value).filter(
     (weaponId) => !trash_weapon_ids.includes(weaponId),
   )

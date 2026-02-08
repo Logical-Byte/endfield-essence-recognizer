@@ -2,7 +2,7 @@
 Windows OS-specific window utilities.
 """
 
-from collections.abc import Container, Iterable
+from collections.abc import Sequence
 
 import numpy as np
 import pyautogui
@@ -12,7 +12,7 @@ import win32gui  # ty:ignore[unresolved-import]
 import win32ui  # ty:ignore[unresolved-import]
 from cv2.typing import MatLike
 
-from endfield_essence_recognizer.utils.image import Scope
+from endfield_essence_recognizer.core.layout.base import Point, Region
 
 
 def _get_window_hwnd(window: pygetwindow.Window) -> int:
@@ -45,7 +45,7 @@ def get_client_size(window: pygetwindow.Window) -> tuple[int, int]:
     return width, height
 
 
-def _get_client_rect(window: pygetwindow.Window) -> Scope:
+def _get_client_rect(window: pygetwindow.Window) -> Region:
     """获取窗口客户区的屏幕坐标（不包含标题栏和边框）"""
 
     # 获取窗口句柄
@@ -61,20 +61,20 @@ def _get_client_rect(window: pygetwindow.Window) -> Scope:
     # 将客户区右下角转换为屏幕坐标
     right, bottom = win32gui.ClientToScreen(hwnd, (client_right, client_bottom))
 
-    return ((left, top), (right, bottom))
+    return Region(Point(left, top), Point(right, bottom))
 
 
-def _screenshot_by_win32ui(scope: Scope) -> MatLike:
+def _screenshot_by_win32ui(scope: Region) -> MatLike:
     """
     截取屏幕指定区域，返回 BGR 格式的 numpy 图像。
 
     Args:
-        scope: 屏幕区域，格式为 ((left, top), (right, bottom))
+        scope: 屏幕区域
 
     Returns:
         numpy 数组（BGR 格式，OpenCV 兼容）
     """
-    (left, top), (right, bottom) = scope
+    left, top, right, bottom = scope.x0, scope.y0, scope.x1, scope.y1
     width, height = right - left, bottom - top
     if width <= 0 or height <= 0:
         raise ValueError(f"Try to screenshot with invalid rect: {scope}")
@@ -117,7 +117,7 @@ def _screenshot_by_win32ui(scope: Scope) -> MatLike:
 
 
 def screenshot_window(
-    window: pygetwindow.Window, relative_region: Scope | None = None
+    window: pygetwindow.Window, relative_region: Region | None = None
 ) -> MatLike:
     """
     截取指定窗口的客户区，返回 BGR 格式的 numpy 图像。
@@ -129,32 +129,40 @@ def screenshot_window(
         numpy 数组（BGR 格式，OpenCV 兼容）
     """
     client_rect = _get_client_rect(window)
-    (left, top), (_right, _bottom) = client_rect
     if relative_region is not None:
-        (rx1, ry1), (rx2, ry2) = relative_region
-        scope = ((left + rx1, top + ry1), (left + rx2, top + ry2))
+        scope = Region(
+            Point(
+                client_rect.x0 + relative_region.x0, client_rect.y0 + relative_region.y0
+            ),
+            Point(
+                client_rect.x0 + relative_region.x1, client_rect.y0 + relative_region.y1
+            ),
+        )
     else:
         scope = client_rect
     return _screenshot_by_win32ui(scope)
 
 
-def get_active_support_window(
-    supported_window_titles: Container[str],
-) -> pygetwindow.Window | None:
-    active_window = pygetwindow.getActiveWindow()
-    if active_window is not None and active_window.title in supported_window_titles:
-        return active_window
-    else:
-        return None
-
-
 def get_support_window(
-    supported_window_titles: Iterable[str],
+    supported_window_titles: Sequence[str],
 ) -> pygetwindow.Window | None:
+    """
+    Try to get a window that matches one of the supported titles. The order of
+    titles indicates the priority of selection. Strict string match is performed.
+
+    Args:
+        supported_window_titles: Sequence of supported window titles. The order
+            indicates the priority of selection.
+
+    Returns:
+        A `pygetwindow.Window` object if a matching window is found, otherwise None.
+    """
+    all_windows: list[pygetwindow.Window] = pygetwindow.getAllWindows()
     for title in supported_window_titles:
-        windows = pygetwindow.getWindowsWithTitle(title)
-        if windows:
-            return windows[0]
+        # do strict match
+        strict_matches = [w for w in all_windows if w.title == title]
+        if strict_matches:
+            return strict_matches[0]
     return None
 
 

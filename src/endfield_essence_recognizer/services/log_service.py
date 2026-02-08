@@ -1,0 +1,206 @@
+from __future__ import annotations
+
+import asyncio
+from collections import deque
+from contextlib import asynccontextmanager
+from typing import TYPE_CHECKING
+
+from fastapi import WebSocket, WebSocketDisconnect
+from loguru import logger
+
+from endfield_essence_recognizer.utils.log import CONSOLE_LOG_FORMAT
+
+if TYPE_CHECKING:
+    from endfield_essence_recognizer.core.config import ServerConfig
+
+
+async def _collect_batch(
+    queue: asyncio.Queue[str], max_batch_size: int, max_timeout: float
+) -> list[str]:
+    """
+    Collects a batch of items from the queue.
+    Returns as soon as max_batch_size is reached OR max_timeout has passed
+    since the first item was received.
+    """
+    batch = []
+    # 1. Block until the very first item is available
+    first_item = await queue.get()
+    batch.append(first_item)
+
+    if max_batch_size <= 1:
+        return batch
+
+    # Start the clock after the first item arrives
+    loop = asyncio.get_running_loop()
+    start_time = loop.time()
+
+    while len(batch) < max_batch_size:
+        remaining_time = max_timeout - (loop.time() - start_time)
+
+        if remaining_time <= 0:
+            break
+
+        try:
+            # Try to get the next item within the remaining window
+            item = await asyncio.wait_for(queue.get(), timeout=remaining_time)
+            batch.append(item)
+        except asyncio.TimeoutError:
+            # Time is up, return what we have
+            break
+
+    return batch
+
+
+class LogService:
+    """
+    Service responsible for broadcasting logs to all connected WebSocket clients.
+
+    The `scope` method manages the lifecycle of the service, and should be called
+    in the server's lifespan context to ensure proper setup and teardown.
+
+
+    """
+
+    def __init__(
+        self,
+        batch_size: int = 32,
+        batch_timeout: float = 0.05,
+        history_size: int = 1000,
+    ) -> None:
+        self._connections: set[WebSocket] = set()
+        self._queue: asyncio.Queue[str] = asyncio.Queue()
+        self._broadcast_task: asyncio.Task[None] | None = None
+        self._handler_id: int | None = None
+        self.batch_size = batch_size
+        self.batch_timeout = batch_timeout
+        self._history: deque[str] = deque(maxlen=history_size)
+
+    def log_sink(self, message: str) -> None:
+        """
+        Loguru-compatible sink that puts log messages into the broadcast queue.
+        """
+        self._queue.put_nowait(message)
+
+    async def add_connection(self, websocket: WebSocket) -> None:
+        """
+        Register a new WebSocket connection for log broadcasting. This should be called
+        when a new client connects to a specific endpoint of the server.
+        """
+        # Replay history before adding to connections to ensure order
+        if self._history:
+            try:
+                history_data = "".join(self._history)
+                await websocket.send_text(history_data)
+            except Exception as e:
+                logger.error(f"Error replaying log history: {e}")
+                # If we can't send history, the connection is probably dead
+                return
+
+        self._connections.add(websocket)
+        logger.debug(f"Log WebSocket connection added. Total: {len(self._connections)}")
+
+    def remove_connection(self, websocket: WebSocket) -> None:
+        """
+        Unregister a WebSocket connection.
+        """
+        self._connections.discard(websocket)
+        logger.debug(
+            f"Log WebSocket connection removed. Total: {len(self._connections)}"
+        )
+
+    async def broadcast_loop(self) -> None:
+        """
+        Background loop that consumes the log queue and broadcasts messages.
+        """
+        while True:
+            try:
+                batch: list[str] = await _collect_batch(
+                    self._queue, self.batch_size, self.batch_timeout
+                )
+
+                # Store in history regardless of whether connections exist
+                self._history.extend(batch)
+
+                if not self._connections:
+                    for _ in batch:
+                        self._queue.task_done()
+                    continue
+
+                # the messages already have newlines, so we just join them directly
+                combined_message = "".join(batch)
+
+                disconnected = set()
+                for connection in self._connections:
+                    try:
+                        await connection.send_text(combined_message)
+                    except (WebSocketDisconnect, RuntimeError):
+                        disconnected.add(connection)
+                    except Exception as e:
+                        logger.error(f"Error broadcasting log message: {e}")
+                        disconnected.add(connection)
+
+                for conn in disconnected:
+                    self.remove_connection(conn)
+
+                for _ in batch:
+                    self._queue.task_done()
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                logger.error(f"Unexpected error in broadcast_loop: {e}")
+                await asyncio.sleep(1)
+
+    def start(self) -> None:
+        """
+        Start the background broadcast loop.
+        """
+        if self._broadcast_task is None or self._broadcast_task.done():
+            self._broadcast_task = asyncio.create_task(self.broadcast_loop())
+            logger.debug("Log broadcast service started.")
+
+    async def stop(self) -> None:
+        """
+        Stop the background broadcast loop and clear connections.
+        """
+        if self._broadcast_task:
+            self._broadcast_task.cancel()
+            try:
+                await self._broadcast_task
+            except asyncio.CancelledError:
+                # The task was cancelled as part of normal shutdown; this is expected.
+                pass
+            self._broadcast_task = None
+
+        # Close all active connections
+        for connection in list(self._connections):
+            try:
+                await connection.close()
+            except Exception as e:
+                logger.warning(f"Error while closing WebSocket connection: {e}")
+        self._connections.clear()
+        logger.debug("Log broadcast service stopped.")
+
+    @asynccontextmanager
+    async def scope(self, config: ServerConfig):
+        """
+        Lifecycle manager for LogService.
+        Binds to loguru, starts broadcasting, and cleans up.
+        """
+        # Bind log_sink to loguru
+        self._handler_id = logger.add(
+            self.log_sink,
+            level=str(config.log_level),
+            format=CONSOLE_LOG_FORMAT,
+            colorize=True,
+            diagnose=True,
+            filter=lambda record: record["extra"].get("module") != "uvicorn",
+        )
+
+        self.start()
+        try:
+            yield self
+        finally:
+            if self._handler_id is not None:
+                logger.remove(self._handler_id)
+                self._handler_id = None
+            await self.stop()

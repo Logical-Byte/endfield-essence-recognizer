@@ -12,6 +12,9 @@ wheels/
 # logs
 logs/
 
+# screenshots by the server
+screenshots/
+
 # local app settings
 config.json
 .env
