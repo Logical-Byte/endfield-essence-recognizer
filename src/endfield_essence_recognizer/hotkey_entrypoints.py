@@ -55,12 +55,12 @@ def hotkey_handler(
             # 如果需要，检查游戏窗口是否存在
             if require_game_exists:
                 if not check_game_window_exists():
-                    return
+                    return None
 
             # 如果需要，检查游戏窗口或 WebView 窗口是否在前台
             if require_game_or_webview_active:
                 if not check_game_or_webview_is_active():
-                    return
+                    return None
 
             return func(key)
 
