@@ -8,7 +8,7 @@ from pathlib import Path
 from fastapi import Depends
 
 from endfield_essence_recognizer.core.layout.base import ResolutionProfile
-from endfield_essence_recognizer.core.layout.res_1080p import Resolution1080p
+from endfield_essence_recognizer.core.layout.scalable import ScalableResolutionProfile
 from endfield_essence_recognizer.core.path import get_config_path, get_screenshots_dir
 from endfield_essence_recognizer.core.recognition import (
     AbandonStatusRecognizer,
@@ -42,12 +42,38 @@ from endfield_essence_recognizer.services.screenshot_service import ScreenshotSe
 from endfield_essence_recognizer.services.user_setting_manager import UserSettingManager
 
 
-@lru_cache()
-def get_resolution_profile() -> ResolutionProfile:
+_REF_RESOLUTION = (1920, 1080)
+
+
+@lru_cache(maxsize=16)
+def _resolution_profile_for_size(width: int, height: int) -> ResolutionProfile:
+    if width <= 0 or height <= 0:
+        width, height = _REF_RESOLUTION
+    return ScalableResolutionProfile(width, height)
+
+
+def get_resolution_profile(
+    width: int | None = None,
+    height: int | None = None,
+) -> ResolutionProfile:
     """
-    Get the ResolutionProfile instance.
+    Returns a layout configuration scaled from the 1080p baseline according to the given resolution.
+
+    - No arguments: Uses the current game window's client area size (for hotkeys/scanning, etc.), or defaults to 1920×1080 if no window is found.
+    - get_resolution_profile(w, h): Specify width and height (supports 2K/4K and other resolutions).
     """
-    return Resolution1080p()
+    if width is not None and height is not None:
+        return _resolution_profile_for_size(width, height)
+    wm = get_window_manager_singleton()
+    if not wm.target_exists:
+        return _resolution_profile_for_size(*_REF_RESOLUTION)
+    try:
+        w, h = wm.get_client_size()
+        if w <= 0 or h <= 0:
+            w, h = _REF_RESOLUTION
+        return _resolution_profile_for_size(w, h)
+    except Exception:
+        return _resolution_profile_for_size(*_REF_RESOLUTION)
 
 
 # AudioService dependency
@@ -77,6 +103,23 @@ def get_window_manager_dep() -> WindowManager:
     Get the WindowManager dependency.
     """
     return get_window_manager_singleton()
+
+
+def get_resolution_profile_dep(
+    window_manager: WindowManager = Depends(get_window_manager_dep),
+) -> ResolutionProfile:
+    """
+    FastAPI dependency: The layout configuration corresponding to the current game window resolution.
+    """
+    if not window_manager.target_exists:
+        return _resolution_profile_for_size(*_REF_RESOLUTION)
+    try:
+        w, h = window_manager.get_client_size()
+        if w <= 0 or h <= 0:
+            w, h = _REF_RESOLUTION
+        return _resolution_profile_for_size(w, h)
+    except Exception:
+        return _resolution_profile_for_size(*_REF_RESOLUTION)
 
 
 @lru_cache()
@@ -226,15 +269,12 @@ def get_scanner_engine_dep(
     ctx: ScannerContext = Depends(get_scanner_context_dep),
     window_manager: WindowManager = Depends(get_window_manager_dep),
     user_setting_manager: UserSettingManager = Depends(get_user_setting_manager_dep),
-    profile: ResolutionProfile = Depends(get_resolution_profile),
 ) -> ScannerEngine:
     """
     Get a ScannerEngine instance.
-
-    Note this dependency depends on ResolutionProfile, which will help multi-resolution
-    support in the future.
     """
     adapter = WindowActionsAdapter(window_manager)
+    profile = get_resolution_profile()
     return ScannerEngine(
         ctx=ctx,
         image_source=adapter,
@@ -249,16 +289,16 @@ def default_scanner_engine() -> ScannerEngine:
     Get the default ScannerEngine instance.
 
     Some functions need a ScannerEngine but are not called within FastAPI request context.
-    So we provide this default builder function.
     """
     window_manager = get_window_manager_singleton()
     adapter = WindowActionsAdapter(window_manager)
+    profile = get_resolution_profile()
     return ScannerEngine(
         ctx=default_scanner_context(),
         image_source=adapter,
         window_actions=adapter,
         user_setting_manager=default_user_setting_manager(),
-        profile=get_resolution_profile(),
+        profile=profile,
     )
 
 

@@ -61,3 +61,27 @@ class Resolution1080p(ResolutionProfile):
     @property
     def MASK_ESSENCE_REGION_CURRENCY(self) -> Region:
         return Region(Point(1340, 20), Point(1810, 70))
+
+    @property
+    def stats_level_icon_points(self) -> list[Sequence[Point]]:
+        # 各属性词条 +1～+4 等级图标的 1080p 坐标（三组，每组 4 点）
+        return [
+            [
+                Point(1503, 395),
+                Point(1520, 395),
+                Point(1538, 395),
+                Point(1554, 395),
+            ],
+            [
+                Point(1503, 452),
+                Point(1520, 452),
+                Point(1538, 452),
+                Point(1554, 452),
+            ],
+            [
+                Point(1503, 507),
+                Point(1520, 507),
+                Point(1538, 507),
+                Point(1554, 507),
+            ],
+        ]

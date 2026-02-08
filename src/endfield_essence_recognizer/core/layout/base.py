@@ -112,3 +112,12 @@ class ResolutionProfile(Protocol):
     def MASK_ESSENCE_REGION_CURRENCY(self) -> Region:
         """在基质界面截图中需要遮罩的货币区区域。"""
         ...
+
+    @property
+    def stats_level_icon_points(self) -> list[Sequence[Point]]:
+        """
+        各属性词条等级图标坐标（+1～+4）。
+
+        三组，每组 4 个 Point，用于亮度检测判定等级。
+        """
+        ...

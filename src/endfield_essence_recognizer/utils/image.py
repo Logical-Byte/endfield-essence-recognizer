@@ -32,6 +32,20 @@ def load_image(
     return image
 
 
+def resize_to_ref_roi(image: MatLike, ref_region: Region) -> MatLike:
+    """
+    将 ROI 图像缩放到参考区域尺寸。
+
+    识别模板基于 1080p 基准，2K/4K 下截取的 ROI 需先缩放到 1080p 对应尺寸再匹配，
+    否则模板匹配分数会极低导致误判。
+    """
+    w = ref_region.x1 - ref_region.x0
+    h = ref_region.y1 - ref_region.y0
+    if image.shape[1] == w and image.shape[0] == h:
+        return image
+    return cv2.resize(image, (w, h))
+
+
 def to_gray_image(image: MatLike) -> MatLike:
     """将图像转换为灰度图像。"""
     if len(image.shape) == 2:

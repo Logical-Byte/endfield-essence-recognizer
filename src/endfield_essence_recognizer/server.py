@@ -25,7 +25,7 @@ from endfield_essence_recognizer.core.scanner.engine import (
 from endfield_essence_recognizer.deps import (
     default_user_setting_manager,
     get_log_service,
-    get_resolution_profile,
+    get_resolution_profile_dep,
     get_scanner_engine_dep,
     get_scanner_service,
     get_screenshot_service,
@@ -61,7 +61,7 @@ def log_welcome_message():
 ==================================================
 <green><bold>使用前阅读：</></>
   - 请使用<yellow><bold>管理员权限</></>运行本工具，否则无法捕获全局热键
-  - 请在终末地的设置中将分辨率调整为 <yellow><bold>1920×1080 窗口</></>
+  - 支持分辨率自动缩放，按照原生 1080p 比例自动计算ROI缩放
   - 请按 "<green><bold>N</></>" 键打开终末地<yellow><bold>贵重品库</></>并切换到<yellow><bold>武器基质</></>页面
   - 在运行过程中，请确保终末地窗口<yellow><bold>置于前台</></>
 
@@ -189,7 +189,7 @@ async def get_screenshot(
 async def take_and_save_screenshot(
     request: ScreenshotRequest,
     screenshot_dir: Path = Depends(get_screenshots_dir_dep),
-    resolution_profile: ResolutionProfile = Depends(get_resolution_profile),
+    resolution_profile: ResolutionProfile = Depends(get_resolution_profile_dep),
     screenshot_service: ScreenshotService = Depends(get_screenshot_service),
 ) -> ScreenshotResponse:
     """Takes a screenshot and saves it to a local directory."""
