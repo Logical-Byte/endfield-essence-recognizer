@@ -2,15 +2,12 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from importlib.abc import Traversable
 from pathlib import Path
-from typing import Generic, TypeVar
 
 from cv2.typing import MatLike
 
-LabelT = TypeVar("LabelT")
-
 
 @dataclass(frozen=True)
-class TemplateDescriptor(Generic[LabelT]):
+class TemplateDescriptor[LabelT]:
     """描述一个模板资源及其对应的标签。"""
 
     path: Path | Traversable
@@ -20,7 +17,7 @@ class TemplateDescriptor(Generic[LabelT]):
 
 
 @dataclass
-class RecognitionProfile(Generic[LabelT]):
+class RecognitionProfile[LabelT]:
     """实例化 Recognizer 所需的配置。"""
 
     templates: list[TemplateDescriptor[LabelT]]
