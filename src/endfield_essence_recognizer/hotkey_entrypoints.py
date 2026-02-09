@@ -52,17 +52,25 @@ def hotkey_handler(
         def wrapper(key: str) -> None:
             logger.debug(f'检测到热键 "{key}" 被按下。')
 
-            # 如果需要，检查游戏窗口是否存在
-            if require_game_exists:
-                if not check_game_window_exists():
-                    return None
+            try:
+                # 如果需要，检查游戏窗口是否存在
+                if require_game_exists:
+                    if not check_game_window_exists():
+                        return
 
-            # 如果需要，检查游戏窗口或 WebView 窗口是否在前台
-            if require_game_or_webview_active:
-                if not check_game_or_webview_is_active():
-                    return None
+                # 如果需要，检查游戏窗口或 WebView 窗口是否在前台
+                if require_game_or_webview_active:
+                    if not check_game_or_webview_is_active():
+                        return
 
-            return func(key)
+                # call the actual handler function
+                func(key)
+
+            except Exception as e:
+                logger.error(f'处理热键 "{key}" 时发生错误: {e}')
+                logger.opt(exception=e).debug("traceback:")
+
+            logger.debug(f'热键 "{key}" 处理完成。')
 
         return wrapper
 
@@ -114,6 +122,8 @@ def handle_keyboard_single_recognition(key: str):
 
     window_manager: WindowManager = get_window_manager_singleton()
     scanner_ctx: ScannerContext = default_scanner_context()
+    resolution_profile = get_resolution_profile()  # may raise exceptions
+    user_setting = default_user_setting_manager().get_user_setting()
     if not window_manager.target_is_active:
         logger.debug(
             f'终末地窗口不在前台，尝试切换到前台以进行识别基质操作 "{key}" 键。'
@@ -128,8 +138,8 @@ def handle_keyboard_single_recognition(key: str):
     recognize_once(
         window_manager,
         scanner_ctx,
-        default_user_setting_manager().get_user_setting(),
-        get_resolution_profile(),
+        user_setting,
+        resolution_profile,
     )
 
 
@@ -169,13 +179,10 @@ def handle_keyboard_delivery_claim(key: str):
     audio_service = get_audio_service()
 
     if not scanner_service.is_running():
-        try:
-            logger.info(f'检测到 "{key}" 键，开始自动抢单')
-            engine = default_delivery_claimer_engine()
-            scanner_service.start_scan(scanner_factory=lambda: engine)
-            audio_service.play_enable()
-        except Exception as e:
-            logger.exception(f"启动自动抢单失败: {e}")
+        logger.info(f'检测到 "{key}" 键，开始自动抢单')
+        engine = default_delivery_claimer_engine()
+        scanner_service.start_scan(scanner_factory=lambda: engine)
+        audio_service.play_enable()
     else:
         logger.info(f'检测到 "{key}" 键，停止自动抢单')
         audio_service.play_disable()
@@ -204,21 +211,18 @@ def handle_keyboard_on_exit(key: str):
 )
 def temp_handle_keyboard_save_screenshot_for_debug(key: str):
     screenshot_service = get_screenshot_service()
-    try:
-        full_path, file_name = asyncio.run(
-            screenshot_service.capture_and_save(
-                screenshot_dir=get_screenshots_dir_dep(),
-                resolution_profile=get_resolution_profile(),
-                should_focus=True,
-                post_process=True,
-                title="Debug",
-                fmt=ScreenshotSaveFormat.PNG,
-            )
+    full_path, file_name = asyncio.run(
+        screenshot_service.capture_and_save(
+            screenshot_dir=get_screenshots_dir_dep(),
+            resolution_profile=get_resolution_profile(),
+            should_focus=True,
+            post_process=True,
+            title="Debug",
+            fmt=ScreenshotSaveFormat.PNG,
         )
-        logger.info(f"截图已保存到 {full_path}")
-        logger.info(f"截图文件名: {file_name}")
-    except Exception as e:
-        logger.exception(f"截图失败: {e}")
+    )
+    logger.info(f"截图已保存到 {full_path}")
+    logger.info(f"截图文件名: {file_name}")
 
 
 @contextmanager

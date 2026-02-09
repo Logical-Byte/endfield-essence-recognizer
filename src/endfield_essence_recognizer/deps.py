@@ -43,7 +43,6 @@ from endfield_essence_recognizer.core.window import (
 from endfield_essence_recognizer.core.window.adapter import WindowActionsAdapter
 from endfield_essence_recognizer.exceptions import (
     UnsupportedResolutionError,
-    WindowNotFoundError,
 )
 from endfield_essence_recognizer.services.audio_service import (
     AudioService,
@@ -94,11 +93,8 @@ def get_resolution_profile_dep(
         ValueError: If the screen width or height is not a positive integer.
         UnsupportedResolutionError: If the screen resolution is unsupported.
     """
-    if not window_manager.target_exists:
-        # we can't get resolution if window not found
-        raise WindowNotFoundError(SUPPORTED_WINDOW_TITLES)
-    width, height = window_manager.get_client_size()
-    match build_resolution_profile_strict(width, height):
+    width, height = window_manager.get_client_size()  # may raise WindowNotFoundError
+    match build_resolution_profile_strict(width, height):  # may raise ValueError
         case None:
             # unsupported resolution
             raise UnsupportedResolutionError(
@@ -288,6 +284,7 @@ def get_scanner_engine_dep(
         WindowNotFoundError: If the target window is not found (from get_resolution_profile_dep).
         UnsupportedResolutionError: If the screen resolution is unsupported
             (from get_resolution_profile_dep).
+        ValueError: If the screen width or height is not a positive integer
     """
     adapter = WindowActionsAdapter(window_manager)
     return ScannerEngine(
@@ -311,7 +308,7 @@ def default_scanner_engine() -> ScannerEngine:
     """
     window_manager = get_window_manager_singleton()
     adapter = WindowActionsAdapter(window_manager)
-    profile = get_resolution_profile()
+    profile = get_resolution_profile()  # may raise exceptions
     return ScannerEngine(
         ctx=default_scanner_context(),
         image_source=adapter,
@@ -330,7 +327,7 @@ def default_delivery_claimer_engine() -> DeliveryClaimerEngine:
     return DeliveryClaimerEngine(
         image_source=adapter,
         window_actions=adapter,
-        profile=get_resolution_profile(),
+        profile=get_resolution_profile(),  # may raise exceptions
         delivery_scene_recognizer=get_delivery_scene_recognizer_dep(),
         delivery_job_reward_recognizer=get_delivery_job_reward_recognizer_dep(),
         audio_service=get_audio_service(),
