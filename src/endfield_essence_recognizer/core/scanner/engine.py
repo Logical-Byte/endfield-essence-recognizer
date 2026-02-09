@@ -36,8 +36,7 @@ def check_scene(
 ) -> bool:
     width, height = image_source.get_client_size()
     if (width, height) != profile.RESOLUTION:
-        # 两种可能：1. 最初尝试获取profile时，窗口比例不是16:9，因此fallback到了1080p的配置
-        # 2. 运行过程中窗口被调整了大小（这应该比较少见）
+        # 运行过程中窗口被调整了大小（这应该比较少见）
         logger.debug(
             "Current window size: {}, profile expects: {}",
             (width, height),

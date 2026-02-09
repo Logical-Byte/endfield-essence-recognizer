@@ -11,7 +11,9 @@ from endfield_essence_recognizer.core.delivery_claimer.engine import (
     DeliveryClaimerEngine,
 )
 from endfield_essence_recognizer.core.layout.base import ResolutionProfile
-from endfield_essence_recognizer.core.layout.scalable import ScalableResolutionProfile
+from endfield_essence_recognizer.core.layout.factory import (
+    build_resolution_profile_strict,
+)
 from endfield_essence_recognizer.core.path import get_config_path, get_screenshots_dir
 from endfield_essence_recognizer.core.recognition import (
     AbandonStatusRecognizer,
@@ -39,6 +41,10 @@ from endfield_essence_recognizer.core.window import (
     WindowManager,
 )
 from endfield_essence_recognizer.core.window.adapter import WindowActionsAdapter
+from endfield_essence_recognizer.exceptions import (
+    UnsupportedResolutionError,
+    WindowNotFoundError,
+)
 from endfield_essence_recognizer.services.audio_service import (
     AudioService,
     build_audio_service_profile,
@@ -47,44 +53,6 @@ from endfield_essence_recognizer.services.log_service import LogService
 from endfield_essence_recognizer.services.scanner_service import ScannerService
 from endfield_essence_recognizer.services.screenshot_service import ScreenshotService
 from endfield_essence_recognizer.services.user_setting_manager import UserSettingManager
-
-_REF_RESOLUTION = (1920, 1080)
-
-
-@lru_cache(maxsize=16)
-def _resolution_profile_for_size(width: int, height: int) -> ResolutionProfile:
-    if width <= 0 or height <= 0:
-        width, height = _REF_RESOLUTION
-    try:
-        return ScalableResolutionProfile(width, height)
-    except ValueError:
-        # 非 16:9 或无效分辨率，回退 1080p；扫描时 check_scene 会检测并打日志后终止
-        return _resolution_profile_for_size(*_REF_RESOLUTION)
-
-
-def get_resolution_profile(
-    width: int | None = None,
-    height: int | None = None,
-) -> ResolutionProfile:
-    """
-    Returns a layout configuration scaled from the 1080p baseline according to the given resolution.
-
-    - No arguments: Uses the current game window's client area size (for hotkeys/scanning, etc.), or defaults to 1920×1080 if no window is found.
-    - get_resolution_profile(w, h): Specify width and height (supports 2K/4K and other resolutions).
-    """
-    if width is not None and height is not None:
-        return _resolution_profile_for_size(width, height)
-    wm = get_window_manager_singleton()
-    if not wm.target_exists:
-        return _resolution_profile_for_size(*_REF_RESOLUTION)
-    try:
-        w, h = wm.get_client_size()
-        if w <= 0 or h <= 0:
-            w, h = _REF_RESOLUTION
-        return _resolution_profile_for_size(w, h)
-    except Exception:
-        return _resolution_profile_for_size(*_REF_RESOLUTION)
-
 
 # AudioService dependency
 
@@ -120,16 +88,31 @@ def get_resolution_profile_dep(
 ) -> ResolutionProfile:
     """
     FastAPI dependency: The layout configuration corresponding to the current game window resolution.
+
+    Raises:
+        WindowNotFoundError: If the target window is not found.
+        ValueError: If the screen width or height is not a positive integer.
+        UnsupportedResolutionError: If the screen resolution is unsupported.
     """
     if not window_manager.target_exists:
-        return _resolution_profile_for_size(*_REF_RESOLUTION)
-    try:
-        w, h = window_manager.get_client_size()
-        if w <= 0 or h <= 0:
-            w, h = _REF_RESOLUTION
-        return _resolution_profile_for_size(w, h)
-    except Exception:
-        return _resolution_profile_for_size(*_REF_RESOLUTION)
+        # we can't get resolution if window not found
+        raise WindowNotFoundError(SUPPORTED_WINDOW_TITLES)
+    width, height = window_manager.get_client_size()
+    match build_resolution_profile_strict(width, height):
+        case None:
+            # unsupported resolution
+            raise UnsupportedResolutionError(
+                f"Unsupported resolution: {width}x{height}"
+            )
+        case profile:
+            return profile
+
+
+def get_resolution_profile() -> ResolutionProfile:
+    """
+    A non-dependency version of get_resolution_profile_dep.
+    """
+    return get_resolution_profile_dep(window_manager=get_window_manager_singleton())
 
 
 @lru_cache
@@ -293,10 +276,18 @@ def get_scanner_engine_dep(
     ctx: ScannerContext = Depends(get_scanner_context_dep),
     window_manager: WindowManager = Depends(get_window_manager_dep),
     user_setting_manager: UserSettingManager = Depends(get_user_setting_manager_dep),
-    profile: ResolutionProfile = Depends(get_resolution_profile),
+    profile: ResolutionProfile = Depends(get_resolution_profile_dep),
 ) -> ScannerEngine:
     """
     Get a ScannerEngine instance.
+
+    As this depends on the user setting manager and the profile, it will automatically
+    get the newest UserSettingManager and a ResolutionProfile that matches the current window.
+
+    Raises:
+        WindowNotFoundError: If the target window is not found (from get_resolution_profile_dep).
+        UnsupportedResolutionError: If the screen resolution is unsupported
+            (from get_resolution_profile_dep).
     """
     adapter = WindowActionsAdapter(window_manager)
     return ScannerEngine(
@@ -313,6 +304,10 @@ def default_scanner_engine() -> ScannerEngine:
     Get the default ScannerEngine instance.
 
     Some functions need a ScannerEngine but are not called within FastAPI request context.
+
+    Raises:
+        WindowNotFoundError: If the target window is not found.
+        UnsupportedResolutionError: If the screen resolution is unsupported.
     """
     window_manager = get_window_manager_singleton()
     adapter = WindowActionsAdapter(window_manager)

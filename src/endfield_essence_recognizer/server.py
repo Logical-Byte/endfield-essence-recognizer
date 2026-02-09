@@ -25,7 +25,7 @@ from endfield_essence_recognizer.core.scanner.engine import (
 from endfield_essence_recognizer.deps import (
     default_user_setting_manager,
     get_log_service,
-    get_resolution_profile,
+    get_resolution_profile_dep,
     get_scanner_engine_dep,
     get_scanner_service,
     get_screenshot_service,
@@ -189,7 +189,7 @@ async def get_screenshot(
 async def take_and_save_screenshot(
     request: ScreenshotRequest,
     screenshot_dir: Path = Depends(get_screenshots_dir_dep),
-    resolution_profile: ResolutionProfile = Depends(get_resolution_profile),
+    resolution_profile: ResolutionProfile = Depends(get_resolution_profile_dep),
     screenshot_service: ScreenshotService = Depends(get_screenshot_service),
 ) -> ScreenshotResponse:
     """Takes a screenshot and saves it to a local directory."""
