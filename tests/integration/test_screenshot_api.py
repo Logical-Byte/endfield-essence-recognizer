@@ -3,7 +3,9 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from fastapi.testclient import TestClient
 
+from endfield_essence_recognizer.core.layout.res_1080p import Resolution1080p
 from endfield_essence_recognizer.deps import (
+    get_resolution_profile_dep,
     get_screenshot_service,
     get_screenshots_dir_dep,
 )
@@ -24,6 +26,8 @@ def client(mock_screenshot_service, tmp_path):
     app.dependency_overrides[get_screenshot_service] = lambda: mock_screenshot_service
     # Override Screenshots Dir
     app.dependency_overrides[get_screenshots_dir_dep] = lambda: tmp_path
+    # Override Resolution Profile to avoid window lookup in tests
+    app.dependency_overrides[get_resolution_profile_dep] = lambda: Resolution1080p()
 
     with TestClient(app) as client:
         yield client

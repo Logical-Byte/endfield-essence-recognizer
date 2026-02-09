@@ -10,6 +10,7 @@ from endfield_essence_recognizer.core.window.windows_utils import (
     get_support_window,
     screenshot_window,
 )
+from endfield_essence_recognizer.exceptions import WindowNotFoundError
 
 
 class WindowManager:
@@ -24,7 +25,7 @@ class WindowManager:
     """
 
     def __init__(self, supported_titles: Sequence[str]):
-        self._supported_titles = supported_titles
+        self._supported_titles = list(supported_titles)
         self._window: pygetwindow.Window | None = None
 
     def _get_window(self) -> pygetwindow.Window | None:
@@ -54,7 +55,7 @@ class WindowManager:
         Returns True if an operation was performed, False otherwise.
         """
         window = self._get_window()
-        if window and (window.isMinimized or window.isMaximized):
+        if window is not None and (window.isMinimized or window.isMaximized):
             window.restore()
             return True
         return False
@@ -84,10 +85,8 @@ class WindowManager:
     def get_client_size(self) -> tuple[int, int]:
         """Return the (width, height) of the window's client area."""
         window = self._get_window()
-        if not window:
-            raise RuntimeError(
-                f"No window found matching titles: {self._supported_titles}"
-            )
+        if window is None:
+            raise WindowNotFoundError(self._supported_titles)
         return get_client_size(window)
 
     def screenshot(self, relative_region: Region | None = None) -> MatLike:
@@ -96,17 +95,13 @@ class WindowManager:
         Returns a BGR numpy array compatible with OpenCV.
         """
         window = self._get_window()
-        if not window:
-            raise RuntimeError(
-                f"No window found matching titles: {self._supported_titles}"
-            )
+        if window is None:
+            raise WindowNotFoundError(self._supported_titles)
         return screenshot_window(window, relative_region)
 
     def click(self, relative_x: int, relative_y: int) -> None:
         """Perform a mouse click at the relative coordinates within the client area."""
         window = self._get_window()
-        if not window:
-            raise RuntimeError(
-                f"No window found matching titles: {self._supported_titles}"
-            )
+        if window is None:
+            raise WindowNotFoundError(self._supported_titles)
         click_on_window(window, relative_x, relative_y)

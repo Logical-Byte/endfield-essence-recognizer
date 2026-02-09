@@ -5,6 +5,7 @@ import pytest
 
 from endfield_essence_recognizer.core.layout.base import Point, Region
 from endfield_essence_recognizer.core.window.manager import WindowManager
+from endfield_essence_recognizer.exceptions import WindowNotFoundError
 
 
 @pytest.fixture
@@ -156,7 +157,7 @@ def test_get_client_size_no_window(window_manager):
         "endfield_essence_recognizer.core.window.manager.get_support_window"
     ) as mock_get_support:
         mock_get_support.return_value = None
-        with pytest.raises(RuntimeError, match="No window found"):
+        with pytest.raises(WindowNotFoundError, match="Target window not found"):
             window_manager.get_client_size()
 
 
@@ -190,7 +191,7 @@ def test_screenshot_no_window(window_manager):
         "endfield_essence_recognizer.core.window.manager.get_support_window"
     ) as mock_get_support:
         mock_get_support.return_value = None
-        with pytest.raises(RuntimeError, match="No window found"):
+        with pytest.raises(WindowNotFoundError, match="Target window not found"):
             window_manager.screenshot()
 
 
@@ -214,5 +215,5 @@ def test_click_no_window(window_manager):
         "endfield_essence_recognizer.core.window.manager.get_support_window"
     ) as mock_get_support:
         mock_get_support.return_value = None
-        with pytest.raises(RuntimeError, match="No window found"):
+        with pytest.raises(WindowNotFoundError, match="Target window not found"):
             window_manager.click(100, 200)

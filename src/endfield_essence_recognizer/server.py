@@ -10,10 +10,12 @@ from fastapi import (
     Depends,
     FastAPI,
     HTTPException,
+    Request,
     WebSocket,
     WebSocketDisconnect,
 )
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from endfield_essence_recognizer.core.config import ServerConfig, get_server_config
@@ -25,14 +27,18 @@ from endfield_essence_recognizer.core.scanner.engine import (
 from endfield_essence_recognizer.deps import (
     default_user_setting_manager,
     get_log_service,
-    get_resolution_profile,
+    get_resolution_profile_dep,
     get_scanner_engine_dep,
     get_scanner_service,
     get_screenshot_service,
     get_screenshots_dir_dep,
     get_user_setting_manager_dep,
 )
-from endfield_essence_recognizer.exceptions import ConfigVersionMismatchError
+from endfield_essence_recognizer.exceptions import (
+    ConfigVersionMismatchError,
+    UnsupportedResolutionError,
+    WindowNotFoundError,
+)
 from endfield_essence_recognizer.hotkey_entrypoints import bind_hotkeys
 from endfield_essence_recognizer.models.screenshot import (
     ImageFormat,
@@ -146,6 +152,26 @@ app.add_middleware(
 )
 
 
+@app.exception_handler(WindowNotFoundError)
+async def window_not_found_exception_handler(
+    _request: Request, exc: WindowNotFoundError
+):
+    return JSONResponse(
+        status_code=404,
+        content={"detail": str(exc)},
+    )
+
+
+@app.exception_handler(UnsupportedResolutionError)
+async def unsupported_resolution_exception_handler(
+    _request: Request, exc: UnsupportedResolutionError
+):
+    return JSONResponse(
+        status_code=400,
+        content={"detail": str(exc)},
+    )
+
+
 @app.get("/api/config")
 async def get_config(
     user_setting_manager: UserSettingManager = Depends(get_user_setting_manager_dep),
@@ -189,7 +215,7 @@ async def get_screenshot(
 async def take_and_save_screenshot(
     request: ScreenshotRequest,
     screenshot_dir: Path = Depends(get_screenshots_dir_dep),
-    resolution_profile: ResolutionProfile = Depends(get_resolution_profile),
+    resolution_profile: ResolutionProfile = Depends(get_resolution_profile_dep),
     screenshot_service: ScreenshotService = Depends(get_screenshot_service),
 ) -> ScreenshotResponse:
     """Takes a screenshot and saves it to a local directory."""
