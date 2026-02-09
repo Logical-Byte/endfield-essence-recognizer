@@ -27,8 +27,8 @@ from .services import (
 )
 from .settings import (
     default_user_setting_manager,
+    get_user_setting_manager_at,
     get_user_setting_manager_dep,
-    get_user_setting_manager_singleton,
 )
 
 __all__ = [
@@ -55,7 +55,7 @@ __all__ = [
     "get_screenshot_service",
     "get_screenshots_dir_dep",
     "get_ui_scene_recognizer_dep",
+    "get_user_setting_manager_at",
     "get_user_setting_manager_dep",
-    "get_user_setting_manager_singleton",
     "get_webview_window_manager",
 ]

@@ -12,11 +12,10 @@ def _get_user_setting_manager_cached(file: Path) -> UserSettingManager:
     return UserSettingManager(user_setting_file=file)
 
 
-def get_user_setting_manager_singleton(user_setting_file: Path) -> UserSettingManager:
+def get_user_setting_manager_at(user_setting_file: Path) -> UserSettingManager:
     """
-    Get the singleton UserSettingManager instance.
-
-    The lru_cache enables testing with different paths in parallel.
+    Get the singleton UserSettingManager instance of the given file.
+    lru_cache is applied to the absolute path of the file to ensure singleton semantics.
     """
     absolute_path = user_setting_file.resolve()
     # Avoid different path representations of the same file
@@ -29,11 +28,11 @@ def get_user_setting_manager_dep(
     """
     Get the singleton UserSettingManager instance.
     """
-    return get_user_setting_manager_singleton(user_setting_file)
+    return get_user_setting_manager_at(user_setting_file)
 
 
 def default_user_setting_manager() -> UserSettingManager:
     """
     Get the default singleton UserSettingManager instance.
     """
-    return get_user_setting_manager_singleton(get_config_path())
+    return get_user_setting_manager_at(get_config_path())
