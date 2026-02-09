@@ -17,14 +17,13 @@ on:
     branches:
       - main
       - dev
-      # branches that ends with `-ci` or `/ci` (e.g., feature-ci, fix/ci)
-      - '**/ci'
-      - '*-ci'
       # Run on all changes
+
+  workflow_dispatch:
 
 # Ensure that only one CI run happens per PR/branch at a time
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -49,10 +48,6 @@ jobs:
   backend-test:
     name: Run tests
     runs-on: windows-latest
-    permissions:
-      contents: read
-      checks: write
-      pull-requests: write
     steps:
       - uses: actions/checkout@v5
 
@@ -70,11 +65,10 @@ jobs:
       - name: Run tests
         run: uv run pytest tests -v --ci -ra --junitxml=pytest-results.xml
 
-      - name: Publish test report
-        uses: mikepenz/action-junit-report@v6
-        if: always() # Always run to publish results even if tests fail
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
-          report_paths: pytest-results.xml
-          detailed_summary: true
-          include_time_in_summary: true
-          comment: true
+          name: pytest-results
+          path: pytest-results.xml
+          retention-days: 1
