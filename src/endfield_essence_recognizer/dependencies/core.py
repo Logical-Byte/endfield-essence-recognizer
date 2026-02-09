@@ -36,8 +36,7 @@ from .recognition import (
 )
 from .services import (
     get_audio_service,
-    get_window_manager_dep,
-    get_window_manager_singleton,
+    get_game_window_manager,
 )
 from .settings import (
     default_user_setting_manager,
@@ -46,7 +45,7 @@ from .settings import (
 
 
 def get_resolution_profile_dep(
-    window_manager: WindowManager = Depends(get_window_manager_dep),
+    window_manager: WindowManager = Depends(get_game_window_manager),
 ) -> ResolutionProfile:
     """
     FastAPI dependency: The layout configuration corresponding to the current game window resolution.
@@ -71,7 +70,7 @@ def get_resolution_profile() -> ResolutionProfile:
     """
     A non-dependency version of get_resolution_profile_dep.
     """
-    return get_resolution_profile_dep(window_manager=get_window_manager_singleton())
+    return get_resolution_profile_dep(window_manager=get_game_window_manager())
 
 
 def default_scanner_context() -> ScannerContext:
@@ -122,7 +121,7 @@ def get_scanner_context_dep(
 
 def get_scanner_engine_dep(
     ctx: ScannerContext = Depends(get_scanner_context_dep),
-    window_manager: WindowManager = Depends(get_window_manager_dep),
+    window_manager: WindowManager = Depends(get_game_window_manager),
     user_setting_manager: UserSettingManager = Depends(get_user_setting_manager_dep),
     profile: ResolutionProfile = Depends(get_resolution_profile_dep),
 ) -> ScannerEngine:
@@ -143,7 +142,7 @@ def default_scanner_engine() -> ScannerEngine:
     """
     Get the default ScannerEngine instance.
     """
-    window_manager = get_window_manager_singleton()
+    window_manager = get_game_window_manager()
     adapter = WindowActionsAdapter(window_manager)
     profile = get_resolution_profile()
     return ScannerEngine(
@@ -159,7 +158,7 @@ def default_delivery_claimer_engine() -> DeliveryClaimerEngine:
     """
     Get the default DeliveryClaimerEngine instance.
     """
-    window_manager = get_window_manager_singleton()
+    window_manager = get_game_window_manager()
     adapter = WindowActionsAdapter(window_manager)
     return DeliveryClaimerEngine(
         image_source=adapter,

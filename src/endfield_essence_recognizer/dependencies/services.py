@@ -23,18 +23,11 @@ def get_audio_service() -> AudioService:
 
 
 @lru_cache
-def get_window_manager_singleton() -> WindowManager:
+def get_game_window_manager() -> WindowManager:
     """
-    Get the singleton WindowManager instance.
+    Get the singleton WindowManager instance for the game window.
     """
     return WindowManager(SUPPORTED_WINDOW_TITLES)
-
-
-def get_window_manager_dep() -> WindowManager:
-    """
-    Get the WindowManager dependency.
-    """
-    return get_window_manager_singleton()
 
 
 @lru_cache
@@ -61,4 +54,4 @@ def get_screenshot_service() -> ScreenshotService:
     """
     Get the ScreenshotService singleton.
     """
-    return ScreenshotService(get_window_manager_singleton())
+    return ScreenshotService(get_game_window_manager())

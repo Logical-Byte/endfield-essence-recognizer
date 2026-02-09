@@ -16,12 +16,12 @@ from endfield_essence_recognizer.dependencies import (
     default_scanner_engine,
     default_user_setting_manager,
     get_audio_service,
+    get_game_window_manager,
     get_resolution_profile,
     get_scanner_service,
     get_screenshot_service,
     get_screenshots_dir_dep,
     get_webview_window_manager,
-    get_window_manager_singleton,
 )
 from endfield_essence_recognizer.models.screenshot import (
     ScreenshotSaveFormat,
@@ -84,7 +84,7 @@ def check_game_window_exists() -> bool:
     Returns:
         bool: 如果游戏窗口存在则返回 True，否则返回 False。
     """
-    window_manager: WindowManager = get_window_manager_singleton()
+    window_manager: WindowManager = get_game_window_manager()
     if not window_manager.target_exists:
         logger.debug("未检测到终末地窗口，停止快捷键操作。")
         return False
@@ -98,7 +98,7 @@ def check_game_or_webview_is_active() -> bool:
     Returns:
         bool: 如果游戏窗口或 WebView 窗口在前台则返回 True，否则返回 False。
     """
-    window_manager: WindowManager = get_window_manager_singleton()
+    window_manager: WindowManager = get_game_window_manager()
     webview_window_manager: WindowManager = get_webview_window_manager()
 
     if window_manager.target_is_active:
@@ -120,7 +120,7 @@ def handle_keyboard_single_recognition(key: str):
     """处理 "[" 键按下事件 - 仅识别不操作"""
     import time
 
-    window_manager: WindowManager = get_window_manager_singleton()
+    window_manager: WindowManager = get_game_window_manager()
     scanner_ctx: ScannerContext = default_scanner_context()
     resolution_profile = get_resolution_profile()  # may raise exceptions
     user_setting = default_user_setting_manager().get_user_setting()
