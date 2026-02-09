@@ -32,6 +32,29 @@ def load_image(
     return image
 
 
+def resize_to_ref_roi(image_roi: MatLike, ref_region: Region) -> MatLike:
+    """
+    将已裁剪的 ROI 图像缩放为参考区域的尺寸。
+
+    Args:
+        image_roi: 已经裁剪好的 ROI 区域的图像。
+        ref_region: 目标参考区域（用于确定缩放为的最终尺寸）。
+
+    Returns:
+        缩放后的 ROI 图像。
+    """
+    if image_roi.size == 0:
+        raise ValueError(
+            "resize_to_ref_roi received empty image; check that ROI coordinates "
+            "are within image bounds and use proper Region (p0, p1)."
+        )
+    w = ref_region.x1 - ref_region.x0
+    h = ref_region.y1 - ref_region.y0
+    if image_roi.shape[1] == w and image_roi.shape[0] == h:
+        return image_roi
+    return cv2.resize(image_roi, (w, h))
+
+
 def to_gray_image(image: MatLike) -> MatLike:
     """将图像转换为灰度图像。"""
     if len(image.shape) == 2:

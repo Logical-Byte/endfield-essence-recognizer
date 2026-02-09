@@ -1,10 +1,8 @@
-from collections.abc import Sequence
 from dataclasses import dataclass
 
 from cv2.typing import MatLike
 
-from endfield_essence_recognizer.core.layout.base import Point
-from endfield_essence_recognizer.core.layout.res_1080p import Resolution1080p
+from endfield_essence_recognizer.core.layout.base import ResolutionProfile
 from endfield_essence_recognizer.core.recognition.brightness_detector import (
     BrightnessDetector,
     BrightnessDetectorProfile,
@@ -21,24 +19,13 @@ class AttributeLevelRecognizerProfile:
 
     brightness_profile: BrightnessDetectorProfile
 
-    stats_level_icon_points: Sequence[Sequence[Point]]
-
 
 def build_attribute_level_recognizer_profile() -> AttributeLevelRecognizerProfile:
     """
-    Builds the AttributeLevelRecognizerProfile with hardcoded 1080p settings.
-
-    TODO: This factory returns only 1080p profile for now. When we extend multi-resolution
-    support, the builder should depend on a current ResolutionProfile.
+    Builds the AttributeLevelRecognizerProfile (brightness only; icon points come from ResolutionProfile).
     """
     brightness_profile = BrightnessDetectorProfile(threshold=200, sample_radius=2)
-
-    stats_level_icon_points = Resolution1080p().STATS_LEVEL_ICON_POINTS
-
-    return AttributeLevelRecognizerProfile(
-        brightness_profile=brightness_profile,
-        stats_level_icon_points=stats_level_icon_points,
-    )
+    return AttributeLevelRecognizerProfile(brightness_profile=brightness_profile)
 
 
 class AttributeLevelRecognizer:
@@ -59,19 +46,25 @@ class AttributeLevelRecognizer:
     def __str__(self) -> str:
         return f"[{self.name}]"
 
-    def recognize_level(self, image: MatLike, stat_index: int) -> int | None:
+    def recognize_level(
+        self,
+        image: MatLike,
+        stat_index: int,
+        resolution_profile: ResolutionProfile,
+    ) -> int | None:
         """
         根据属性索引识别等级。
 
         Args:
             image: 全局图像（客户区截图）。
             stat_index: 属性索引 (0, 1, 2)。
+            resolution_profile: 当前分辨率的布局配置，提供等级图标坐标。
 
         Returns:
             等级 (1-6) 或 None（识别失败）。
         """
         gray = to_gray_image(image)
-        icon_points = self.profile.stats_level_icon_points[stat_index]
+        icon_points = resolution_profile.STATS_LEVEL_ICON_POINTS[stat_index]
 
         # 检测每个图标的状态
         active_count = 0
