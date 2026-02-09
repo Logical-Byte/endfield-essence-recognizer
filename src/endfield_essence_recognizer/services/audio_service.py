@@ -7,7 +7,7 @@ This is an easy single-file implementation using the `winsound` module.
 import importlib.resources
 import winsound
 from dataclasses import dataclass
-from importlib.abc import Traversable
+from importlib.resources.abc import Traversable
 from pathlib import Path
 
 from endfield_essence_recognizer.utils.log import logger

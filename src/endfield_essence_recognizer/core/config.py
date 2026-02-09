@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING
 
 from pydantic import Field, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from webview.guilib import GUI_TYPES, GUIType
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -85,6 +86,20 @@ class ServerConfig(BaseSettings):
     EER_API_PORT: 服务器端口号。
     """
 
+    webview_debug: bool = Field(
+        default=False,
+    )
+    """
+    EER_WEBVIEW_DEBUG: 是否启用 Webview 调试模式。
+    """
+
+    webview_gui: GUIType | None = Field(
+        default=None,
+    )
+    f"""
+    EER_WEBVIEW_GUI: Webview 使用的 GUI 后端，默认为 None，表示自动选择。可选值包括：{", ".join(GUI_TYPES)}。
+    """
+
     def _get_webview_prod_url(self) -> str:
         """生产环境 Webview URL"""
         return f"http://localhost:{self.api_port}"
@@ -110,10 +125,10 @@ def _get_fresh_server_config(
             _env_file=None to ServerConfig to ignore any .env files.
     """
     if not use_dotenv:
-        return ServerConfig(_env_file=None)
+        return ServerConfig(_env_file=None)  # type: ignore
     if base_dir is None:
         return ServerConfig()
-    return ServerConfig(_env_file=base_dir / ".env")
+    return ServerConfig(_env_file=base_dir / ".env")  # type: ignore
 
 
 @lru_cache(maxsize=1)

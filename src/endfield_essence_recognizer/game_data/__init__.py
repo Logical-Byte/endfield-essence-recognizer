@@ -5,7 +5,7 @@ import json
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from importlib.abc import Traversable
+    from importlib.resources.abc import Traversable
     from typing import Any
 
     from endfield_essence_recognizer.game_data.models import (
