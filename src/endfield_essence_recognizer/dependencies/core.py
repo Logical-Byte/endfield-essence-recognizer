@@ -7,6 +7,13 @@ from endfield_essence_recognizer.core.layout.base import ResolutionProfile
 from endfield_essence_recognizer.core.layout.factory import (
     build_resolution_profile_strict,
 )
+from endfield_essence_recognizer.core.recognition import (
+    AbandonStatusRecognizer,
+    AttributeLevelRecognizer,
+    AttributeRecognizer,
+    LockStatusRecognizer,
+    UISceneRecognizer,
+)
 from endfield_essence_recognizer.core.scanner.context import (
     ScannerContext,
 )
@@ -89,11 +96,17 @@ def default_scanner_context() -> ScannerContext:
 
 
 def get_scanner_context_dep(
-    attr_recognizer=Depends(get_attribute_recognizer_dep),
-    attr_level_recognizer=Depends(get_attribute_level_recognizer_dep),
-    abandon_status_recognizer=Depends(get_abandon_status_recognizer_dep),
-    lock_status_recognizer=Depends(get_lock_status_recognizer_dep),
-    ui_scene_recognizer=Depends(get_ui_scene_recognizer_dep),
+    attr_recognizer: AttributeRecognizer = Depends(get_attribute_recognizer_dep),
+    attr_level_recognizer: AttributeLevelRecognizer = Depends(
+        get_attribute_level_recognizer_dep
+    ),
+    abandon_status_recognizer: AbandonStatusRecognizer = Depends(
+        get_abandon_status_recognizer_dep
+    ),
+    lock_status_recognizer: LockStatusRecognizer = Depends(
+        get_lock_status_recognizer_dep
+    ),
+    ui_scene_recognizer: UISceneRecognizer = Depends(get_ui_scene_recognizer_dep),
 ) -> ScannerContext:
     """
     Get a ScannerContext instance.
