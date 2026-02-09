@@ -103,8 +103,8 @@
             <v-col cols="12" md="8">
               <v-slider
                 v-model="highLevelTreasureAttributeThreshold"
-                :disabled="!highLevelTreasureEnabled"
                 color="primary"
+                :disabled="!highLevelTreasureEnabled"
                 label="基础属性"
                 :max="6"
                 :min="1"
@@ -118,8 +118,8 @@
               </v-slider>
               <v-slider
                 v-model="highLevelTreasureSecondaryThreshold"
-                :disabled="!highLevelTreasureEnabled"
                 color="primary"
+                :disabled="!highLevelTreasureEnabled"
                 label="附加属性"
                 :max="6"
                 :min="1"
@@ -133,8 +133,8 @@
               </v-slider>
               <v-slider
                 v-model="highLevelTreasureSkillThreshold"
-                :disabled="!highLevelTreasureEnabled"
                 color="primary"
+                :disabled="!highLevelTreasureEnabled"
                 label="技能属性"
                 :max="3"
                 :min="1"
@@ -196,7 +196,6 @@
                 variant="outlined"
               />
             </v-col>
-            // eslint-disable-next-line vue/attributes-order
             <v-col cols="12" md="3" sm="6">
               <v-select
                 v-model="essenceStat.skill"

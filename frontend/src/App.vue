@@ -20,7 +20,7 @@
     </v-navigation-drawer>
 
     <v-app-bar app color="primary" density="comfortable" flat>
-      <v-app-bar-nav-icon @click="drawer = !drawer"></v-app-bar-nav-icon>
+      <v-app-bar-nav-icon @click="drawer = !drawer" />
       <v-app-bar-title>{{ route.meta?.title || '终末地基质妙妙小工具' }}</v-app-bar-title>
       <template #append>
         <v-btn icon="mdi-update" @click="checkForUpdates(true)" />
