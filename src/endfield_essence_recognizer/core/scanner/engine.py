@@ -36,7 +36,17 @@ def check_scene(
 ) -> bool:
     width, height = image_source.get_client_size()
     if (width, height) != profile.RESOLUTION:
-        logger.warning("检测到游戏窗口分辨率发生变动，终止当前扫描")
+        # 两种可能：1. 最初尝试获取profile时，窗口比例不是16:9，因此fallback到了1080p的配置
+        # 2. 运行过程中窗口被调整了大小（这应该比较少见）
+        logger.debug(
+            "Current window size: {}, profile expects: {}",
+            (width, height),
+            profile.RESOLUTION,
+        )
+        logger.warning(
+            f"当前终末地窗口分辨率为 {width}x{height}，"
+            f"请将游戏分辨率调整为 16:9 比例后重试（如 1920x1080、2560x1440、3840x2160 等）；避免在运行时调整窗口大小。"
+        )
         return False
 
     screenshot = image_source.screenshot(profile.ESSENCE_UI_ROI)

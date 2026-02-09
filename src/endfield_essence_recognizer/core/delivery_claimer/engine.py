@@ -58,6 +58,23 @@ class DeliveryClaimerEngine(AutomationEngine):
         logger.debug("DeliveryClaimerEngine execution finished.")
 
     def _check_window_and_scene(self) -> bool:
+        # check resolution
+        # only support 1080p for now
+        if self._profile.RESOLUTION != (1920, 1080):
+            logger.warning(
+                f"当前仅支持 1920x1080 分辨率的终末地窗口，"
+                f"检测到分辨率为 {self._profile.RESOLUTION}，停止抢单。"
+            )
+            return False
+
+        window_size = self._image_source.get_client_size()
+        if window_size != self._profile.RESOLUTION:
+            logger.warning(
+                f"当前终末地窗口分辨率为 {window_size}，"
+                f"目前仅支持 1920x1080 分辨率，停止抢单。"
+            )
+            return False
+
         if not self._window_actions.target_is_active:
             logger.info("终末地窗口不在前台，停止抢单。")
             return False
