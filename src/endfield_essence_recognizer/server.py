@@ -10,10 +10,12 @@ from fastapi import (
     Depends,
     FastAPI,
     HTTPException,
+    Request,
     WebSocket,
     WebSocketDisconnect,
 )
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from endfield_essence_recognizer.core.config import ServerConfig, get_server_config
@@ -32,7 +34,11 @@ from endfield_essence_recognizer.deps import (
     get_screenshots_dir_dep,
     get_user_setting_manager_dep,
 )
-from endfield_essence_recognizer.exceptions import ConfigVersionMismatchError
+from endfield_essence_recognizer.exceptions import (
+    ConfigVersionMismatchError,
+    UnsupportedResolutionError,
+    WindowNotFoundError,
+)
 from endfield_essence_recognizer.hotkey_entrypoints import bind_hotkeys
 from endfield_essence_recognizer.models.screenshot import (
     ImageFormat,
@@ -144,6 +150,26 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.exception_handler(WindowNotFoundError)
+async def window_not_found_exception_handler(
+    _request: Request, exc: WindowNotFoundError
+):
+    return JSONResponse(
+        status_code=404,
+        content={"detail": str(exc)},
+    )
+
+
+@app.exception_handler(UnsupportedResolutionError)
+async def unsupported_resolution_exception_handler(
+    _request: Request, exc: UnsupportedResolutionError
+):
+    return JSONResponse(
+        status_code=400,
+        content={"detail": str(exc)},
+    )
 
 
 @app.get("/api/config")
