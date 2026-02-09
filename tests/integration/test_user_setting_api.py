@@ -3,7 +3,7 @@ import json
 import pytest
 from fastapi.testclient import TestClient
 
-from endfield_essence_recognizer.deps import get_user_setting_manager_dep
+from endfield_essence_recognizer.dependencies import get_user_setting_manager_dep
 from endfield_essence_recognizer.server import app
 from endfield_essence_recognizer.services.user_setting_manager import UserSettingManager
 

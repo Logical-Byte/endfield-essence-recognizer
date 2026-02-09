@@ -10,7 +10,7 @@ from endfield_essence_recognizer.core.interfaces import HotkeyHandler
 from endfield_essence_recognizer.core.scanner.engine import (
     recognize_once,
 )
-from endfield_essence_recognizer.deps import (
+from endfield_essence_recognizer.dependencies import (
     default_delivery_claimer_engine,
     default_scanner_context,
     default_scanner_engine,
