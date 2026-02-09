@@ -37,9 +37,9 @@
               >
                 <template #prepend>
                   <img
-                    :src="getGroupIconUrl(iconId)"
                     :alt="getTranslation(groupName)"
                     class="group-icon me-2"
+                    :src="getGroupIconUrl(iconId)"
                     :style="{
                       filter: theme.current.value.dark ? 'none' : 'invert(1)',
                     }"
@@ -78,7 +78,7 @@
                   density="comfortable"
                   :value="weaponId"
                 />
-                <v-tooltip location="bottom" activator="parent">
+                <v-tooltip activator="parent" location="bottom">
                   {{ getWeaponStatsDescription(weaponId) }}
                 </v-tooltip>
               </div>
@@ -104,45 +104,45 @@
               <v-slider
                 v-model="highLevelTreasureAttributeThreshold"
                 :disabled="!highLevelTreasureEnabled"
-                :min="1"
-                :max="6"
-                :step="1"
-                :ticks="{ 1: '+1', 2: '+2', 3: '+3', 4: '+4', 5: '+5', 6: '+6' }"
-                label="基础属性"
-                show-ticks="always"
-                tick-size="4"
                 color="primary"
+                label="基础属性"
+                :max="6"
+                :min="1"
+                show-ticks="always"
+                :step="1"
                 thumb-label
+                tick-size="4"
+                :ticks="{ 1: '+1', 2: '+2', 3: '+3', 4: '+4', 5: '+5', 6: '+6' }"
               >
                 <template #thumb-label="{ modelValue }">+{{ modelValue }}</template>
               </v-slider>
               <v-slider
                 v-model="highLevelTreasureSecondaryThreshold"
                 :disabled="!highLevelTreasureEnabled"
-                :min="1"
-                :max="6"
-                :step="1"
-                :ticks="{ 1: '+1', 2: '+2', 3: '+3', 4: '+4', 5: '+5', 6: '+6' }"
-                label="附加属性"
-                show-ticks="always"
-                tick-size="4"
                 color="primary"
+                label="附加属性"
+                :max="6"
+                :min="1"
+                show-ticks="always"
+                :step="1"
                 thumb-label
+                tick-size="4"
+                :ticks="{ 1: '+1', 2: '+2', 3: '+3', 4: '+4', 5: '+5', 6: '+6' }"
               >
                 <template #thumb-label="{ modelValue }">+{{ modelValue }}</template>
               </v-slider>
               <v-slider
                 v-model="highLevelTreasureSkillThreshold"
                 :disabled="!highLevelTreasureEnabled"
-                :min="1"
-                :max="3"
-                :step="1"
-                :ticks="{ 1: '+1', 2: '+2', 3: '+3' }"
-                label="技能属性"
-                show-ticks="always"
-                tick-size="4"
                 color="primary"
+                label="技能属性"
+                :max="3"
+                :min="1"
+                show-ticks="always"
+                :step="1"
                 thumb-label
+                tick-size="4"
+                :ticks="{ 1: '+1', 2: '+2', 3: '+3' }"
               >
                 <template #thumb-label="{ modelValue }">+{{ modelValue }}</template>
               </v-slider>
@@ -166,52 +166,53 @@
             请点击右侧（或者下方）的加号按钮添加新的基质属性行，点击删除按钮删除对应行。上下箭头按钮可调整行顺序。
           </v-alert>
           <v-row v-for="(essenceStat, index) in treasureEssenceStats" :key="index" align="center">
-            <v-col cols="12" sm="6" md="3">
+            <v-col cols="12" md="3" sm="6">
               <v-select
                 v-model="essenceStat.attribute"
+                density="comfortable"
+                hide-details
                 :items="
                   allAttributeStats.map((gemTermId) => ({
                     title: getGemTagName(gemTermId),
                     value: gemTermId,
                   }))
                 "
-                density="comfortable"
-                hide-details
                 label="基础属性"
                 variant="outlined"
               />
             </v-col>
-            <v-col cols="12" sm="6" md="3">
+            <v-col cols="12" md="3" sm="6">
               <v-select
                 v-model="essenceStat.secondary"
+                density="comfortable"
+                hide-details
                 :items="
                   allSecondaryStats.map((gemTermId) => ({
                     title: getGemTagName(gemTermId),
                     value: gemTermId,
                   }))
                 "
-                density="comfortable"
-                hide-details
                 label="附加属性"
                 variant="outlined"
               />
             </v-col>
-            <v-col cols="12" sm="6" md="3">
+            // eslint-disable-next-line vue/attributes-order
+            <v-col cols="12" md="3" sm="6">
               <v-select
                 v-model="essenceStat.skill"
+                density="comfortable"
+                hide-details
                 :items="
                   allSkillStats.map((gemTermId) => ({
                     title: getGemTagName(gemTermId),
                     value: gemTermId,
                   }))
                 "
-                density="comfortable"
-                hide-details
                 label="技能属性"
                 variant="outlined"
               />
             </v-col>
-            <v-col cols="12" sm="6" md="3">
+            <v-col cols="12" md="3" sm="6">
               <v-btn
                 color="primary"
                 icon="mdi-plus"
@@ -255,7 +256,7 @@
             </v-col>
           </v-row>
           <v-row v-if="treasureEssenceStats.length === 0" class="my-4">
-            <v-col cols="12" sm="6" md="9">
+            <v-col cols="12" md="9" sm="6">
               <v-btn
                 color="primary"
                 prepend-icon="mdi-plus"
@@ -268,8 +269,8 @@
             </v-col>
           </v-row>
           <v-row v-else>
-            <v-col cols="12" sm="6" md="9" />
-            <v-col cols="12" sm="6" md="3">
+            <v-col cols="12" md="9" sm="6" />
+            <v-col cols="12" md="3" sm="6">
               <v-btn
                 color="primary"
                 icon="mdi-plus"
@@ -295,11 +296,11 @@
               <v-radio-group v-model="treasureAction" color="primary" density="comfortable">
                 <v-radio label="不去动它" value="keep" />
                 <v-radio label="把它锁上" value="lock" />
-                <v-radio label="把它标记为弃用" value="deprecate" disabled />
+                <v-radio disabled label="把它标记为弃用" value="deprecate" />
                 <v-radio label="如果锁着，则解锁" value="unlock"></v-radio>
                 <v-radio label="如果已标记为弃用，则取消弃用" value="undeprecate" />
                 <v-radio label="解锁且取消弃用" value="unlock_and_undeprecate"></v-radio>
-                <v-radio label="如果没有上锁，则弃用" value="deprecate_if_not_locked" disabled />
+                <v-radio disabled label="如果没有上锁，则弃用" value="deprecate_if_not_locked" />
                 <v-radio label="如果没有弃用，则上锁" value="lock_if_not_deprecated" />
               </v-radio-group>
             </v-col>
@@ -324,6 +325,8 @@
 </template>
 
 <script lang="ts" setup>
+import { computed, onMounted, ref, watch } from 'vue'
+import { useTheme } from 'vuetify'
 import ItemIcon from '@/components/ItemIcon.vue'
 import {
   gemTable,
@@ -335,8 +338,6 @@ import {
   wikiGroupTable,
 } from '@/utils/gameData/gameData'
 import { statsForWeapon } from '@/utils/gameData/weapon'
-import { computed, onMounted, ref, watch } from 'vue'
-import { useTheme } from 'vuetify'
 
 const theme = useTheme()
 

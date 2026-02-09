@@ -1,3 +1,4 @@
+import { computed } from 'vue'
 import {
   gemTable,
   gemTagIdTable,
@@ -6,7 +7,6 @@ import {
   skillPatchTable,
   weaponBasicTable,
 } from '@/utils/gameData/gameData'
-import { computed } from 'vue'
 
 export interface EssenceStat {
   attribute: string | null
@@ -43,15 +43,18 @@ export function getStatsForWeapon(weaponId: string): EssenceStat {
     const gemStat = gemTagIdTable.value[tagId]!
     const gem = gemTable.value[gemStat]!
     switch (gem.termType) {
-      case 0:
+      case 0: {
         result.attribute = gem.gemTermId
         break
-      case 1:
+      }
+      case 1: {
         result.secondary = gem.gemTermId
         break
-      case 2:
+      }
+      case 2: {
         result.skill = gem.gemTermId
         break
+      }
     }
   }
   return result

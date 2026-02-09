@@ -1,1 +1,1 @@
-export type WikiEntryTable = Record<string, { list: string[] }>;
+export type WikiEntryTable = Record<string, { list: string[] }>

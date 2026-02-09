@@ -1,6 +1,6 @@
-import { getTranslation, itemTable, rarityColorTable } from '@/utils/gameData/gameData'
 import type { ColorInstance } from 'color'
 import Color from 'color'
+import { getTranslation, itemTable, rarityColorTable } from '@/utils/gameData/gameData'
 
 export function getItemName(itemId: string, language?: string): string {
   if (itemTable.value[itemId] === undefined) {

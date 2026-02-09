@@ -78,7 +78,7 @@
       :src="screenshotUrl"
       style="max-width: 100%; height: auto"
     />
-    <v-alert v-else class="my-4" border="start" type="warning" variant="tonal">
+    <v-alert v-else border="start" class="my-4" type="warning" variant="tonal">
       终末地窗口不在前台
     </v-alert>
   </v-container>
