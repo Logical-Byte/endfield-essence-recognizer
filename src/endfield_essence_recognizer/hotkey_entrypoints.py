@@ -41,14 +41,16 @@ def hotkey_handler():
 def handle_keyboard_single_recognition(key: str):
     """处理 "[" 键按下事件 - 仅识别不操作"""
     logger.info(f'检测到 "{key}" 键，开始识别基质')
-    get_hotkey_client().post("/recognize_once")
+    get_hotkey_client().post("/recognize_once", key_pressed=key)
 
 
 @hotkey_handler()
 def handle_keyboard_auto_click(key: str):
     """处理 "]" 键按下事件 - 切换自动点击"""
     logger.info(f'检测到 "{key}" 键，切换自动点击状态')
-    get_hotkey_client().post("/toggle_scanning", json={"task_type": TaskType.ESSENCE})
+    get_hotkey_client().post(
+        "/toggle_scanning", json={"task_type": TaskType.ESSENCE}, key_pressed=key
+    )
 
 
 @hotkey_handler()
@@ -56,7 +58,9 @@ def handle_keyboard_delivery_claim(key: str):
     """切换自动抢单状态"""
     logger.info(f'检测到 "{key}" 键，切换自动抢单状态')
     get_hotkey_client().post(
-        "/toggle_scanning", json={"task_type": TaskType.DELIVERY_CLAIM}
+        "/toggle_scanning",
+        json={"task_type": TaskType.DELIVERY_CLAIM},
+        key_pressed=key,
     )
 
 
@@ -64,7 +68,7 @@ def handle_keyboard_delivery_claim(key: str):
 def handle_keyboard_on_exit(key: str):
     """处理 Alt+Delete 按下事件 - 退出程序"""
     logger.info(f'检测到 "{key}"，正在退出程序...')
-    get_hotkey_client().post("/exit")
+    get_hotkey_client().post("/exit", key_pressed=key)
 
 
 @hotkey_handler()
@@ -78,6 +82,7 @@ def temp_handle_keyboard_save_screenshot_for_debug(key: str):
             "title": "Debug",
             "format": "png",
         },
+        key_pressed=key,
     )
 
 
