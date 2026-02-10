@@ -168,6 +168,55 @@ def recognize_once(
     logger.opt(colors=True).success(evaluation.log_message)
 
 
+class OneTimeRecognitionEngine:
+    """
+    单次基质识别引擎。
+
+    此引擎执行一次性识别流程，包括窗口激活、场景检查、基质信息识别与评估；不会执行点击操作。
+    """
+
+    def __init__(
+        self,
+        ctx: ScannerContext,
+        image_source: ImageSource,
+        window_actions: WindowActions,
+        user_setting_manager: UserSettingManager,
+        profile: ResolutionProfile,
+    ) -> None:
+        self.ctx: ScannerContext = ctx
+        self._image_source = image_source
+        self._window_actions = window_actions
+        self._user_setting_manager: UserSettingManager = user_setting_manager
+        self._profile: ResolutionProfile = profile
+
+    def execute(self, stop_event: threading.Event) -> None:
+        """
+        执行单次识别流程。
+        """
+        if not self._window_actions.target_exists:
+            logger.info("未找到终末地窗口，停止单次识别。")
+            return
+
+        if not self._window_actions.target_is_active:
+            logger.debug("终末地窗口不在前台，尝试切换到前台以进行识别基质操作。")
+            if self._window_actions.activate():
+                self._window_actions.wait(0.3)
+            if self._window_actions.show():
+                # make sure the window is visible
+                self._window_actions.wait(0.3)
+
+        if stop_event.is_set():
+            return
+
+        user_setting = self._user_setting_manager.get_user_setting()
+        recognize_once(
+            self._image_source,
+            self.ctx,
+            user_setting,
+            self._profile,
+        )
+
+
 class ScannerEngine:
     """
     基质图标扫描器引擎。

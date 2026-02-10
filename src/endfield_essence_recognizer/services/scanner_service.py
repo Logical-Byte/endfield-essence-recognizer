@@ -9,6 +9,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
     from endfield_essence_recognizer.core.interfaces import AutomationEngine
+    from endfield_essence_recognizer.services.audio_service import AudioService
 
 
 class ScannerService:
@@ -22,13 +23,18 @@ class ScannerService:
 
     def __init__(
         self,
+        audio_service: AudioService | None = None,
     ) -> None:
         """
         Initialize the ScannerService.
+
+        Args:
+            audio_service: Optional AudioService for notification sounds.
         """
         self._thread: threading.Thread | None = None
         self._stop_event = threading.Event()  # Event to signal the thread to stop
         self._lock = threading.RLock()  # Reentrant lock for nested locking
+        self._audio_service = audio_service
 
     def start_scan(self, scanner_factory: Callable[[], AutomationEngine]) -> None:
         """
@@ -62,6 +68,9 @@ class ScannerService:
             logger.debug("Starting scanner thread.")
             self._thread.start()
 
+            if self._audio_service:
+                self._audio_service.play_enable()
+
     def stop_scan(self) -> None:
         """
         Stop the scanning process.
@@ -80,6 +89,9 @@ class ScannerService:
                 self._thread.join()
                 logger.debug("Scanner thread joined.")
                 self._thread = None
+
+            if self._audio_service:
+                self._audio_service.play_disable()
 
     def is_running(self) -> bool:
         """
