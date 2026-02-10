@@ -18,17 +18,21 @@ from .recognition import (
 )
 from .services import (
     get_audio_service,
-    get_game_window_manager,
     get_log_service,
     get_scanner_service,
     get_screenshot_service,
     get_system_service,
-    get_webview_window_manager,
 )
 from .settings import (
     default_user_setting_manager,
     get_user_setting_manager_at,
     get_user_setting_manager_dep,
+)
+from .window import (
+    get_game_window_manager,
+    get_webview_window_manager,
+    require_game_or_webview_is_active,
+    require_game_window_exists,
 )
 
 __all__ = [
@@ -57,4 +61,6 @@ __all__ = [
     "get_user_setting_manager_at",
     "get_user_setting_manager_dep",
     "get_webview_window_manager",
+    "require_game_or_webview_is_active",
+    "require_game_window_exists",
 ]

@@ -39,11 +39,11 @@ from .recognition import (
 )
 from .services import (
     get_audio_service,
-    get_game_window_manager,
 )
 from .settings import (
     get_user_setting_manager_dep,
 )
+from .window import get_game_window_manager
 
 
 def get_resolution_profile_dep(
