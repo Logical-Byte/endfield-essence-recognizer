@@ -4,7 +4,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from endfield_essence_recognizer.core.layout.res_1080p import Resolution1080p
-from endfield_essence_recognizer.deps import (
+from endfield_essence_recognizer.dependencies import (
     get_resolution_profile_dep,
     get_screenshot_service,
     get_screenshots_dir_dep,
