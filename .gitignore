@@ -21,3 +21,5 @@ config.json
 
 # enfield data table config
 src/endfield_essence_recognizer/data/endfielddata/TableCfg/**.json
+
+AGENTS.md
