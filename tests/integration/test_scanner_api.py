@@ -31,6 +31,7 @@ def client(mock_scanner_service):
     """FastAPI TestClient with overridden dependencies."""
     app.dependency_overrides[get_scanner_service] = lambda: mock_scanner_service
     # Mock engines to avoid real initialization
+    # use explicit lambdas to avoid fastapi caching MagicMock instance
     app.dependency_overrides[get_scanner_engine_dep] = lambda: MagicMock()
     app.dependency_overrides[get_one_time_recognition_engine_dep] = lambda: MagicMock()
     app.dependency_overrides[get_delivery_claimer_engine_dep] = lambda: MagicMock()

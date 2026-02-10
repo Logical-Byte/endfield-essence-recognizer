@@ -71,5 +71,7 @@ async def toggle_scanning(
                 return essence_engine
             case TaskType.DELIVERY_CLAIM:
                 return delivery_engine
+            case _:
+                raise ValueError(f"Unsupported task type: {request.task_type}")
 
     scanner_service.toggle_scan(scanner_factory=get_engine)
