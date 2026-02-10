@@ -43,7 +43,7 @@ def require_game_window_exists(
     if not window_manager.target_exists:
         logger.error("未检测到终末地窗口，无法执行操作。")
         raise WindowNotFoundError(
-            window_manager._supported_titles, "未检测到终末地窗口，无法执行操作。"
+            window_manager.supported_titles, "未检测到终末地窗口，无法执行操作。"
         )
 
 
@@ -66,6 +66,6 @@ def require_game_or_webview_is_active(
     else:
         logger.error("前台窗口不是终末地或 WebView，无法执行操作。")
         raise WindowNotActiveError(
-            window_manager._supported_titles + webview_window_manager._supported_titles,
+            window_manager.supported_titles + webview_window_manager.supported_titles,
             "前台窗口不是终末地或 WebView，无法执行操作。",
         )

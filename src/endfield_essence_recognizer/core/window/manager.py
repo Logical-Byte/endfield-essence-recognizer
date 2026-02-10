@@ -39,6 +39,11 @@ class WindowManager:
         self._window = None
 
     @property
+    def supported_titles(self) -> list[str]:
+        """Get the list of supported window titles."""
+        return self._supported_titles
+
+    @property
     def target_exists(self) -> bool:
         """Check if any supported window is currently open."""
         return self._get_window() is not None

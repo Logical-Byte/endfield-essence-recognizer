@@ -99,9 +99,11 @@ def bind_hotkeys(server_config: ServerConfig):
             "=", temp_handle_keyboard_save_screenshot_for_debug, args=("=",)
         )  # 临时热键，用于调试截图功能
     logger.info("全局热键已注册")
+    _ = get_hotkey_client()  # ensure client is initialized
     try:
         yield
     finally:
+        get_hotkey_client().close()
         keyboard.unhook_all()
         logger.info("全局热键已注销")
 

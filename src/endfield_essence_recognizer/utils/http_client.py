@@ -34,6 +34,10 @@ class HotkeyClient:
         except Exception as e:
             logger.warning(f"{caller} 发送请求到 {url} 失败: {e}")
 
+    def close(self):
+        """Close the HTTP client."""
+        self.client.close()
+
 
 _client = None
 

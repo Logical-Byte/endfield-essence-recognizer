@@ -36,8 +36,8 @@ async def window_not_found_exception_handler(
     _request: Request, exc: WindowNotFoundError
 ):
     """
-    WindowNotFoundError are raised when the target window is not found.
-    Generally this means the game window is not open，and therefore we
+    WindowNotFoundError is raised when the target window is not found.
+    Generally this means the game window is not open, and therefore we
     cannot perform the requested operation.
 
     We return a 404 status code here to indicate that the target window
@@ -54,7 +54,7 @@ async def window_not_active_exception_handler(
     _request: Request, exc: WindowNotActiveError
 ):
     """
-    WindowNotActiveError are raised when the the active window is
+    WindowNotActiveError is raised when the the active window is
     not what we expect. Normally this means the user triggers an action
     when either the game window or the webview is not in the foreground.
 
