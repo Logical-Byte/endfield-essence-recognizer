@@ -11,6 +11,8 @@ from endfield_essence_recognizer.core.recognition import (
     AbandonStatusRecognizer,
     AttributeLevelRecognizer,
     AttributeRecognizer,
+    DeliveryJobRewardRecognizer,
+    DeliverySceneRecognizer,
     LockStatusRecognizer,
     UISceneRecognizer,
 )
@@ -26,6 +28,7 @@ from endfield_essence_recognizer.core.window.adapter import WindowActionsAdapter
 from endfield_essence_recognizer.exceptions import (
     UnsupportedResolutionError,
 )
+from endfield_essence_recognizer.services.audio_service import AudioService
 from endfield_essence_recognizer.services.user_setting_manager import UserSettingManager
 
 from .recognition import (
@@ -141,6 +144,13 @@ def get_one_time_recognition_engine_dep(
 def get_delivery_claimer_engine_dep(
     window_manager: WindowManager = Depends(get_game_window_manager),
     profile: ResolutionProfile = Depends(get_resolution_profile_dep),
+    delivery_scene_recognizer: DeliverySceneRecognizer = Depends(
+        get_delivery_scene_recognizer_dep
+    ),
+    delivery_job_reward_recognizer: DeliveryJobRewardRecognizer = Depends(
+        get_delivery_job_reward_recognizer_dep
+    ),
+    audio_service: AudioService = Depends(get_audio_service),
 ) -> DeliveryClaimerEngine:
     """
     Get a DeliveryClaimerEngine instance.
@@ -150,7 +160,7 @@ def get_delivery_claimer_engine_dep(
         image_source=adapter,
         window_actions=adapter,
         profile=profile,
-        delivery_scene_recognizer=get_delivery_scene_recognizer_dep(),
-        delivery_job_reward_recognizer=get_delivery_job_reward_recognizer_dep(),
-        audio_service=get_audio_service(),
+        delivery_scene_recognizer=delivery_scene_recognizer,
+        delivery_job_reward_recognizer=delivery_job_reward_recognizer,
+        audio_service=audio_service,
     )
