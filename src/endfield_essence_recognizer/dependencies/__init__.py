@@ -44,7 +44,6 @@ __all__ = [
     "get_delivery_job_reward_recognizer_dep",
     "get_delivery_scene_recognizer_dep",
     "get_game_window_manager",
-    "get_game_window_manager",
     "get_lock_status_recognizer_dep",
     "get_log_service",
     "get_resolution_profile",
