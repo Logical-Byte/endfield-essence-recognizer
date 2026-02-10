@@ -9,8 +9,8 @@
         <v-btn :color="autoScroll ? 'success' : 'warning'" @click="toggleAutoScroll">
           {{ autoScroll ? '自动滚动：开' : '自动滚动：关' }}
         </v-btn>
-        <v-tooltip text="日志文件中的日志更全" location="bottom">
-          <template v-slot:activator="{ props }">
+        <v-tooltip location="bottom" text="日志文件中的日志更全">
+          <template #activator="{ props }">
             <v-badge v-bind="props" icon="mdi-help">
               <v-btn color="secondary" @click="openLogsFolder">打开日志文件目录</v-btn>
             </v-badge>
@@ -27,8 +27,8 @@
 </template>
 
 <script lang="ts" setup>
-import { clearLogs, logs } from '@/composables/useLogs'
 import { nextTick, onMounted, ref, watch } from 'vue'
+import { clearLogs, logs } from '@/composables/useLogs'
 
 const autoScroll = ref(true)
 

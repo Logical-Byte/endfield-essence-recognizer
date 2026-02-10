@@ -22,17 +22,17 @@
       </v-btn>
       <v-btn prepend-icon="mdi-update" @click="checkForUpdates(true)">检查更新</v-btn>
       <v-btn
-        prepend-icon="mdi-qqchat"
         href="https://qm.qq.com/cgi-bin/qm/qr?k=1xqRp7JwQHwGswa-8_SMFuAsRYYRnF8J"
+        prepend-icon="mdi-qqchat"
         rel="noopener noreferrer"
         target="_blank"
       >
         反馈交流①群：486622964
       </v-btn>
       <v-btn
-        prepend-icon="mdi-qqchat"
         color="primary"
         href="https://qm.qq.com/cgi-bin/qm/qr?k=qAmvmHCc3HuESiJhZVe6Ytgj7foOxXx9"
+        prepend-icon="mdi-qqchat"
         rel="noopener noreferrer"
         target="_blank"
       >
@@ -68,10 +68,10 @@
             若您的显示器分辨率为 1920×1080，请将终末地的分辨率更改为 1920×1080 全屏后按下
             <strong class="text-primary">
               <v-hotkey
-                keys="Alt+Enter"
                 color="primary"
                 display-mode="text"
                 inline
+                keys="Alt+Enter"
                 variant="flat"
               />
               切换为窗口模式</strong
@@ -81,7 +81,7 @@
       </li>
       <li>请确保终末地的整个窗口都位于屏幕范围内且未被性能监控工具等任何其他内容遮挡</li>
       <li>
-        请按 <v-hotkey keys="N" display-mode="text" inline variant="flat" /> 键打开终末地<strong
+        请按 <v-hotkey display-mode="text" inline keys="N" variant="flat" /> 键打开终末地<strong
           class="text-primary"
           >贵重品库</strong
         >并切换到<strong class="text-primary">武器基质</strong>页面
@@ -93,26 +93,26 @@
     <ul>
       <li>
         按
-        <v-hotkey keys="[" display-mode="text" inline variant="flat" />
+        <v-hotkey display-mode="text" inline keys="[" variant="flat" />
         键识别当前选中的基质是宝藏还是养成材料
       </li>
       <li>
         按
-        <v-hotkey keys="]" display-mode="text" inline variant="flat" />
-        键扫描所有基质，并根据<router-link to="/settings" class="text-primary text-decoration-none"
+        <v-hotkey display-mode="text" inline keys="]" variant="flat" />
+        键扫描所有基质，并根据<router-link class="text-primary text-decoration-none" to="/settings"
           ><strong>设置</strong></router-link
         >，自动锁定或者解锁基质<br />
         基质扫描过程中再次按
-        <v-hotkey keys="]" display-mode="text" inline variant="flat" /> 键中断扫描
+        <v-hotkey display-mode="text" inline keys="]" variant="flat" /> 键中断扫描
       </li>
 
-      <li>按 <v-hotkey keys="Alt+DELETE" display-mode="text" inline variant="flat" /> 退出程序</li>
+      <li>按 <v-hotkey display-mode="text" inline keys="Alt+DELETE" variant="flat" /> 退出程序</li>
     </ul>
 
     <p>
       <strong class="text-primary">宝藏基质和养成材料：</strong>可以在<router-link
-        to="/settings"
         class="text-primary text-decoration-none"
+        to="/settings"
         ><strong>设置</strong></router-link
       >界面自定义。默认情况下，如果这个基质和任何一把武器能对上<span class="text-secondary"
         >（基质的所有属性与至少 1 件已实装武器的属性完全相同）</span
@@ -122,8 +122,8 @@
     <h2>常见问题</h2>
     <h3>双击运行时遇到“Unhandled exception in script”弹窗报错</h3>
     <v-img
-      src="https://cos.yituliu.cn/endfield/endfield-essence-recognizer/assets/遇到报错解决方法.webp"
       alt="遇到报错解决方法"
+      src="https://cos.yituliu.cn/endfield/endfield-essence-recognizer/assets/遇到报错解决方法.webp"
     />
     <p>这大概率是由于 Windows 自带的解压导致的。</p>
     <p>有两种解决办法：</p>
@@ -133,16 +133,16 @@
         <a
           class="text-primary text-decoration-none"
           href="https://www.7-zip.org/"
-          target="_blank"
           rel="noopener noreferrer"
+          target="_blank"
           >7zip</a
         >
         或者
         <a
           class="text-primary text-decoration-none"
           href="https://www.win-rar.com/"
-          target="_blank"
           rel="noopener noreferrer"
+          target="_blank"
           >WinRAR</a
         >
         解压即可解决（其他解压软件也可以试试）。
@@ -160,8 +160,8 @@
       <a
         class="text-primary text-decoration-none"
         href="https://github.com/Logical-Byte/endfield-essence-recognizer/issues/24#issuecomment-3830421851"
-        target="_blank"
         rel="noopener noreferrer"
+        target="_blank"
         >https://github.com/Logical-Byte/endfield-essence-recognizer/issues/24#issuecomment-3830421851</a
       >
     </p>
@@ -170,15 +170,15 @@
       <a
         class="text-primary text-decoration-none"
         href="http://127.0.0.1:325/"
-        target="_blank"
         rel="noopener noreferrer"
+        target="_blank"
         >http://127.0.0.1:325/</a
       >
     </p>
     <p>
       <strong class="text-primary">方法三：</strong
       >如果以上方法仍然解决不了，那就先凑合用。界面看不见没关系的，只要终末地在前台，按
-      <v-hotkey keys="]" display-mode="text" inline variant="flat" /> 键是可以正常使用的。
+      <v-hotkey display-mode="text" inline keys="]" variant="flat" /> 键是可以正常使用的。
     </p>
 
     <h3>明明是 1920×1080 窗口，依然提示分辨率错误</h3>
@@ -194,7 +194,7 @@
       <li>请确保终末地的整个窗口都位于屏幕范围内且未被性能监控工具等任何其他内容遮挡</li>
       <li>
         如果问题仍未解决，可以使用<strong
-          ><router-link to="/monitor" class="text-primary text-decoration-none"
+          ><router-link class="text-primary text-decoration-none" to="/monitor"
             >监控</router-link
           ></strong
         >工具进行排查
@@ -207,7 +207,7 @@
       <strong class="text-primary">1920×1080 窗口</strong>。若您的显示器分辨率为
       1920×1080，请将终末地的分辨率更改为 1920×1080 全屏后按下
       <strong class="text-primary">
-        <v-hotkey keys="Alt+Enter" color="primary" display-mode="text" inline variant="flat" />
+        <v-hotkey color="primary" display-mode="text" inline keys="Alt+Enter" variant="flat" />
         切换为窗口模式</strong
       >。
     </p>
@@ -217,22 +217,22 @@
       如果在使用过程中遇到任何问题，或是想提出建议，欢迎<a
         class="text-primary text-decoration-none"
         href="https://github.com/Logical-Byte/endfield-essence-recognizer"
-        target="_blank"
         rel="noopener noreferrer"
+        target="_blank"
         ><strong>在 GitHub 上提 Issue</strong></a
       >，或者加入反馈交流群：<v-chip
         class="mr-1"
-        prepend-icon="mdi-qqchat"
         href="https://qm.qq.com/cgi-bin/qm/qr?k=1xqRp7JwQHwGswa-8_SMFuAsRYYRnF8J"
-        target="_blank"
+        prepend-icon="mdi-qqchat"
         rel="noopener noreferrer"
+        target="_blank"
       >
         ①群：486622964
       </v-chip>
       <v-chip
-        prepend-icon="mdi-qqchat"
         color="primary"
         href="https://qm.qq.com/cgi-bin/qm/qr?k=qAmvmHCc3HuESiJhZVe6Ytgj7foOxXx9"
+        prepend-icon="mdi-qqchat"
         rel="noopener noreferrer"
         target="_blank"
       >

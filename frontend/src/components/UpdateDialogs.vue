@@ -12,9 +12,9 @@
       <v-btn
         class="ms-2"
         color="primary"
-        variant="elevated"
         :href="updateInfo?.downloadUrl"
         target="_blank"
+        variant="elevated"
         >立即下载</v-btn
       >
     </template>

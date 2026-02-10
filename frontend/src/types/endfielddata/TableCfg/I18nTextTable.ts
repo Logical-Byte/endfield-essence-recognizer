@@ -1,1 +1,1 @@
-export type I18nTextTable = Record<string, string>;
+export type I18nTextTable = Record<string, string>

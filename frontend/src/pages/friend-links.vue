@@ -16,7 +16,7 @@
 
     <!-- 正常状态 -->
     <v-row v-else>
-      <v-col v-for="link in links" :key="link.id" cols="12" sm="6" lg="4" xl="3" class="d-flex">
+      <v-col v-for="link in links" :key="link.id" class="d-flex" cols="12" lg="4" sm="6" xl="3">
         <v-card class="flex-grow-1 d-flex flex-column gr-6 pa-8" hover rounded="xl">
           <div class="d-flex flex-row align-center gc-4">
             <v-avatar rounded size="48">
@@ -71,8 +71,8 @@
 </template>
 
 <script setup lang="ts">
-import extraFriendLinks from '@/assets/json/friendLinks.json'
 import { onMounted, ref } from 'vue'
+import extraFriendLinks from '@/assets/json/friendLinks.json'
 
 /**
  * 本地化值接口
@@ -150,9 +150,9 @@ async function fetchLinks(): Promise<void> {
     }
 
     links.value = [...extraFriendLinks, ...data.data]
-  } catch (err) {
-    error.value = err instanceof Error ? err.message : '获取数据失败'
-    console.error('获取友情链接失败:', err)
+  } catch (error_) {
+    error.value = error_ instanceof Error ? error_.message : '获取数据失败'
+    console.error('获取友情链接失败:', error_)
   } finally {
     loading.value = false
   }

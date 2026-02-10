@@ -2,7 +2,7 @@
   <div
     class="w-100 h-100 position-relative overflow-hidden rounded border-md border-b-0 elevation-2 bg-surface repeating-gradient"
   >
-    <img :alt="itemName" :src="getItemIconUrl(props.itemId)" class="item-icon-img w-100 h-100" />
+    <img :alt="itemName" class="item-icon-img w-100 h-100" :src="getItemIconUrl(props.itemId)" />
     <div class="item-gradient-overlay" />
     <div class="item-tier-bar" />
     <div ref="itemNameContainerRef" class="item-name-container">
@@ -14,11 +14,11 @@
 </template>
 
 <script lang="ts" setup>
+import { computed, useTemplateRef, watch } from 'vue'
 import { useLanguage } from '@/composables/useLanguage'
 import { updateText } from '@/utils/autoFontSizing'
 import { isLoaded } from '@/utils/gameData/gameData'
 import { getItemIconUrl, getItemName, getItemTierColor } from '@/utils/gameData/item'
-import { computed, useTemplateRef, watch } from 'vue'
 
 const { currentLanguage } = useLanguage()
 

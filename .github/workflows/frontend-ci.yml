@@ -1,0 +1,53 @@
+name: Frontend CI
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+    paths:
+      - "frontend/**"
+      - ".github/workflows/**"
+
+  pull_request:
+    branches:
+      - main
+      - dev
+    paths:
+      - "frontend/**"
+      - ".github/workflows/**"
+
+jobs:
+  lint:
+    name: Lint Frontend
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run TypeScript type check
+        if: always() # Always run to report type issues
+        run: npm run type-check
+
+      - name: Run ESLint
+        if: always() # Always run to report linting issues
+        run: npm run lint
+
+      - name: Check code formatting
+        if: always() # Always run to report formatting issues
+        run: npm run format -- --check

@@ -1,10 +1,10 @@
+import { createRouter, createWebHistory } from 'vue-router'
 import Docs from '@/pages/docs.vue'
 import FriendLinks from '@/pages/friend-links.vue'
 import Index from '@/pages/index.vue'
 import Monitor from '@/pages/monitor.vue'
 import Settings from '@/pages/settings.vue'
 import Yituliu from '@/pages/yituliu.vue'
-import { createRouter, createWebHistory } from 'vue-router'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),

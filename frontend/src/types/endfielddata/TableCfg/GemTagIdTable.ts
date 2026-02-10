@@ -1,1 +1,1 @@
-export type GemTagIdTable = Record<string, string>;
+export type GemTagIdTable = Record<string, string>

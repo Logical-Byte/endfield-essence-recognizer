@@ -1,5 +1,4 @@
 import type { Language } from '@/composables/useLanguage'
-import { useLanguage } from '@/composables/useLanguage'
 import type { TranslationKey } from '@/types/common'
 import type { GemTable } from '@/types/endfielddata/TableCfg/GemTable'
 import type { GemTagIdTable } from '@/types/endfielddata/TableCfg/GemTagIdTable'
@@ -15,6 +14,7 @@ import type { WikiGroupTable } from '@/types/endfielddata/TableCfg/WikiGroupTabl
 import type { WorldEnergyPointGroupTable } from '@/types/endfielddata/TableCfg/WorldEnergyPointGroupTable'
 import type { WorldEnergyPointTable } from '@/types/endfielddata/TableCfg/WorldEnergyPointTable'
 import { ref } from 'vue'
+import { useLanguage } from '@/composables/useLanguage'
 
 /** 获取指定语言的国际化文本表路径 */
 function getI18nTextTablePath(language: string) {
