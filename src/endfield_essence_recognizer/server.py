@@ -9,13 +9,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from endfield_essence_recognizer.api.lifespan import lifespan
 from endfield_essence_recognizer.api.router import api_router, ws_router
 from endfield_essence_recognizer.core.config import ServerConfig, get_server_config
 from endfield_essence_recognizer.exceptions import (
     UnsupportedResolutionError,
     WindowNotFoundError,
 )
+from endfield_essence_recognizer.lifespan import lifespan
 from endfield_essence_recognizer.utils.log import (
     LOGGING_CONFIG,
 )
