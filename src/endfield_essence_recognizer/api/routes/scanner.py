@@ -11,6 +11,8 @@ from endfield_essence_recognizer.dependencies import (
     get_one_time_recognition_engine_dep,
     get_scanner_engine_dep,
     get_scanner_service,
+    require_game_or_webview_is_active,
+    require_game_window_exists,
 )
 from endfield_essence_recognizer.models.scanner import TaskType
 from endfield_essence_recognizer.services.scanner_service import ScannerService
@@ -22,7 +24,13 @@ class ToggleScanningRequest(BaseModel):
     task_type: TaskType
 
 
-@router.post("/recognize_once")
+@router.post(
+    "/recognize_once",
+    dependencies=[
+        Depends(require_game_or_webview_is_active),
+        Depends(require_game_window_exists),
+    ],
+)
 async def recognize_once(
     engine: OneTimeRecognitionEngine = Depends(get_one_time_recognition_engine_dep),
     scanner_service: ScannerService = Depends(get_scanner_service),
@@ -30,7 +38,13 @@ async def recognize_once(
     scanner_service.start_scan(scanner_factory=lambda: engine)
 
 
-@router.post("/start_scanning")
+@router.post(
+    "/start_scanning",
+    dependencies=[
+        Depends(require_game_or_webview_is_active),
+        Depends(require_game_window_exists),
+    ],
+)
 async def start_scanning(
     scanner: ScannerEngine = Depends(get_scanner_engine_dep),
     scanner_service: ScannerService = Depends(get_scanner_service),
@@ -38,7 +52,13 @@ async def start_scanning(
     scanner_service.toggle_scan(scanner_factory=lambda: scanner)
 
 
-@router.post("/toggle_scanning")
+@router.post(
+    "/toggle_scanning",
+    dependencies=[
+        Depends(require_game_or_webview_is_active),
+        Depends(require_game_window_exists),
+    ],
+)
 async def toggle_scanning(
     request: ToggleScanningRequest,
     scanner_service: ScannerService = Depends(get_scanner_service),

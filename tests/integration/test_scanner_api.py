@@ -8,6 +8,8 @@ from endfield_essence_recognizer.dependencies import (
     get_one_time_recognition_engine_dep,
     get_scanner_engine_dep,
     get_scanner_service,
+    require_game_or_webview_is_active,
+    require_game_window_exists,
 )
 from endfield_essence_recognizer.server import app
 from endfield_essence_recognizer.services.scanner_service import ScannerService
@@ -32,6 +34,10 @@ def client(mock_scanner_service):
     app.dependency_overrides[get_scanner_engine_dep] = lambda: MagicMock()
     app.dependency_overrides[get_one_time_recognition_engine_dep] = lambda: MagicMock()
     app.dependency_overrides[get_delivery_claimer_engine_dep] = lambda: MagicMock()
+
+    # Bypass window checks
+    app.dependency_overrides[require_game_window_exists] = lambda: None
+    app.dependency_overrides[require_game_or_webview_is_active] = lambda: None
 
     with TestClient(app) as client:
         yield client
