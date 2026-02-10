@@ -1,8 +1,14 @@
 import itertools
+import random
 import threading
+import time
+
+import cv2
+import numpy as np
+from cv2.typing import MatLike
 
 from endfield_essence_recognizer.core.interfaces import ImageSource, WindowActions
-from endfield_essence_recognizer.core.layout.base import ResolutionProfile
+from endfield_essence_recognizer.core.layout.base import Region, ResolutionProfile
 from endfield_essence_recognizer.core.layout.res_1080p import Resolution1080p
 from endfield_essence_recognizer.core.recognition import (
     AbandonStatusLabel,
@@ -29,6 +35,27 @@ from endfield_essence_recognizer.utils.log import logger
 
 # 模板均为 1080p，高分辨率下 ROI 截图需缩放到此尺寸再送入识别器
 _REF_PROFILE = Resolution1080p()
+
+
+def images_similar(img1: MatLike, img2: MatLike, threshold: float = 5.0) -> bool:
+    """
+    比较两张图片是否足够相似（像素级）。
+
+    使用 cv2.absdiff 计算逐像素差异，再用 np.mean 求平均差值。
+    当平均差值低于阈值时认为两张图片相似。
+
+    Args:
+        img1: 第一张图片。
+        img2: 第二张图片。
+        threshold: 相似度阈值，越小越严格。默认 5.0。
+
+    Returns:
+        True 表示两张图片相似。
+    """
+    if img1.shape != img2.shape:
+        return False
+    diff = cv2.absdiff(img1, img2)
+    return float(np.mean(diff)) < threshold
 
 
 def check_scene(
@@ -70,12 +97,16 @@ def recognize_essence(
         get_gem_tag_name,
     )
 
+    recognize_start = time.monotonic()
+
     stats: list[str | None] = []
     levels: list[int | None] = []
 
     # 截取客户区全局截图用于等级检测和子区域裁剪
+    t0 = time.monotonic()
     mem_source = InMemoryImageSource.cache_from(image_source)
     full_screenshot = mem_source.screenshot()
+    screenshot_time = time.monotonic() - t0
 
     rois = [profile.STATS_0_ROI, profile.STATS_1_ROI, profile.STATS_2_ROI]
     ref_rois = [
@@ -84,6 +115,7 @@ def recognize_essence(
         _REF_PROFILE.STATS_2_ROI,
     ]
 
+    t0 = time.monotonic()
     for k, (roi, ref_roi) in enumerate(zip(rois, ref_rois, strict=True)):
         screenshot_image = mem_source.screenshot(roi)
         screenshot_image = resize_to_ref_roi(screenshot_image, ref_roi)
@@ -101,7 +133,9 @@ def recognize_essence(
             logger.debug(f"属性 {k} 等级识别结果: +{level_value}")
         else:
             logger.debug(f"属性 {k} 等级识别结果: 无法识别")
+    attr_time = time.monotonic() - t0
 
+    t0 = time.monotonic()
     screenshot_image = mem_source.screenshot(profile.DEPRECATE_BUTTON_ROI)
     screenshot_image = resize_to_ref_roi(
         screenshot_image, _REF_PROFILE.DEPRECATE_BUTTON_ROI
@@ -119,6 +153,7 @@ def recognize_essence(
         fallback_label=LockStatusLabel.MAYBE_LOCKED,
     )
     logger.debug(f"锁定按钮识别结果: {locked_label.value} (分数: {max_val:.3f})")
+    status_time = time.monotonic() - t0
 
     stats_name_parts = []
     for i, stat in enumerate(stats):
@@ -132,8 +167,13 @@ def recognize_essence(
                 stats_name_parts.append(stat_name)
     stats_name = "、".join(stats_name_parts)
 
+    recognize_total = time.monotonic() - recognize_start
     logger.opt(colors=True).info(
         f"已识别当前基质，属性: <magenta>{stats_name}</>, <magenta>{abandon_label.value}</>, <magenta>{locked_label.value}</>"
+    )
+    logger.debug(
+        f"recognize_essence 耗时: 总计={recognize_total:.3f}s "
+        f"(截图={screenshot_time:.3f}s, 属性={attr_time:.3f}s, 状态={status_time:.3f}s)"
     )
 
     return EssenceData(stats, levels, abandon_label, locked_label)
@@ -176,6 +216,9 @@ class ScannerEngine:
     对每个位置执行"点击 -> 截图 -> 识别"的流程。
     """
 
+    # 图标点击随机偏移半径（像素），保持在图标区域内
+    CLICK_RANDOM_RADIUS: int = 20
+
     def __init__(
         self,
         ctx: ScannerContext,
@@ -189,6 +232,7 @@ class ScannerEngine:
         self._window_actions = window_actions
         self._user_setting_manager: UserSettingManager = user_setting_manager
         self._profile: ResolutionProfile = profile
+        self._last_click_pos: tuple[int, int] | None = None
 
         from endfield_essence_recognizer.utils.log import str_properties_and_attrs
 
@@ -196,6 +240,108 @@ class ScannerEngine:
             "Scanner profile configuration: {}",
             lambda: str_properties_and_attrs(profile),
         )
+
+    def _random_click_pos(
+        self, center_x: int, center_y: int, radius: int | None = None
+    ) -> tuple[int, int]:
+        """
+        在图标中心附近生成随机点击坐标，确保与上一次点击位置不同。
+
+        通过每次点击位置不同，使鼠标光标在截图中的位置发生变化，
+        帮助 _wait_until_stable 检测到画面变动。
+
+        Args:
+            center_x: 图标中心 X 坐标。
+            center_y: 图标中心 Y 坐标。
+            radius: 随机偏移半径（像素），默认使用 CLICK_RANDOM_RADIUS。
+
+        Returns:
+            (x, y) 随机偏移后的点击坐标。
+        """
+        if radius is None:
+            radius = self.CLICK_RANDOM_RADIUS
+        while True:
+            x = center_x + random.randint(-radius, radius)
+            y = center_y + random.randint(-radius, radius)
+            if (x, y) != self._last_click_pos:
+                self._last_click_pos = (x, y)
+                return x, y
+
+    def _wait_until_stable(
+        self,
+        roi: Region,
+        before_image: MatLike,
+        *,
+        timeout: float = 2.0,
+        poll_interval: float = 0.05,
+        similarity_threshold: float = 5.0,
+        no_change_timeout: float = 0.5,
+    ) -> bool:
+        """
+        截图轮询等待：等待指定 ROI 区域发生变化并稳定下来。
+
+        先检测画面变动（与 before_image 不同），再检测画面稳定（连续两帧相似）
+
+        如果持续 no_change_timeout 秒未检测到任何变化（例如点击的是已选中的图标），
+        则提前退出，避免等满完整的 timeout。
+
+        Args:
+            roi: 要监测的屏幕区域。
+            before_image: 点击前该 ROI 的截图，用于检测"是否已变化"。
+            timeout: 最长等待时间（秒）。超时后静默返回，扫描继续。
+            poll_interval: 轮询间隔（秒）。
+            similarity_threshold: 图像相似度阈值，越小越严格。
+            no_change_timeout: 持续未检测到变化时的快速退出时间（秒）。
+
+        Returns:
+            True 表示检测到变化并已稳定，False 表示超时。
+        """
+        start = time.monotonic()
+        last_image: MatLike | None = None
+        iterations = 0
+        ever_changed = False
+
+        while time.monotonic() - start < timeout:
+            current = self._image_source.screenshot(roi)
+            diff = cv2.absdiff(before_image, current)
+            mean_diff = float(np.mean(diff))
+            changed = mean_diff >= similarity_threshold
+            iterations += 1
+
+            if changed:
+                ever_changed = True
+                if last_image is not None:
+                    stab_diff = float(np.mean(cv2.absdiff(last_image, current)))
+                    stable = stab_diff < similarity_threshold
+                    if stable:
+                        elapsed = time.monotonic() - start
+                        logger.debug(
+                            f"_wait_until_stable: 变化已稳定, "
+                            f"耗时={elapsed:.3f}s, 轮询={iterations}次, "
+                            f"vs_before_diff={mean_diff:.2f}, vs_last_diff={stab_diff:.2f}"
+                        )
+                        return True
+            elif not ever_changed:
+                # 如果从未检测到变化，且已超过 no_change_timeout，提前退出
+                elapsed = time.monotonic() - start
+                if elapsed >= no_change_timeout:
+                    logger.debug(
+                        f"_wait_until_stable: 无变化快速退出, "
+                        f"耗时={elapsed:.3f}s, 轮询={iterations}次, "
+                        f"mean_diff={mean_diff:.2f}"
+                    )
+                    return False
+
+            last_image = current
+            self._window_actions.wait(poll_interval)
+
+        elapsed = time.monotonic() - start
+        logger.debug(
+            f"_wait_until_stable: 超时, "
+            f"耗时={elapsed:.3f}s, 轮询={iterations}次, "
+            f"ever_changed={ever_changed}"
+        )
+        return False
 
     def execute(self, stop_event: threading.Event) -> None:
         """
@@ -246,25 +392,41 @@ class ScannerEngine:
                 logger.info("基质扫描被中断。")
                 break
 
+            cell_label = f"[{i + 1},{j + 1}]"
             logger.info(f"正在扫描第 {i + 1} 行第 {j + 1} 列的基质...")
+            cell_start = time.monotonic()
 
-            # 点击基质图标位置
-            self._window_actions.click(relative_x, relative_y)
+            # 截取点击前的面板区域，用于变化检测
+            before_img = self._image_source.screenshot(self._profile.AREA)
 
-            # 等待短暂时间以确保界面更新
-            self._window_actions.wait(0.3)
+            # 点击基质图标位置（随机偏移，使鼠标位置与上次不同）
+            click_x, click_y = self._random_click_pos(relative_x, relative_y)
+            self._window_actions.click(click_x, click_y)
+
+            # 截图轮询：等待右侧信息面板刷新并稳定
+            t0 = time.monotonic()
+            self._wait_until_stable(self._profile.AREA, before_img)
+            wait_time = time.monotonic() - t0
 
             # 识别基质信息
+            t0 = time.monotonic()
             data = recognize_essence(
                 self._image_source,
                 self.ctx,
                 self._profile,
             )
+            recognize_time = time.monotonic() - t0
 
             if (
                 data.abandon_label == AbandonStatusLabel.MAYBE_ABANDONED
                 or data.lock_label == LockStatusLabel.MAYBE_LOCKED
             ):
+                cell_total = time.monotonic() - cell_start
+                logger.debug(
+                    f"{cell_label} 耗时: 总计={cell_total:.3f}s "
+                    f"(等待={wait_time:.3f}s, 识别={recognize_time:.3f}s) "
+                    f"[识别不确定, 跳过]"
+                )
                 # early continue on uncertain recognition
                 continue
 
@@ -283,7 +445,16 @@ class ScannerEngine:
             actions = decide_actions(data, evaluation, user_setting)
 
             # Execute actions
+            action_time_total = 0.0
             for action in actions:
+                # 根据 action 类型选择对应的按钮 ROI，截取点击前状态
+                button_roi = (
+                    self._profile.LOCK_BUTTON_ROI
+                    if action.type == ActionType.CLICK_LOCK
+                    else self._profile.DEPRECATE_BUTTON_ROI
+                )
+                before_img = self._image_source.screenshot(button_roi)
+
                 if action.type == ActionType.CLICK_LOCK:
                     pos = self._profile.LOCK_BUTTON_POS
                     self._window_actions.click(pos.x, pos.y)
@@ -291,8 +462,20 @@ class ScannerEngine:
                     pos = self._profile.DEPRECATE_BUTTON_POS
                     self._window_actions.click(pos.x, pos.y)
 
-                self._window_actions.wait(0.3)
+                # 截图轮询：等待按钮状态变化并稳定
+                t0 = time.monotonic()
+                self._wait_until_stable(button_roi, before_img)
+                action_wait = time.monotonic() - t0
+                action_time_total += action_wait
                 logger.success(action.log_message)
+
+            cell_total = time.monotonic() - cell_start
+            logger.debug(
+                f"{cell_label} 耗时: 总计={cell_total:.3f}s "
+                f"(等待={wait_time:.3f}s, 识别={recognize_time:.3f}s"
+                + (f", 动作={action_time_total:.3f}s" if actions else "")
+                + ")"
+            )
 
         else:
             # 扫描完成
