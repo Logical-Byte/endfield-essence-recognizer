@@ -1,7 +1,9 @@
 import itertools
 import random
+import shutil
 import threading
 import time
+from typing import TYPE_CHECKING
 
 import cv2
 import numpy as np
@@ -33,11 +35,14 @@ from endfield_essence_recognizer.services.user_setting_manager import UserSettin
 from endfield_essence_recognizer.utils.image import resize_to_ref_roi
 from endfield_essence_recognizer.utils.log import logger
 
+if TYPE_CHECKING:
+    from pathlib import Path
+
 # 模板均为 1080p，高分辨率下 ROI 截图需缩放到此尺寸再送入识别器
 _REF_PROFILE = Resolution1080p()
 
 
-def images_similar(img1: MatLike, img2: MatLike, threshold: float = 5.0) -> bool:
+def images_similar(img1: MatLike, img2: MatLike, threshold: float = 20.0) -> bool:
     """
     比较两张图片是否足够相似（像素级）。
 
@@ -217,7 +222,7 @@ class ScannerEngine:
     """
 
     # 图标点击随机偏移半径（像素），保持在图标区域内
-    CLICK_RANDOM_RADIUS: int = 20
+    CLICK_RANDOM_RADIUS: int = 50
 
     def __init__(
         self,
@@ -234,12 +239,49 @@ class ScannerEngine:
         self._profile: ResolutionProfile = profile
         self._last_click_pos: tuple[int, int] | None = None
 
+        # 每个格子的截图计数，在每个格子开始时重置
+        self._cell_screenshot_count: int = 0
+
+        # DEV_MODE 下保存第一个格子的所有截图
+        self._debug_first_cell_pending: bool = self._is_dev_mode()
+        self._debug_dir: Path | None = None
+        self._debug_step: int = 0
+
         from endfield_essence_recognizer.utils.log import str_properties_and_attrs
 
         logger.opt(lazy=True).debug(
             "Scanner profile configuration: {}",
             lambda: str_properties_and_attrs(profile),
         )
+
+    @staticmethod
+    def _is_dev_mode() -> bool:
+        try:
+            from endfield_essence_recognizer.core.config import get_server_config
+
+            return get_server_config().dev_mode
+        except Exception:
+            return False
+
+    def _debug_init_dir(self, cell_label: str) -> None:
+        """为第一个格子的截图调试创建输出目录。"""
+        from endfield_essence_recognizer.core.path import get_logs_dir
+
+        self._debug_dir = get_logs_dir() / "debug_first_cell"
+        if self._debug_dir.exists():
+            shutil.rmtree(self._debug_dir)
+        self._debug_dir.mkdir(parents=True, exist_ok=True)
+        self._debug_step = 0
+        logger.debug(f"DEV_MODE: 将保存 {cell_label} 扫描截图到 {self._debug_dir}")
+
+    def _debug_save(self, image: MatLike, label: str) -> None:
+        """DEV_MODE 下保存一张调试截图（仅第一个格子生效）。"""
+        if self._debug_dir is None:
+            return
+        filename = f"{self._debug_step:03d}_{label}.png"
+        path = self._debug_dir / filename
+        cv2.imwrite(str(path), image)
+        self._debug_step += 1
 
     def _random_click_pos(
         self, center_x: int, center_y: int, radius: int | None = None
@@ -303,6 +345,9 @@ class ScannerEngine:
 
         while time.monotonic() - start < timeout:
             current = self._image_source.screenshot(roi)
+            self._cell_screenshot_count += 1
+            self._debug_save(current, f"wait_poll_{iterations + 1:03d}")
+
             diff = cv2.absdiff(before_image, current)
             mean_diff = float(np.mean(diff))
             changed = mean_diff >= similarity_threshold
@@ -395,9 +440,16 @@ class ScannerEngine:
             cell_label = f"[{i + 1},{j + 1}]"
             logger.info(f"正在扫描第 {i + 1} 行第 {j + 1} 列的基质...")
             cell_start = time.monotonic()
+            self._cell_screenshot_count = 0
+
+            # DEV_MODE: 为第一个格子初始化截图保存目录
+            if self._debug_first_cell_pending:
+                self._debug_init_dir(cell_label)
 
             # 截取点击前的面板区域，用于变化检测
             before_img = self._image_source.screenshot(self._profile.AREA)
+            self._cell_screenshot_count += 1
+            self._debug_save(before_img, "before_area")
 
             # 点击基质图标位置（随机偏移，使鼠标位置与上次不同）
             click_x, click_y = self._random_click_pos(relative_x, relative_y)
@@ -408,13 +460,14 @@ class ScannerEngine:
             self._wait_until_stable(self._profile.AREA, before_img)
             wait_time = time.monotonic() - t0
 
-            # 识别基质信息
+            # 识别基质信息（内部截取 1 张全屏截图）
             t0 = time.monotonic()
             data = recognize_essence(
                 self._image_source,
                 self.ctx,
                 self._profile,
             )
+            self._cell_screenshot_count += 1  # recognize_essence 内部 cache_from
             recognize_time = time.monotonic() - t0
 
             if (
@@ -425,8 +478,12 @@ class ScannerEngine:
                 logger.debug(
                     f"{cell_label} 耗时: 总计={cell_total:.3f}s "
                     f"(等待={wait_time:.3f}s, 识别={recognize_time:.3f}s) "
-                    f"[识别不确定, 跳过]"
+                    f"截图={self._cell_screenshot_count}次 [识别不确定, 跳过]"
                 )
+                # DEV_MODE: 第一个格子结束，关闭截图保存
+                if self._debug_first_cell_pending:
+                    self._debug_first_cell_pending = False
+                    self._debug_dir = None
                 # early continue on uncertain recognition
                 continue
 
@@ -454,6 +511,13 @@ class ScannerEngine:
                     else self._profile.DEPRECATE_BUTTON_ROI
                 )
                 before_img = self._image_source.screenshot(button_roi)
+                self._cell_screenshot_count += 1
+                action_label = (
+                    "before_lock"
+                    if action.type == ActionType.CLICK_LOCK
+                    else "before_abandon"
+                )
+                self._debug_save(before_img, action_label)
 
                 if action.type == ActionType.CLICK_LOCK:
                     pos = self._profile.LOCK_BUTTON_POS
@@ -474,8 +538,17 @@ class ScannerEngine:
                 f"{cell_label} 耗时: 总计={cell_total:.3f}s "
                 f"(等待={wait_time:.3f}s, 识别={recognize_time:.3f}s"
                 + (f", 动作={action_time_total:.3f}s" if actions else "")
-                + ")"
+                + f") 截图={self._cell_screenshot_count}次"
             )
+
+            # DEV_MODE: 第一个格子结束，关闭截图保存
+            if self._debug_first_cell_pending:
+                logger.debug(
+                    f"DEV_MODE: 第一个格子截图已保存到 {self._debug_dir}，"
+                    f"共 {self._debug_step} 张"
+                )
+                self._debug_first_cell_pending = False
+                self._debug_dir = None
 
         else:
             # 扫描完成
