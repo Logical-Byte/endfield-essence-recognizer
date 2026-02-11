@@ -11,7 +11,7 @@ from endfield_essence_recognizer.core.scanner.models import (
     EssenceData,
     EssenceQuality,
 )
-from endfield_essence_recognizer.models.user_setting import EssenceStats, UserSetting
+from endfield_essence_recognizer.schemas.user_setting import EssenceStats, UserSetting
 
 
 @pytest.fixture

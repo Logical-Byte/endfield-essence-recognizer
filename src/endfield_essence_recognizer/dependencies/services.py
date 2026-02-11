@@ -7,6 +7,7 @@ from endfield_essence_recognizer.services.audio_service import (
 from endfield_essence_recognizer.services.log_service import LogService
 from endfield_essence_recognizer.services.scanner_service import ScannerService
 from endfield_essence_recognizer.services.screenshot_service import ScreenshotService
+from endfield_essence_recognizer.services.static_data_service import StaticDataService
 from endfield_essence_recognizer.services.system_service import SystemService
 
 from .window import get_game_window_manager
@@ -41,3 +42,11 @@ def get_screenshot_service() -> ScreenshotService:
     Get the ScreenshotService singleton.
     """
     return ScreenshotService(get_game_window_manager())
+
+
+@lru_cache
+def get_static_data_service() -> StaticDataService:
+    """
+    Get the StaticDataService singleton.
+    """
+    return StaticDataService()

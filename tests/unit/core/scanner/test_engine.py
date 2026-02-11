@@ -18,7 +18,7 @@ from endfield_essence_recognizer.core.recognition.recognizer import Recognizer
 from endfield_essence_recognizer.core.recognition.tasks.ui import UISceneLabel
 from endfield_essence_recognizer.core.scanner.context import ScannerContext
 from endfield_essence_recognizer.core.scanner.engine import ScannerEngine
-from endfield_essence_recognizer.models.user_setting import UserSetting
+from endfield_essence_recognizer.schemas.user_setting import UserSetting
 from endfield_essence_recognizer.services.user_setting_manager import UserSettingManager
 
 

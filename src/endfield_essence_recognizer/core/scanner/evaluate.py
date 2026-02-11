@@ -3,7 +3,7 @@ from endfield_essence_recognizer.core.scanner.models import (
     EssenceQuality,
     EvaluationResult,
 )
-from endfield_essence_recognizer.models.user_setting import UserSetting
+from endfield_essence_recognizer.schemas.user_setting import UserSetting
 
 
 def evaluate_essence(data: EssenceData, setting: UserSetting) -> EvaluationResult:

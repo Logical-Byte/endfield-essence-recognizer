@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 
 from endfield_essence_recognizer.core.layout.base import ResolutionProfile
-from endfield_essence_recognizer.models.screenshot import (
+from endfield_essence_recognizer.schemas.screenshot import (
     ImageFormat,
     ScreenshotSaveFormat,
 )

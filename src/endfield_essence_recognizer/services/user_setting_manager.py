@@ -4,7 +4,7 @@ import json
 from typing import TYPE_CHECKING, Any
 
 from endfield_essence_recognizer.exceptions import ConfigVersionMismatchError
-from endfield_essence_recognizer.models.user_setting import UserSetting
+from endfield_essence_recognizer.schemas.user_setting import UserSetting
 from endfield_essence_recognizer.utils.log import logger
 
 if TYPE_CHECKING:
