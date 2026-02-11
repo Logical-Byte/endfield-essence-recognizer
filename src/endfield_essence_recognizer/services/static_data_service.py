@@ -109,10 +109,14 @@ class StaticDataService:
             A WeaponTypeListResponse containing category metadata and weapon IDs.
         """
         weapon_types = []
+        # Get all weapon groups from wiki_group_table. Each group represents a weapon type.
         groups = wiki_group_table.get("wiki_type_weapon", {}).get("list", [])
 
         for i, group in enumerate(groups):
             group_id = group.get("groupId")
+            if group_id is None:
+                continue
+            # The wiki entries of this weapon type
             entries = wiki_entry_table.get(group_id, {}).get("list", [])
 
             weapon_ids = []
