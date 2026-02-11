@@ -22,6 +22,12 @@ from endfield_essence_recognizer.schemas.static_data import (
 
 
 class StaticDataService:
+    """
+    Static data service for retrieving game-related information.
+
+    TODO: Refactor the database schema (smaller jsons) before testing this service.
+    """
+
     def __init__(self, language: str = "CN"):
         self.language = language
         self.item_icon_base_url = "https://cos.yituliu.cn/endfield/unpack-images/items/"
