@@ -1,9 +1,17 @@
+from enum import StrEnum
+
 from pydantic import BaseModel, ConfigDict, Field
 
 type EssenceId = str
 """
 表示基质的唯一标识符 (gemTermId)。
 """
+
+
+class EssenceType(StrEnum):
+    ATTRIBUTE = "ATTRIBUTE"
+    SECONDARY = "SECONDARY"
+    SKILL = "SKILL"
 
 
 class WeaponInfo(BaseModel):
@@ -37,9 +45,8 @@ class WeaponTypeInfo(BaseModel):
 class EssenceInfo(BaseModel):
     id: EssenceId = Field(description="基质的唯一标识符")
     name: str = Field(description="基质名称")
-    category: int = Field(
-        description="基质类别，0表示属性，1表示次要属性，2表示技能属性"
-    )
+    tag_name: str = Field(description="基质标签名称 (tagName)")
+    type: EssenceType = Field(description="基质类型")
 
     model_config = ConfigDict(from_attributes=True)
 

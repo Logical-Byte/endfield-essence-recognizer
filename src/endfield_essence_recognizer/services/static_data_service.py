@@ -12,6 +12,7 @@ from endfield_essence_recognizer.game_data.weapon import get_stats_for_weapon
 from endfield_essence_recognizer.schemas.static_data import (
     EssenceInfo,
     EssenceListResponse,
+    EssenceType,
     RarityColorResponse,
     WeaponInfo,
     WeaponListResponse,
@@ -163,16 +164,34 @@ class StaticDataService:
             essence_id: The unique identifier for the essence (gemTermId).
 
         Returns:
-            An EssenceInfo object containing name and category, or None if not found.
+            An EssenceInfo object containing name, tag name and type, or None if not found.
         """
         gem = gem_table.get(essence_id)
         if not gem:
             return None
 
+        tag_name_data = gem.get("tagName")
+        if not tag_name_data:
+            return None
+
+        # termType: 0=Attribute, 1=Secondary, 2=Skill
+        match gem.get("termType", None):
+            case 0:
+                essence_type = EssenceType.ATTRIBUTE
+            case 1:
+                essence_type = EssenceType.SECONDARY
+            case 2:
+                essence_type = EssenceType.SKILL
+            case _:
+                return None  # Unknown term type
+
+        name = get_translation(tag_name_data, self.language)
+
         return EssenceInfo(
             id=essence_id,
-            name=get_translation(gem["tagName"], self.language),
-            category=gem.get("termType", 0),
+            name=name,
+            tag_name=name,
+            type=essence_type,
         )
 
     def list_essences(self) -> EssenceListResponse:
