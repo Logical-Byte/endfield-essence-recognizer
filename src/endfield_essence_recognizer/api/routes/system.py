@@ -2,9 +2,11 @@ import asyncio
 import os
 import platform
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
 from endfield_essence_recognizer.core.path import get_logs_dir
+from endfield_essence_recognizer.dependencies import get_system_service
+from endfield_essence_recognizer.services.system_service import SystemService
 from endfield_essence_recognizer.utils.log import logger
 from endfield_essence_recognizer.version import __version__
 
@@ -14,6 +16,13 @@ router = APIRouter(prefix="", tags=["system"])
 @router.get("/version")
 async def get_version() -> str | None:
     return __version__
+
+
+@router.post("/exit")
+async def exit_app(
+    system_service: SystemService = Depends(get_system_service),
+) -> None:
+    system_service.exit_application()
 
 
 @router.post("/open_logs_folder")

@@ -13,6 +13,7 @@ from endfield_essence_recognizer.api.router import api_router, ws_router
 from endfield_essence_recognizer.core.config import ServerConfig, get_server_config
 from endfield_essence_recognizer.exceptions import (
     UnsupportedResolutionError,
+    WindowNotActiveError,
     WindowNotFoundError,
 )
 from endfield_essence_recognizer.lifespan import lifespan
@@ -34,6 +35,32 @@ app.add_middleware(
 async def window_not_found_exception_handler(
     _request: Request, exc: WindowNotFoundError
 ):
+    """
+    WindowNotFoundError is raised when the target window is not found.
+    Generally this means the game window is not open, and therefore we
+    cannot perform the requested operation.
+
+    We return a 404 status code here to indicate that the target window
+    is "not found".
+    """
+    return JSONResponse(
+        status_code=404,
+        content={"detail": str(exc)},
+    )
+
+
+@app.exception_handler(WindowNotActiveError)
+async def window_not_active_exception_handler(
+    _request: Request, exc: WindowNotActiveError
+):
+    """
+    WindowNotActiveError is raised when the the active window is
+    not what we expect. Normally this means the user triggers an action
+    when either the game window or the webview is not in the foreground.
+
+    We return a 404 status code here to indicate that the target window
+    is "not found" in the foreground.
+    """
     return JSONResponse(
         status_code=404,
         content={"detail": str(exc)},
@@ -44,6 +71,13 @@ async def window_not_found_exception_handler(
 async def unsupported_resolution_exception_handler(
     _request: Request, exc: UnsupportedResolutionError
 ):
+    """
+    UnsupportedResolutionError are raised when the resolution of the game
+    window is not supported by the application.
+
+    We return a 400 status code here to indicate that the client made
+    a bad request.
+    """
     return JSONResponse(
         status_code=400,
         content={"detail": str(exc)},

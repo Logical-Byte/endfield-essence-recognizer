@@ -11,18 +11,24 @@ from endfield_essence_recognizer.core.recognition import (
     AbandonStatusRecognizer,
     AttributeLevelRecognizer,
     AttributeRecognizer,
+    DeliveryJobRewardRecognizer,
+    DeliverySceneRecognizer,
     LockStatusRecognizer,
     UISceneRecognizer,
 )
 from endfield_essence_recognizer.core.scanner.context import (
     ScannerContext,
 )
-from endfield_essence_recognizer.core.scanner.engine import ScannerEngine
+from endfield_essence_recognizer.core.scanner.engine import (
+    OneTimeRecognitionEngine,
+    ScannerEngine,
+)
 from endfield_essence_recognizer.core.window import WindowManager
 from endfield_essence_recognizer.core.window.adapter import WindowActionsAdapter
 from endfield_essence_recognizer.exceptions import (
     UnsupportedResolutionError,
 )
+from endfield_essence_recognizer.services.audio_service import AudioService
 from endfield_essence_recognizer.services.user_setting_manager import UserSettingManager
 
 from .recognition import (
@@ -36,12 +42,11 @@ from .recognition import (
 )
 from .services import (
     get_audio_service,
-    get_game_window_manager,
 )
 from .settings import (
-    default_user_setting_manager,
     get_user_setting_manager_dep,
 )
+from .window import get_game_window_manager
 
 
 def get_resolution_profile_dep(
@@ -71,27 +76,6 @@ def get_resolution_profile() -> ResolutionProfile:
     A non-dependency version of get_resolution_profile_dep.
     """
     return get_resolution_profile_dep(window_manager=get_game_window_manager())
-
-
-def default_scanner_context() -> ScannerContext:
-    """
-    Get the default ScannerContext instance.
-    """
-    from endfield_essence_recognizer.core.recognition import (
-        prepare_abandon_status_recognizer,
-        prepare_attribute_level_recognizer,
-        prepare_attribute_recognizer,
-        prepare_lock_status_recognizer,
-        prepare_ui_scene_recognizer,
-    )
-
-    return ScannerContext(
-        attr_recognizer=prepare_attribute_recognizer(),
-        attr_level_recognizer=prepare_attribute_level_recognizer(),
-        abandon_status_recognizer=prepare_abandon_status_recognizer(),
-        lock_status_recognizer=prepare_lock_status_recognizer(),
-        ui_scene_recognizer=prepare_ui_scene_recognizer(),
-    )
 
 
 def get_scanner_context_dep(
@@ -138,33 +122,45 @@ def get_scanner_engine_dep(
     )
 
 
-def default_scanner_engine() -> ScannerEngine:
+def get_one_time_recognition_engine_dep(
+    ctx: ScannerContext = Depends(get_scanner_context_dep),
+    window_manager: WindowManager = Depends(get_game_window_manager),
+    user_setting_manager: UserSettingManager = Depends(get_user_setting_manager_dep),
+    profile: ResolutionProfile = Depends(get_resolution_profile_dep),
+) -> OneTimeRecognitionEngine:
     """
-    Get the default ScannerEngine instance.
+    Get a OneTimeRecognitionEngine instance.
     """
-    window_manager = get_game_window_manager()
     adapter = WindowActionsAdapter(window_manager)
-    profile = get_resolution_profile()
-    return ScannerEngine(
-        ctx=default_scanner_context(),
+    return OneTimeRecognitionEngine(
+        ctx=ctx,
         image_source=adapter,
         window_actions=adapter,
-        user_setting_manager=default_user_setting_manager(),
+        user_setting_manager=user_setting_manager,
         profile=profile,
     )
 
 
-def default_delivery_claimer_engine() -> DeliveryClaimerEngine:
+def get_delivery_claimer_engine_dep(
+    window_manager: WindowManager = Depends(get_game_window_manager),
+    profile: ResolutionProfile = Depends(get_resolution_profile_dep),
+    delivery_scene_recognizer: DeliverySceneRecognizer = Depends(
+        get_delivery_scene_recognizer_dep
+    ),
+    delivery_job_reward_recognizer: DeliveryJobRewardRecognizer = Depends(
+        get_delivery_job_reward_recognizer_dep
+    ),
+    audio_service: AudioService = Depends(get_audio_service),
+) -> DeliveryClaimerEngine:
     """
-    Get the default DeliveryClaimerEngine instance.
+    Get a DeliveryClaimerEngine instance.
     """
-    window_manager = get_game_window_manager()
     adapter = WindowActionsAdapter(window_manager)
     return DeliveryClaimerEngine(
         image_source=adapter,
         window_actions=adapter,
-        profile=get_resolution_profile(),
-        delivery_scene_recognizer=get_delivery_scene_recognizer_dep(),
-        delivery_job_reward_recognizer=get_delivery_job_reward_recognizer_dep(),
-        audio_service=get_audio_service(),
+        profile=profile,
+        delivery_scene_recognizer=delivery_scene_recognizer,
+        delivery_job_reward_recognizer=delivery_job_reward_recognizer,
+        audio_service=audio_service,
     )

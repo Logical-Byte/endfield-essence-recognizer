@@ -7,6 +7,8 @@ from endfield_essence_recognizer.dependencies import (
     get_resolution_profile_dep,
     get_screenshot_service,
     get_screenshots_dir_dep,
+    require_game_or_webview_is_active,
+    require_game_window_exists,
 )
 from endfield_essence_recognizer.models.screenshot import (
     ImageFormat,
@@ -19,7 +21,10 @@ from endfield_essence_recognizer.utils.log import logger
 router = APIRouter(prefix="", tags=["screenshot"])
 
 
-@router.get("/screenshot")
+@router.get(
+    "/screenshot",
+    dependencies=[Depends(require_game_window_exists)],
+)
 async def get_screenshot(
     width: int = 1920,
     height: int = 1080,
@@ -39,6 +44,10 @@ async def get_screenshot(
 @router.post(
     "/take_and_save_screenshot",
     description="后端截图并保存到本地，返回文件路径和文件名",
+    dependencies=[
+        Depends(require_game_or_webview_is_active),
+        Depends(require_game_window_exists),
+    ],
 )
 async def take_and_save_screenshot(
     request: ScreenshotRequest,
