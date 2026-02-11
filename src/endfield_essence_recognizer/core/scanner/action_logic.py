@@ -10,7 +10,7 @@ from endfield_essence_recognizer.core.scanner.models import (
     EssenceQuality,
     EvaluationResult,
 )
-from endfield_essence_recognizer.models.user_setting import Action, UserSetting
+from endfield_essence_recognizer.schemas.user_setting import Action, UserSetting
 
 
 class ActionType(Enum):

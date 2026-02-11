@@ -22,7 +22,7 @@ from endfield_essence_recognizer.core.scanner.models import (
     EssenceQuality,
 )
 from endfield_essence_recognizer.core.window.adapter import InMemoryImageSource
-from endfield_essence_recognizer.models.user_setting import UserSetting
+from endfield_essence_recognizer.schemas.user_setting import UserSetting
 from endfield_essence_recognizer.services.user_setting_manager import UserSettingManager
 from endfield_essence_recognizer.utils.image import resize_to_ref_roi
 from endfield_essence_recognizer.utils.log import logger

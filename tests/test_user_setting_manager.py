@@ -4,7 +4,7 @@ import pytest
 from pydantic import ValidationError
 
 from endfield_essence_recognizer.exceptions import ConfigVersionMismatchError
-from endfield_essence_recognizer.models.user_setting import UserSetting
+from endfield_essence_recognizer.schemas.user_setting import UserSetting
 from endfield_essence_recognizer.services.user_setting_manager import (
     UserSettingManager,
 )

@@ -10,7 +10,7 @@ from endfield_essence_recognizer.dependencies import (
     require_game_or_webview_is_active,
     require_game_window_exists,
 )
-from endfield_essence_recognizer.models.screenshot import (
+from endfield_essence_recognizer.schemas.screenshot import (
     ImageFormat,
     ScreenshotRequest,
     ScreenshotResponse,

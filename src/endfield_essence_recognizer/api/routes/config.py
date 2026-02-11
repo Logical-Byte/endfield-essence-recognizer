@@ -2,7 +2,7 @@ from fastapi import APIRouter, Body, Depends, HTTPException
 
 from endfield_essence_recognizer.dependencies import get_user_setting_manager_dep
 from endfield_essence_recognizer.exceptions import ConfigVersionMismatchError
-from endfield_essence_recognizer.models.user_setting import UserSetting
+from endfield_essence_recognizer.schemas.user_setting import UserSetting
 from endfield_essence_recognizer.services.user_setting_manager import UserSettingManager
 
 router = APIRouter(prefix="/config", tags=["user setting"])

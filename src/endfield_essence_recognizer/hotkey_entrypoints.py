@@ -5,7 +5,7 @@ import keyboard
 
 from endfield_essence_recognizer.core.config import ServerConfig
 from endfield_essence_recognizer.core.interfaces import HotkeyHandler
-from endfield_essence_recognizer.models.scanner import TaskType
+from endfield_essence_recognizer.schemas.scanner import TaskType
 from endfield_essence_recognizer.utils.http_client import get_hotkey_client
 from endfield_essence_recognizer.utils.log import (
     logger,

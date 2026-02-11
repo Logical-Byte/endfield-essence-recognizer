@@ -77,7 +77,7 @@ def test_post_config_invalid_data(client):
 
 def test_post_config_version_mismatch(client, test_manager):
     """Test the POST /api/config endpoint with a version mismatch."""
-    from endfield_essence_recognizer.models.user_setting import UserSetting
+    from endfield_essence_recognizer.schemas.user_setting import UserSetting
 
     config_with_wrong_version = {
         "version": -1,

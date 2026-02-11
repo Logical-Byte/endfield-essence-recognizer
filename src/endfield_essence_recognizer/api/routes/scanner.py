@@ -14,7 +14,7 @@ from endfield_essence_recognizer.dependencies import (
     require_game_or_webview_is_active,
     require_game_window_exists,
 )
-from endfield_essence_recognizer.models.scanner import TaskType
+from endfield_essence_recognizer.schemas.scanner import TaskType
 from endfield_essence_recognizer.services.scanner_service import ScannerService
 
 router = APIRouter(prefix="", tags=["scanner"])
