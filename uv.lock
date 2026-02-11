@@ -167,6 +167,7 @@ version = "0.6.0"
 source = { editable = "." }
 dependencies = [
     { name = "fastapi" },
+    { name = "httpx" },
     { name = "keyboard" },
     { name = "loguru" },
     { name = "opencv-python" },
@@ -187,7 +188,6 @@ build = [
 ]
 dev = [
     { name = "fastapi", extra = ["standard"] },
-    { name = "httpx" },
     { name = "pillow" },
     { name = "pre-commit" },
     { name = "pytest" },
@@ -198,6 +198,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "fastapi", specifier = ">=0.127.0" },
+    { name = "httpx", specifier = ">=0.28.1" },
     { name = "keyboard", specifier = ">=0.13.5" },
     { name = "loguru", specifier = ">=0.7.3" },
     { name = "opencv-python", specifier = ">=4.12.0.88" },
@@ -216,7 +217,6 @@ requires-dist = [
 build = [{ name = "pyinstaller", specifier = ">=6.17.0" }]
 dev = [
     { name = "fastapi", extras = ["standard"], specifier = ">=0.127.0" },
-    { name = "httpx", specifier = ">=0.28.1" },
     { name = "pillow", specifier = ">=12.0.0" },
     { name = "pre-commit", specifier = ">=4.5.1" },
     { name = "pytest", specifier = ">=9.0.2" },
