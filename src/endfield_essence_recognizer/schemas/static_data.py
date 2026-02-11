@@ -1,6 +1,7 @@
 from enum import StrEnum
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import AliasGenerator, BaseModel, ConfigDict, Field
+from pydantic.alias_generators import to_camel
 
 type EssenceId = str
 """
@@ -29,7 +30,14 @@ class WeaponInfo(BaseModel):
         default=None, description="表示武器技能属性的基质ID"
     )
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(
+        from_attributes=True,
+        alias_generator=AliasGenerator(
+            validation_alias=to_camel,
+            serialization_alias=to_camel,
+        ),
+        populate_by_name=True,
+    )
 
 
 class WeaponTypeInfo(BaseModel):
@@ -39,7 +47,14 @@ class WeaponTypeInfo(BaseModel):
     sort_order: int = Field(description="武器类型的排序顺序")
     weapon_ids: list[str] = Field(description="属于该类型的武器 ID 列表")
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(
+        from_attributes=True,
+        alias_generator=AliasGenerator(
+            validation_alias=to_camel,
+            serialization_alias=to_camel,
+        ),
+        populate_by_name=True,
+    )
 
 
 class EssenceInfo(BaseModel):
@@ -48,19 +63,50 @@ class EssenceInfo(BaseModel):
     tag_name: str = Field(description="基质标签名称 (tagName)")
     type: EssenceType = Field(description="基质类型")
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(
+        from_attributes=True,
+        alias_generator=AliasGenerator(
+            validation_alias=to_camel,
+            serialization_alias=to_camel,
+        ),
+        populate_by_name=True,
+    )
 
 
 class WeaponListResponse(BaseModel):
     weapons: list[WeaponInfo] = Field(description="武器列表")
 
+    model_config = ConfigDict(
+        alias_generator=AliasGenerator(
+            validation_alias=to_camel,
+            serialization_alias=to_camel,
+        ),
+        populate_by_name=True,
+    )
+
 
 class WeaponTypeListResponse(BaseModel):
     weapon_types: list[WeaponTypeInfo] = Field(description="武器类型列表")
 
+    model_config = ConfigDict(
+        alias_generator=AliasGenerator(
+            validation_alias=to_camel,
+            serialization_alias=to_camel,
+        ),
+        populate_by_name=True,
+    )
+
 
 class EssenceListResponse(BaseModel):
     essences: list[EssenceInfo] = Field(description="基质列表")
+
+    model_config = ConfigDict(
+        alias_generator=AliasGenerator(
+            validation_alias=to_camel,
+            serialization_alias=to_camel,
+        ),
+        populate_by_name=True,
+    )
 
 
 class RarityColorResponse(BaseModel):
