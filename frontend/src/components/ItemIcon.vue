@@ -17,10 +17,11 @@
 import { computed, useTemplateRef, watch } from 'vue'
 import { useLanguage } from '@/composables/useLanguage'
 import { updateText } from '@/utils/autoFontSizing'
-import { isLoaded } from '@/utils/gameData/gameData'
 import { getItemIconUrl, getItemName, getItemTierColor } from '@/utils/gameData/item'
+import { useStaticData } from '@/utils/gameData/staticData'
 
 const { currentLanguage } = useLanguage()
+const { isLoaded } = useStaticData()
 
 interface Props {
   itemId: string

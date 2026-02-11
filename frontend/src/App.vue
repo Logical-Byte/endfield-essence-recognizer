@@ -8,13 +8,13 @@
       <v-divider />
       <v-list density="comfortable" nav>
         <v-list-item
-          v-for="(route, index) in router.options.routes"
+          v-for="(routeItem, index) in router.options.routes"
           :key="index"
           color="primary"
-          :prepend-icon="(route.meta as any)?.icon"
-          :to="route.path"
+          :prepend-icon="(routeItem.meta as any)?.icon"
+          :to="routeItem.path"
         >
-          {{ route.meta?.title ?? route.name }}
+          {{ routeItem.meta?.title ?? routeItem.name }}
         </v-list-item>
       </v-list>
     </v-navigation-drawer>
@@ -67,7 +67,7 @@ import UpdateDialogs from '@/components/UpdateDialogs.vue'
 import { useLanguage } from '@/composables/useLanguage'
 import { useLogs } from '@/composables/useLogs'
 import { useUpdateChecker } from '@/composables/useUpdateChecker'
-import { initGameData } from '@/utils/gameData/gameData'
+import { useStaticData } from '@/utils/gameData/staticData'
 
 const route = useRoute()
 const router = useRouter()
@@ -84,9 +84,11 @@ useLogs()
 // 检查更新
 const { checkForUpdates } = useUpdateChecker()
 
+const { fetchStaticData } = useStaticData()
+
 onMounted(() => {
   // 初始化游戏数据
-  initGameData()
+  fetchStaticData()
   // 初始检查更新
   checkForUpdates(false)
 })
