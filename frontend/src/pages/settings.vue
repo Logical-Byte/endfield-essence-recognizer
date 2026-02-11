@@ -10,7 +10,7 @@
             <v-checkbox
               v-for="rarity in [3, 4, 5, 6]"
               :key="rarity"
-              :color="`#${rarityColorTable[rarity]?.color}`"
+              :color="rarityColors[rarity]"
               density="compact"
               hide-details
               :indeterminate="isRarityPartiallySelected(rarity)"
@@ -18,45 +18,40 @@
               @click="raritySelectAll(rarity, !isRarityAllSelected(rarity))"
             >
               <template #label>
-                <span :style="{ color: `#${rarityColorTable[rarity]?.color}` }">{{ rarity }}★</span>
+                <span :style="{ color: rarityColors[rarity] }">{{ rarity }}★</span>
               </template>
             </v-checkbox>
           </div>
           <v-divider class="my-4" />
           <template
-            v-for="{ groupId, groupName, iconId } in wikiGroupTable['wiki_type_weapon']?.list ?? []"
-            :key="groupId"
+            v-for="{ id, name, icon_url, weapon_ids } in sortedWeaponTypes"
+            :key="id"
           >
             <h3>
               <v-checkbox
                 density="compact"
                 hide-details
-                :indeterminate="isTypePartiallySelected(groupId)"
-                :model-value="isTypeAllSelected(groupId)"
-                @click="typeSelectAll(groupId, !isTypeAllSelected(groupId))"
+                :indeterminate="isTypePartiallySelected(id)"
+                :model-value="isTypeAllSelected(id)"
+                @click="typeSelectAll(id, !isTypeAllSelected(id))"
               >
                 <template #prepend>
                   <img
-                    :alt="getTranslation(groupName)"
+                    :alt="name"
                     class="group-icon me-2"
-                    :src="getGroupIconUrl(iconId)"
+                    :src="icon_url"
                     :style="{
                       filter: theme.current.value.dark ? 'none' : 'invert(1)',
                     }"
                   />
-                  <h3 class="ma-0">{{ getTranslation(groupName) }}</h3>
+                  <h3 class="ma-0">{{ name }}</h3>
                 </template>
               </v-checkbox>
             </h3>
             <div class="weapon-grid">
               <div
-                v-for="{ wikiEntryId, weaponId } in wikiEntryTable[groupId]!.list.map(
-                  (wikiEntryId) => ({
-                    wikiEntryId,
-                    weaponId: wikiEntryDataTable[wikiEntryId]!.refItemId,
-                  }),
-                )"
-                :key="wikiEntryId"
+                v-for="weaponId in getSortedWeaponIds(weapon_ids)"
+                :key="weaponId"
                 class="d-flex flex-column align-center"
                 :class="{
                   'opacity-50': !selectedWeaponIds.includes(weaponId),
@@ -328,44 +323,66 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useTheme } from 'vuetify'
 import ItemIcon from '@/components/ItemIcon.vue'
 import {
-  gemTable,
-  getTranslation,
-  rarityColorTable,
-  weaponBasicTable,
-  wikiEntryDataTable,
-  wikiEntryTable,
-  wikiGroupTable,
-} from '@/utils/gameData/gameData'
-import { statsForWeapon } from '@/utils/gameData/weapon'
+  allAttributeStats,
+  allSecondaryStats,
+  allSkillStats,
+  getEssenceName,
+  getGemTagName,
+  getWeaponInfo,
+  rarityColors,
+  weaponsMap,
+  weaponTypes,
+} from '@/utils/staticData'
 
 const theme = useTheme()
 
-const allAttributeStats = computed(() =>
-  Object.values(gemTable.value)
-    .filter((gem) => gem.termType === 0)
-    .map((gem) => gem.gemTermId),
-)
-const allSecondaryStats = computed(() =>
-  Object.values(gemTable.value)
-    .filter((gem) => gem.termType === 1)
-    .map((gem) => gem.gemTermId),
-)
-const allSkillStats = computed(() =>
-  Object.values(gemTable.value)
-    .filter((gem) => gem.termType === 2)
-    .map((gem) => gem.gemTermId),
-)
+const selectedWeaponIds = ref<string[]>([])
+const notSelectedWeaponIds = computed(() => {
+  return Array.from(weaponsMap.value.keys()).filter((id) => !selectedWeaponIds.value.includes(id))
+})
 
-function getGemTagName(gemTermId: string): string {
-  const gem = gemTable.value[gemTermId]
-  if (gem === undefined) {
-    return gemTermId
-  }
-  return getTranslation(gem.tagName) || gemTermId
+const treasureEssenceStats = ref<EssenceStat[]>([])
+const treasureAction = ref('lock')
+const trashAction = ref('deprecate')
+const highLevelTreasureEnabled = ref(false)
+const highLevelTreasureAttributeThreshold = ref(3)
+const highLevelTreasureSecondaryThreshold = ref(3)
+const highLevelTreasureSkillThreshold = ref(3)
+
+const sortedWeaponTypes = computed(() => {
+  // eslint-disable-next-line unicorn/no-array-sort
+  return [...weaponTypes.value].sort((a, b) => a.sort_order - b.sort_order)
+})
+
+function getSortedWeaponIds(weaponIds: string[]) {
+  // eslint-disable-next-line unicorn/no-array-sort
+  return [...weaponIds].sort((a, b) => {
+    const infoA = getWeaponInfo(a)
+    const infoB = getWeaponInfo(b)
+    if (!infoA || !infoB) return 0
+    if (infoA.rarity !== infoB.rarity) {
+      return infoA.rarity - infoB.rarity // Ascending rarity
+    }
+    return a.localeCompare(b) // Alphabetical weaponId
+  })
 }
 
-function getGroupIconUrl(iconId: string): string {
-  return `https://cos.yituliu.cn/endfield/sprites_selective/wiki/groupicon/${iconId}.png`
+function getWeaponStatsDescription(weaponId: string): string {
+  const info = getWeaponInfo(weaponId)
+  if (!info) {
+    return '无基质属性'
+  }
+  const parts: string[] = []
+  if (info.attribute_essence_id) {
+    parts.push(getEssenceName(info.attribute_essence_id))
+  }
+  if (info.secondary_essence_id) {
+    parts.push(getEssenceName(info.secondary_essence_id))
+  }
+  if (info.skill_essence_id) {
+    parts.push(getEssenceName(info.skill_essence_id))
+  }
+  return parts.length > 0 ? parts.join('、') : '无基质属性'
 }
 
 interface EssenceStat {
@@ -374,43 +391,10 @@ interface EssenceStat {
   skill: string | null
 }
 
-const selectedWeaponIds = ref<string[]>([])
-const treasureEssenceStats = ref<EssenceStat[]>([])
-const treasureAction = ref('lock')
-const trashAction = ref('unlock')
-const highLevelTreasureEnabled = ref(false)
-const highLevelTreasureAttributeThreshold = ref(3)
-const highLevelTreasureSecondaryThreshold = ref(3)
-const highLevelTreasureSkillThreshold = ref(3)
-
-const notSelectedWeaponIds = computed(() => {
-  return Object.keys(weaponBasicTable.value).filter(
-    (weaponId) => !selectedWeaponIds.value.includes(weaponId),
-  )
-})
-
-function getWeaponStatsDescription(weaponId: string): string {
-  const stats = statsForWeapon.value.get(weaponId)
-  if (!stats) {
-    return '无基质属性'
-  }
-  const parts: string[] = []
-  if (stats.attribute) {
-    parts.push(getGemTagName(stats.attribute))
-  }
-  if (stats.secondary) {
-    parts.push(getGemTagName(stats.secondary))
-  }
-  if (stats.skill) {
-    parts.push(getGemTagName(stats.skill))
-  }
-  return parts.join('、')
-}
-
 function raritySelectAll(rarity: number, select: boolean) {
-  const weaponIds = Object.values(weaponBasicTable.value)
+  const weaponIds = Array.from(weaponsMap.value.values())
     .filter((weapon) => weapon.rarity === rarity)
-    .map((weapon) => weapon.weaponId)
+    .map((weapon) => weapon.id)
   if (select) {
     selectedWeaponIds.value = [...new Set([...selectedWeaponIds.value, ...weaponIds])]
   } else {
@@ -419,25 +403,22 @@ function raritySelectAll(rarity: number, select: boolean) {
 }
 
 function isRarityAllSelected(rarity: number): boolean {
-  const weaponIds = Object.values(weaponBasicTable.value)
+  const weaponIds = Array.from(weaponsMap.value.values())
     .filter((weapon) => weapon.rarity === rarity)
-    .map((weapon) => weapon.weaponId)
+    .map((weapon) => weapon.id)
   return weaponIds.every((id) => selectedWeaponIds.value.includes(id))
 }
 
 function isRarityPartiallySelected(rarity: number): boolean {
-  const weaponIds = Object.values(weaponBasicTable.value)
+  const weaponIds = Array.from(weaponsMap.value.values())
     .filter((weapon) => weapon.rarity === rarity)
-    .map((weapon) => weapon.weaponId)
+    .map((weapon) => weapon.id)
   const selectedCount = weaponIds.filter((id) => selectedWeaponIds.value.includes(id)).length
   return selectedCount > 0 && selectedCount < weaponIds.length
 }
 
-function typeSelectAll(groupId: string, select: boolean) {
-  const weaponIds =
-    wikiEntryTable.value[groupId]?.list.map(
-      (wikiEntryId) => wikiEntryDataTable.value[wikiEntryId]!.refItemId,
-    ) ?? []
+function typeSelectAll(typeId: string, select: boolean) {
+  const weaponIds = weaponTypes.value.find((t) => t.id === typeId)?.weapon_ids ?? []
   if (select) {
     selectedWeaponIds.value = [...new Set([...selectedWeaponIds.value, ...weaponIds])]
   } else {
@@ -445,19 +426,14 @@ function typeSelectAll(groupId: string, select: boolean) {
   }
 }
 
-function isTypeAllSelected(groupId: string): boolean {
-  const weaponIds =
-    wikiEntryTable.value[groupId]?.list.map(
-      (wikiEntryId) => wikiEntryDataTable.value[wikiEntryId]!.refItemId,
-    ) ?? []
+function isTypeAllSelected(typeId: string): boolean {
+  const weaponIds = weaponTypes.value.find((t) => t.id === typeId)?.weapon_ids ?? []
+  if (weaponIds.length === 0) return false
   return weaponIds.every((id) => selectedWeaponIds.value.includes(id))
 }
 
-function isTypePartiallySelected(groupId: string): boolean {
-  const weaponIds =
-    wikiEntryTable.value[groupId]?.list.map(
-      (wikiEntryId) => wikiEntryDataTable.value[wikiEntryId]!.refItemId,
-    ) ?? []
+function isTypePartiallySelected(typeId: string): boolean {
+  const weaponIds = weaponTypes.value.find((t) => t.id === typeId)?.weapon_ids ?? []
   const selectedCount = weaponIds.filter((id) => selectedWeaponIds.value.includes(id)).length
   return selectedCount > 0 && selectedCount < weaponIds.length
 }
@@ -496,7 +472,7 @@ async function getConfig() {
   highLevelTreasureAttributeThreshold.value = high_level_treasure_attribute_threshold
   highLevelTreasureSecondaryThreshold.value = high_level_treasure_secondary_threshold
   highLevelTreasureSkillThreshold.value = high_level_treasure_skill_threshold
-  selectedWeaponIds.value = Object.keys(weaponBasicTable.value).filter(
+  selectedWeaponIds.value = Array.from(weaponsMap.value.keys()).filter(
     (weaponId) => !trash_weapon_ids.includes(weaponId),
   )
 }

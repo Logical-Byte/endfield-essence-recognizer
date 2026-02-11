@@ -2,7 +2,11 @@
   <div
     class="w-100 h-100 position-relative overflow-hidden rounded border-md border-b-0 elevation-2 bg-surface repeating-gradient"
   >
-    <img :alt="itemName" class="item-icon-img w-100 h-100" :src="getItemIconUrl(props.itemId)" />
+    <img
+      :alt="itemName"
+      class="item-icon-img w-100 h-100"
+      :src="isStaticDataLoaded ? getWeaponIconUrl(props.itemId) : getItemIconUrl(props.itemId)"
+    />
     <div class="item-gradient-overlay" />
     <div class="item-tier-bar" />
     <div ref="itemNameContainerRef" class="item-name-container">
@@ -19,6 +23,12 @@ import { useLanguage } from '@/composables/useLanguage'
 import { updateText } from '@/utils/autoFontSizing'
 import { isLoaded } from '@/utils/gameData/gameData'
 import { getItemIconUrl, getItemName, getItemTierColor } from '@/utils/gameData/item'
+import {
+  getWeaponIconUrl,
+  getWeaponName,
+  getWeaponTierColor,
+  isStaticDataLoaded,
+} from '@/utils/staticData'
 
 const { currentLanguage } = useLanguage()
 
@@ -39,11 +49,20 @@ const itemName = computed(() => {
   if (props.itemName !== undefined) {
     return props.itemName
   } else {
-    return getItemName(props.itemId)
+    return isStaticDataLoaded.value ? getWeaponName(props.itemId) : getItemName(props.itemId)
   }
 })
 
-watch([props, itemNameRef, isLoaded, currentLanguage], () => {
+const tierColor = computed(() => {
+  return isStaticDataLoaded.value
+    ? getWeaponTierColor(props.itemId)
+    : getItemTierColor(props.itemId)
+})
+
+const overlayColor = computed(() => tierColor.value.alpha(0.3).string())
+const barColor = computed(() => tierColor.value.string())
+
+watch([props, itemNameRef, isLoaded, isStaticDataLoaded, currentLanguage], () => {
   if (itemNameRef.value) {
     updateText(itemNameRef.value, (itemNameContainerRef.value?.clientWidth || 96) * 0.95, 10, 16)
   }
@@ -63,7 +82,7 @@ watch([props, itemNameRef, isLoaded, currentLanguage], () => {
     to bottom,
     transparent 0%,
     transparent 70%,
-    v-bind('getItemTierColor(props.itemId).alpha(0.3).string()') 100%
+    v-bind(overlayColor) 100%
   );
 }
 
@@ -72,7 +91,7 @@ watch([props, itemNameRef, isLoaded, currentLanguage], () => {
   bottom: 0;
   width: 100%;
   height: 4%;
-  background-color: v-bind('getItemTierColor(props.itemId).string()');
+  background-color: v-bind(barColor);
 }
 
 .item-name-container {

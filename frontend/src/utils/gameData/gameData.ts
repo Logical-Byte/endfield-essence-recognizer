@@ -58,12 +58,12 @@ const gemTagIdTablePath = 'endfielddata/TableCfg/GemTagIdTable.json'
 const itemTablePath = 'endfielddata/TableCfg/ItemTable.json'
 const rarityColorTablePath = 'endfielddata/TableCfg/RarityColorTable.json'
 const skillPatchTablePath = 'endfielddata/TableCfg/SkillPatchTable.json'
-const textTablePath = 'endfielddata/TableCfg/TextTable.json'
-const weaponBasicTablePath = 'endfielddata/TableCfg/WeaponBasicTable.json'
-const wikiEntryDataTablePath = 'endfielddata/TableCfg/WikiEntryDataTable.json'
-const wikiEntryTablePath = 'endfielddata/TableCfg/WikiEntryTable.json'
-const wikiGroupTablePath = 'endfielddata/TableCfg/WikiGroupTable.json'
-const i18nLanguages: Language[] = [
+const _textTablePath = 'endfielddata/TableCfg/TextTable.json'
+const _weaponBasicTablePath = 'endfielddata/TableCfg/WeaponBasicTable.json'
+const _wikiEntryDataTablePath = 'endfielddata/TableCfg/WikiEntryDataTable.json'
+const _wikiEntryTablePath = 'endfielddata/TableCfg/WikiEntryTable.json'
+const _wikiGroupTablePath = 'endfielddata/TableCfg/WikiGroupTable.json'
+const _i18nLanguages: Language[] = [
   'CN',
   'TC',
   'DE',

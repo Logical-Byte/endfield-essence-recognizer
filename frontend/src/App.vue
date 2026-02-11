@@ -8,13 +8,13 @@
       <v-divider />
       <v-list density="comfortable" nav>
         <v-list-item
-          v-for="(route, index) in router.options.routes"
+          v-for="(r, index) in router.options.routes"
           :key="index"
           color="primary"
-          :prepend-icon="(route.meta as any)?.icon"
-          :to="route.path"
+          :prepend-icon="(r.meta as any)?.icon"
+          :to="r.path"
         >
-          {{ route.meta?.title ?? route.name }}
+          {{ r.meta?.title ?? r.name }}
         </v-list-item>
       </v-list>
     </v-navigation-drawer>
@@ -68,6 +68,7 @@ import { useLanguage } from '@/composables/useLanguage'
 import { useLogs } from '@/composables/useLogs'
 import { useUpdateChecker } from '@/composables/useUpdateChecker'
 import { initGameData } from '@/utils/gameData/gameData'
+import { initStaticData } from '@/utils/staticData'
 
 const route = useRoute()
 const router = useRouter()
@@ -87,6 +88,7 @@ const { checkForUpdates } = useUpdateChecker()
 onMounted(() => {
   // 初始化游戏数据
   initGameData()
+  initStaticData()
   // 初始检查更新
   checkForUpdates(false)
 })
