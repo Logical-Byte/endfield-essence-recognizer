@@ -1,0 +1,157 @@
+{
+  "gat_passive_attr_agi": {
+    "gem_id": "gat_passive_attr_agi",
+    "name": "敏捷提升",
+    "type": "ATTRIBUTE"
+  },
+  "gat_passive_attr_atk": {
+    "gem_id": "gat_passive_attr_atk",
+    "name": "攻击提升",
+    "type": "SECONDARY"
+  },
+  "gat_passive_attr_crirate": {
+    "gem_id": "gat_passive_attr_crirate",
+    "name": "暴击率提升",
+    "type": "SECONDARY"
+  },
+  "gat_passive_attr_pulsedam": {
+    "gem_id": "gat_passive_attr_pulsedam",
+    "name": "电磁伤害提升",
+    "type": "SECONDARY"
+  },
+  "gst_passive_tacafter": {
+    "gem_id": "gst_passive_tacafter",
+    "name": "流转",
+    "type": "SKILL"
+  },
+  "gat_passive_attr_firedam": {
+    "gem_id": "gat_passive_attr_firedam",
+    "name": "灼热伤害提升",
+    "type": "SECONDARY"
+  },
+  "gat_passive_attr_main": {
+    "gem_id": "gat_passive_attr_main",
+    "name": "主能力提升",
+    "type": "ATTRIBUTE"
+  },
+  "gst_passive_magabn": {
+    "gem_id": "gst_passive_magabn",
+    "name": "附术",
+    "type": "SKILL"
+  },
+  "gat_passive_attr_heal": {
+    "gem_id": "gat_passive_attr_heal",
+    "name": "治疗效率提升",
+    "type": "SECONDARY"
+  },
+  "gat_passive_attr_will": {
+    "gem_id": "gat_passive_attr_will",
+    "name": "意志提升",
+    "type": "ATTRIBUTE"
+  },
+  "gst_passive_crit": {
+    "gem_id": "gst_passive_crit",
+    "name": "切骨",
+    "type": "SKILL"
+  },
+  "gat_passive_attr_hp": {
+    "gem_id": "gat_passive_attr_hp",
+    "name": "生命提升",
+    "type": "SECONDARY"
+  },
+  "gat_passive_attr_icedam": {
+    "gem_id": "gat_passive_attr_icedam",
+    "name": "寒冷伤害提升",
+    "type": "SECONDARY"
+  },
+  "gat_passive_attr_magicdam": {
+    "gem_id": "gat_passive_attr_magicdam",
+    "name": "法术伤害提升",
+    "type": "SECONDARY"
+  },
+  "gat_passive_attr_naturaldam": {
+    "gem_id": "gat_passive_attr_naturaldam",
+    "name": "自然伤害提升",
+    "type": "SECONDARY"
+  },
+  "gst_passive_spirit": {
+    "gem_id": "gst_passive_spirit",
+    "name": "昂扬",
+    "type": "SKILL"
+  },
+  "gat_passive_attr_phydam": {
+    "gem_id": "gat_passive_attr_phydam",
+    "name": "物理伤害提升",
+    "type": "SECONDARY"
+  },
+  "gat_passive_attr_physpell": {
+    "gem_id": "gat_passive_attr_physpell",
+    "name": "源石技艺提升",
+    "type": "SECONDARY"
+  },
+  "gat_passive_attr_str": {
+    "gem_id": "gat_passive_attr_str",
+    "name": "力量提升",
+    "type": "ATTRIBUTE"
+  },
+  "gat_passive_attr_usp": {
+    "gem_id": "gat_passive_attr_usp",
+    "name": "终结技效率提升",
+    "type": "SECONDARY"
+  },
+  "gat_passive_attr_wisd": {
+    "gem_id": "gat_passive_attr_wisd",
+    "name": "智识提升",
+    "type": "ATTRIBUTE"
+  },
+  "gst_passive_ult": {
+    "gem_id": "gst_passive_ult",
+    "name": "夜幕",
+    "type": "SKILL"
+  },
+  "gst_passive_break": {
+    "gem_id": "gst_passive_break",
+    "name": "残暴",
+    "type": "SKILL"
+  },
+  "gst_passive_smash": {
+    "gem_id": "gst_passive_smash",
+    "name": "粉碎",
+    "type": "SKILL"
+  },
+  "gst_passive_burst": {
+    "gem_id": "gst_passive_burst",
+    "name": "迸发",
+    "type": "SKILL"
+  },
+  "gst_passive_combo": {
+    "gem_id": "gst_passive_combo",
+    "name": "追袭",
+    "type": "SKILL"
+  },
+  "gst_passive_force": {
+    "gem_id": "gst_passive_force",
+    "name": "强攻",
+    "type": "SKILL"
+  },
+  "gst_passive_heal": {
+    "gem_id": "gst_passive_heal",
+    "name": "医疗",
+    "type": "SKILL"
+  },
+  "gst_passive_keyword": {
+    "gem_id": "gst_passive_keyword",
+    "name": "效益",
+    "type": "SKILL"
+  },
+  "gst_passive_phyabn": {
+    "gem_id": "gst_passive_phyabn",
+    "name": "巧技",
+    "type": "SKILL"
+  },
+  "gst_passive_tactic": {
+    "gem_id": "gst_passive_tactic",
+    "name": "压制",
+    "type": "SKILL"
+  }
+}

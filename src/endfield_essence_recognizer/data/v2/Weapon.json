@@ -1,0 +1,622 @@
+{
+  "wpn_claym_0003": {
+    "weapon_id": "wpn_claym_0003",
+    "name": "工业零点一",
+    "weapon_type": 2,
+    "rarity": 4,
+    "icon_id": "wpn_claym_0003",
+    "gem1_id": "gat_passive_attr_str",
+    "gem2_id": "gat_passive_attr_atk",
+    "gem3_id": "gst_passive_tactic"
+  },
+  "wpn_funnel_0009": {
+    "weapon_id": "wpn_funnel_0009",
+    "name": "遗忘",
+    "weapon_type": 5,
+    "rarity": 6,
+    "icon_id": "wpn_funnel_0009",
+    "gem1_id": "gat_passive_attr_wisd",
+    "gem2_id": "gat_passive_attr_magicdam",
+    "gem3_id": "gst_passive_ult"
+  },
+  "wpn_claym_0004": {
+    "weapon_id": "wpn_claym_0004",
+    "name": "典范",
+    "weapon_type": 2,
+    "rarity": 6,
+    "icon_id": "wpn_claym_0004",
+    "gem1_id": "gat_passive_attr_main",
+    "gem2_id": "gat_passive_attr_atk",
+    "gem3_id": "gst_passive_tactic"
+  },
+  "wpn_claym_0008": {
+    "weapon_id": "wpn_claym_0008",
+    "name": "破碎君王",
+    "weapon_type": 2,
+    "rarity": 6,
+    "icon_id": "wpn_claym_0008",
+    "gem1_id": "gat_passive_attr_str",
+    "gem2_id": "gat_passive_attr_crirate",
+    "gem3_id": "gst_passive_smash"
+  },
+  "wpn_claym_0006": {
+    "weapon_id": "wpn_claym_0006",
+    "name": "昔日精品",
+    "weapon_type": 2,
+    "rarity": 6,
+    "icon_id": "wpn_claym_0006",
+    "gem1_id": "gat_passive_attr_will",
+    "gem2_id": "gat_passive_attr_hp",
+    "gem3_id": "gst_passive_keyword"
+  },
+  "wpn_claym_0007": {
+    "weapon_id": "wpn_claym_0007",
+    "name": "大雷斑",
+    "weapon_type": 2,
+    "rarity": 6,
+    "icon_id": "wpn_claym_0007",
+    "gem1_id": "gat_passive_attr_str",
+    "gem2_id": "gat_passive_attr_hp",
+    "gem3_id": "gst_passive_heal"
+  },
+  "wpn_pistol_0006": {
+    "weapon_id": "wpn_pistol_0006",
+    "name": "作品：众生",
+    "weapon_type": 4,
+    "rarity": 5,
+    "icon_id": "wpn_pistol_0006",
+    "gem1_id": "gat_passive_attr_agi",
+    "gem2_id": "gat_passive_attr_magicdam",
+    "gem3_id": "gst_passive_magabn"
+  },
+  "wpn_claym_0009": {
+    "weapon_id": "wpn_claym_0009",
+    "name": "淬火者",
+    "weapon_type": 2,
+    "rarity": 4,
+    "icon_id": "wpn_claym_0009",
+    "gem1_id": "gat_passive_attr_will",
+    "gem2_id": "gat_passive_attr_hp",
+    "gem3_id": "gst_passive_smash"
+  },
+  "wpn_funnel_0010": {
+    "weapon_id": "wpn_funnel_0010",
+    "name": "骑士精神",
+    "weapon_type": 5,
+    "rarity": 6,
+    "icon_id": "wpn_funnel_0008",
+    "gem1_id": "gat_passive_attr_will",
+    "gem2_id": "gat_passive_attr_hp",
+    "gem3_id": "gst_passive_heal"
+  },
+  "wpn_claym_0010": {
+    "weapon_id": "wpn_claym_0010",
+    "name": "达尔霍夫7",
+    "weapon_type": 2,
+    "rarity": 3,
+    "icon_id": "wpn_claym_0010",
+    "gem1_id": "gat_passive_attr_main",
+    "gem2_id": null,
+    "gem3_id": "gst_passive_force"
+  },
+  "wpn_sword_0013": {
+    "weapon_id": "wpn_sword_0013",
+    "name": "显赫声名",
+    "weapon_type": 1,
+    "rarity": 6,
+    "icon_id": "wpn_sword_0013",
+    "gem1_id": "gat_passive_attr_main",
+    "gem2_id": "gat_passive_attr_phydam",
+    "gem3_id": "gst_passive_break"
+  },
+  "wpn_claym_0011": {
+    "weapon_id": "wpn_claym_0011",
+    "name": "探骊",
+    "weapon_type": 2,
+    "rarity": 5,
+    "icon_id": "wpn_claym_0011",
+    "gem1_id": "gat_passive_attr_str",
+    "gem2_id": "gat_passive_attr_usp",
+    "gem3_id": "gst_passive_burst"
+  },
+  "wpn_claym_0012": {
+    "weapon_id": "wpn_claym_0012",
+    "name": "终点之声",
+    "weapon_type": 2,
+    "rarity": 5,
+    "icon_id": "wpn_claym_0012",
+    "gem1_id": "gat_passive_attr_str",
+    "gem2_id": "gat_passive_attr_hp",
+    "gem3_id": "gst_passive_heal"
+  },
+  "wpn_lance_0008": {
+    "weapon_id": "wpn_lance_0008",
+    "name": "天使杀手",
+    "weapon_type": 3,
+    "rarity": 4,
+    "icon_id": "wpn_lance_0008",
+    "gem1_id": "gat_passive_attr_will",
+    "gem2_id": "gat_passive_attr_magicdam",
+    "gem3_id": "gst_passive_tactic"
+  },
+  "wpn_sword_0011": {
+    "weapon_id": "wpn_sword_0011",
+    "name": "扶摇",
+    "weapon_type": 1,
+    "rarity": 6,
+    "icon_id": "wpn_sword_0011",
+    "gem1_id": "gat_passive_attr_main",
+    "gem2_id": "gat_passive_attr_crirate",
+    "gem3_id": "gst_passive_ult"
+  },
+  "wpn_claym_0013": {
+    "weapon_id": "wpn_claym_0013",
+    "name": "赫拉芬格",
+    "weapon_type": 2,
+    "rarity": 6,
+    "icon_id": "wpn_claym_0013",
+    "gem1_id": "gat_passive_attr_str",
+    "gem2_id": "gat_passive_attr_atk",
+    "gem3_id": "gst_passive_burst"
+  },
+  "wpn_funnel_0006": {
+    "weapon_id": "wpn_funnel_0006",
+    "name": "作品：蚀迹",
+    "weapon_type": 5,
+    "rarity": 6,
+    "icon_id": "wpn_funnel_0006",
+    "gem1_id": "gat_passive_attr_will",
+    "gem2_id": "gat_passive_attr_naturaldam",
+    "gem3_id": "gst_passive_tactic"
+  },
+  "wpn_lance_0009": {
+    "weapon_id": "wpn_lance_0009",
+    "name": "奥佩罗77",
+    "weapon_type": 3,
+    "rarity": 3,
+    "icon_id": "wpn_lance_0009",
+    "gem1_id": "gat_passive_attr_main",
+    "gem2_id": null,
+    "gem3_id": "gst_passive_force"
+  },
+  "wpn_sword_0010": {
+    "weapon_id": "wpn_sword_0010",
+    "name": "黯色火炬",
+    "weapon_type": 1,
+    "rarity": 6,
+    "icon_id": "wpn_sword_0010",
+    "gem1_id": "gat_passive_attr_wisd",
+    "gem2_id": "gat_passive_attr_firedam",
+    "gem3_id": "gst_passive_magabn"
+  },
+  "wpn_claym_0014": {
+    "weapon_id": "wpn_claym_0014",
+    "name": "古渠",
+    "weapon_type": 2,
+    "rarity": 5,
+    "icon_id": "wpn_claym_0014",
+    "gem1_id": "gat_passive_attr_str",
+    "gem2_id": "gat_passive_attr_physpell",
+    "gem3_id": "gst_passive_break"
+  },
+  "wpn_funnel_0003": {
+    "weapon_id": "wpn_funnel_0003",
+    "name": "荧光雷羽",
+    "weapon_type": 5,
+    "rarity": 4,
+    "icon_id": "wpn_funnel_0003",
+    "gem1_id": "gat_passive_attr_will",
+    "gem2_id": "gat_passive_attr_atk",
+    "gem3_id": "gst_passive_tactic"
+  },
+  "wpn_claym_0015": {
+    "weapon_id": "wpn_claym_0015",
+    "name": "O.B.J.重荷",
+    "weapon_type": 2,
+    "rarity": 5,
+    "icon_id": "wpn_claym_0015",
+    "gem1_id": "gat_passive_attr_str",
+    "gem2_id": "gat_passive_attr_hp",
+    "gem3_id": "gst_passive_keyword"
+  },
+  "wpn_funnel_0001": {
+    "weapon_id": "wpn_funnel_0001",
+    "name": "全自动骇新星",
+    "weapon_type": 5,
+    "rarity": 4,
+    "icon_id": "wpn_funnel_0001",
+    "gem1_id": "gat_passive_attr_wisd",
+    "gem2_id": "gat_passive_attr_magicdam",
+    "gem3_id": "gst_passive_spirit"
+  },
+  "wpn_funnel_0002": {
+    "weapon_id": "wpn_funnel_0002",
+    "name": "吉米尼12",
+    "weapon_type": 5,
+    "rarity": 3,
+    "icon_id": "wpn_funnel_0002",
+    "gem1_id": "gat_passive_attr_main",
+    "gem2_id": null,
+    "gem3_id": "gst_passive_force"
+  },
+  "wpn_sword_0007": {
+    "weapon_id": "wpn_sword_0007",
+    "name": "坚城铸造者",
+    "weapon_type": 1,
+    "rarity": 5,
+    "icon_id": "wpn_sword_0007",
+    "gem1_id": "gat_passive_attr_wisd",
+    "gem2_id": "gat_passive_attr_usp",
+    "gem3_id": "gst_passive_spirit"
+  },
+  "wpn_funnel_0004": {
+    "weapon_id": "wpn_funnel_0004",
+    "name": "迷失荒野",
+    "weapon_type": 5,
+    "rarity": 5,
+    "icon_id": "wpn_funnel_0004",
+    "gem1_id": "gat_passive_attr_wisd",
+    "gem2_id": "gat_passive_attr_pulsedam",
+    "gem3_id": "gst_passive_magabn"
+  },
+  "wpn_sword_0018": {
+    "weapon_id": "wpn_sword_0018",
+    "name": "十二问",
+    "weapon_type": 1,
+    "rarity": 5,
+    "icon_id": "wpn_sword_0018",
+    "gem1_id": "gat_passive_attr_agi",
+    "gem2_id": "gat_passive_attr_atk",
+    "gem3_id": "gst_passive_magabn"
+  },
+  "wpn_funnel_0005": {
+    "weapon_id": "wpn_funnel_0005",
+    "name": "悼亡诗",
+    "weapon_type": 5,
+    "rarity": 5,
+    "icon_id": "wpn_funnel_0005",
+    "gem1_id": "gat_passive_attr_wisd",
+    "gem2_id": "gat_passive_attr_atk",
+    "gem3_id": "gst_passive_ult"
+  },
+  "wpn_funnel_0007": {
+    "weapon_id": "wpn_funnel_0007",
+    "name": "莫奈何",
+    "weapon_type": 5,
+    "rarity": 5,
+    "icon_id": "wpn_funnel_0007",
+    "gem1_id": "gat_passive_attr_will",
+    "gem2_id": "gat_passive_attr_usp",
+    "gem3_id": "gst_passive_spirit"
+  },
+  "wpn_sword_0008": {
+    "weapon_id": "wpn_sword_0008",
+    "name": "应急手段",
+    "weapon_type": 1,
+    "rarity": 4,
+    "icon_id": "wpn_sword_0008",
+    "gem1_id": "gat_passive_attr_agi",
+    "gem2_id": "gat_passive_attr_phydam",
+    "gem3_id": "gst_passive_tactic"
+  },
+  "wpn_sword_0020": {
+    "weapon_id": "wpn_sword_0020",
+    "name": "逐鳞3.0",
+    "weapon_type": 1,
+    "rarity": 5,
+    "icon_id": "wpn_sword_0020",
+    "gem1_id": "gat_passive_attr_str",
+    "gem2_id": "gat_passive_attr_icedam",
+    "gem3_id": "gst_passive_tactic"
+  },
+  "wpn_funnel_0008": {
+    "weapon_id": "wpn_funnel_0008",
+    "name": "爆破单元",
+    "weapon_type": 5,
+    "rarity": 6,
+    "icon_id": "wpn_funnel_0010",
+    "gem1_id": "gat_passive_attr_main",
+    "gem2_id": "gat_passive_attr_physpell",
+    "gem3_id": "gst_passive_burst"
+  },
+  "wpn_funnel_0011": {
+    "weapon_id": "wpn_funnel_0011",
+    "name": "使命必达",
+    "weapon_type": 5,
+    "rarity": 6,
+    "icon_id": "wpn_funnel_0011",
+    "gem1_id": "gat_passive_attr_will",
+    "gem2_id": "gat_passive_attr_usp",
+    "gem3_id": "gst_passive_combo"
+  },
+  "wpn_funnel_0012": {
+    "weapon_id": "wpn_funnel_0012",
+    "name": "布道自由",
+    "weapon_type": 5,
+    "rarity": 5,
+    "icon_id": "wpn_funnel_0012",
+    "gem1_id": "gat_passive_attr_will",
+    "gem2_id": "gat_passive_attr_heal",
+    "gem3_id": "gst_passive_heal"
+  },
+  "wpn_lance_0006": {
+    "weapon_id": "wpn_lance_0006",
+    "name": "向心之引",
+    "weapon_type": 3,
+    "rarity": 5,
+    "icon_id": "wpn_lance_0006",
+    "gem1_id": "gat_passive_attr_will",
+    "gem2_id": "gat_passive_attr_pulsedam",
+    "gem3_id": "gst_passive_tactic"
+  },
+  "wpn_funnel_0013": {
+    "weapon_id": "wpn_funnel_0013",
+    "name": "沧溟星梦",
+    "weapon_type": 5,
+    "rarity": 6,
+    "icon_id": "wpn_funnel_0013",
+    "gem1_id": "gat_passive_attr_wisd",
+    "gem2_id": "gat_passive_attr_heal",
+    "gem3_id": "gst_passive_magabn"
+  },
+  "wpn_funnel_0014": {
+    "weapon_id": "wpn_funnel_0014",
+    "name": "O.B.J.术识",
+    "weapon_type": 5,
+    "rarity": 5,
+    "icon_id": "wpn_funnel_0014",
+    "gem1_id": "gat_passive_attr_wisd",
+    "gem2_id": "gat_passive_attr_physpell",
+    "gem3_id": "gst_passive_combo"
+  },
+  "wpn_lance_0003": {
+    "weapon_id": "wpn_lance_0003",
+    "name": "寻路者道标",
+    "weapon_type": 3,
+    "rarity": 4,
+    "icon_id": "wpn_lance_0003",
+    "gem1_id": "gat_passive_attr_agi",
+    "gem2_id": "gat_passive_attr_atk",
+    "gem3_id": "gst_passive_spirit"
+  },
+  "wpn_lance_0004": {
+    "weapon_id": "wpn_lance_0004",
+    "name": "嵌合正义",
+    "weapon_type": 3,
+    "rarity": 5,
+    "icon_id": "wpn_lance_0004",
+    "gem1_id": "gat_passive_attr_str",
+    "gem2_id": "gat_passive_attr_usp",
+    "gem3_id": "gst_passive_break"
+  },
+  "wpn_lance_0010": {
+    "weapon_id": "wpn_lance_0010",
+    "name": "骁勇",
+    "weapon_type": 3,
+    "rarity": 6,
+    "icon_id": "wpn_lance_0010",
+    "gem1_id": "gat_passive_attr_agi",
+    "gem2_id": "gat_passive_attr_phydam",
+    "gem3_id": "gst_passive_phyabn"
+  },
+  "wpn_lance_0011": {
+    "weapon_id": "wpn_lance_0011",
+    "name": "J.E.T.",
+    "weapon_type": 3,
+    "rarity": 6,
+    "icon_id": "wpn_lance_0011",
+    "gem1_id": "gat_passive_attr_main",
+    "gem2_id": "gat_passive_attr_atk",
+    "gem3_id": "gst_passive_tactic"
+  },
+  "wpn_lance_0012": {
+    "weapon_id": "wpn_lance_0012",
+    "name": "负山",
+    "weapon_type": 3,
+    "rarity": 6,
+    "icon_id": "wpn_lance_0012",
+    "gem1_id": "gat_passive_attr_agi",
+    "gem2_id": "gat_passive_attr_phydam",
+    "gem3_id": "gst_passive_keyword"
+  },
+  "wpn_pistol_0010": {
+    "weapon_id": "wpn_pistol_0010",
+    "name": "艺术暴君",
+    "weapon_type": 4,
+    "rarity": 6,
+    "icon_id": "wpn_pistol_0010",
+    "gem1_id": "gat_passive_attr_wisd",
+    "gem2_id": "gat_passive_attr_crirate",
+    "gem3_id": "gst_passive_crit"
+  },
+  "wpn_lance_0013": {
+    "weapon_id": "wpn_lance_0013",
+    "name": "O.B.J.尖峰",
+    "weapon_type": 3,
+    "rarity": 5,
+    "icon_id": "wpn_lance_0013",
+    "gem1_id": "gat_passive_attr_will",
+    "gem2_id": "gat_passive_attr_phydam",
+    "gem3_id": "gst_passive_magabn"
+  },
+  "wpn_pistol_0001": {
+    "weapon_id": "wpn_pistol_0001",
+    "name": "佩科5",
+    "weapon_type": 4,
+    "rarity": 3,
+    "icon_id": "wpn_pistol_0001",
+    "gem1_id": "gat_passive_attr_main",
+    "gem2_id": null,
+    "gem3_id": "gst_passive_force"
+  },
+  "wpn_pistol_0002": {
+    "weapon_id": "wpn_pistol_0002",
+    "name": "呼啸守卫",
+    "weapon_type": 4,
+    "rarity": 4,
+    "icon_id": "wpn_pistol_0002",
+    "gem1_id": "gat_passive_attr_wisd",
+    "gem2_id": "gat_passive_attr_atk",
+    "gem3_id": "gst_passive_tactic"
+  },
+  "wpn_pistol_0003": {
+    "weapon_id": "wpn_pistol_0003",
+    "name": "长路",
+    "weapon_type": 4,
+    "rarity": 4,
+    "icon_id": "wpn_pistol_0003",
+    "gem1_id": "gat_passive_attr_str",
+    "gem2_id": "gat_passive_attr_magicdam",
+    "gem3_id": "gst_passive_combo"
+  },
+  "wpn_sword_0014": {
+    "weapon_id": "wpn_sword_0014",
+    "name": "白夜新星",
+    "weapon_type": 1,
+    "rarity": 6,
+    "icon_id": "wpn_sword_0014",
+    "gem1_id": "gat_passive_attr_main",
+    "gem2_id": "gat_passive_attr_physpell",
+    "gem3_id": "gst_passive_magabn"
+  },
+  "wpn_pistol_0004": {
+    "weapon_id": "wpn_pistol_0004",
+    "name": "理性告别",
+    "weapon_type": 4,
+    "rarity": 5,
+    "icon_id": "wpn_pistol_0004",
+    "gem1_id": "gat_passive_attr_str",
+    "gem2_id": "gat_passive_attr_firedam",
+    "gem3_id": "gst_passive_combo"
+  },
+  "wpn_pistol_0005": {
+    "weapon_id": "wpn_pistol_0005",
+    "name": "领航者",
+    "weapon_type": 4,
+    "rarity": 6,
+    "icon_id": "wpn_pistol_0005",
+    "gem1_id": "gat_passive_attr_wisd",
+    "gem2_id": "gat_passive_attr_icedam",
+    "gem3_id": "gst_passive_magabn"
+  },
+  "wpn_pistol_0008": {
+    "weapon_id": "wpn_pistol_0008",
+    "name": "楔子",
+    "weapon_type": 4,
+    "rarity": 6,
+    "icon_id": "wpn_pistol_0008",
+    "gem1_id": "gat_passive_attr_main",
+    "gem2_id": "gat_passive_attr_crirate",
+    "gem3_id": "gst_passive_magabn"
+  },
+  "wpn_sword_0006": {
+    "weapon_id": "wpn_sword_0006",
+    "name": "熔铸火焰",
+    "weapon_type": 1,
+    "rarity": 6,
+    "icon_id": "wpn_sword_0006",
+    "gem1_id": "gat_passive_attr_wisd",
+    "gem2_id": "gat_passive_attr_atk",
+    "gem3_id": "gst_passive_ult"
+  },
+  "wpn_pistol_0009": {
+    "weapon_id": "wpn_pistol_0009",
+    "name": "同类相食",
+    "weapon_type": 4,
+    "rarity": 6,
+    "icon_id": "wpn_pistol_0009",
+    "gem1_id": "gat_passive_attr_main",
+    "gem2_id": "gat_passive_attr_magicdam",
+    "gem3_id": "gst_passive_magabn"
+  },
+  "wpn_sword_0016": {
+    "weapon_id": "wpn_sword_0016",
+    "name": "不知归",
+    "weapon_type": 1,
+    "rarity": 6,
+    "icon_id": "wpn_sword_0016",
+    "gem1_id": "gat_passive_attr_will",
+    "gem2_id": "gat_passive_attr_atk",
+    "gem3_id": "gst_passive_tacafter"
+  },
+  "wpn_pistol_0012": {
+    "weapon_id": "wpn_pistol_0012",
+    "name": "O.B.J.迅极",
+    "weapon_type": 4,
+    "rarity": 5,
+    "icon_id": "wpn_pistol_0012",
+    "gem1_id": "gat_passive_attr_agi",
+    "gem2_id": "gat_passive_attr_usp",
+    "gem3_id": "gst_passive_burst"
+  },
+  "wpn_sword_0003": {
+    "weapon_id": "wpn_sword_0003",
+    "name": "塔尔11",
+    "weapon_type": 1,
+    "rarity": 3,
+    "icon_id": "wpn_sword_0003",
+    "gem1_id": "gat_passive_attr_main",
+    "gem2_id": null,
+    "gem3_id": "gst_passive_force"
+  },
+  "wpn_sword_0005": {
+    "weapon_id": "wpn_sword_0005",
+    "name": "钢铁余音",
+    "weapon_type": 1,
+    "rarity": 5,
+    "icon_id": "wpn_sword_0005",
+    "gem1_id": "gat_passive_attr_agi",
+    "gem2_id": "gat_passive_attr_phydam",
+    "gem3_id": "gst_passive_phyabn"
+  },
+  "wpn_sword_0009": {
+    "weapon_id": "wpn_sword_0009",
+    "name": "浪潮",
+    "weapon_type": 1,
+    "rarity": 4,
+    "icon_id": "wpn_sword_0009",
+    "gem1_id": "gat_passive_attr_wisd",
+    "gem2_id": "gat_passive_attr_atk",
+    "gem3_id": "gst_passive_combo"
+  },
+  "wpn_sword_0012": {
+    "weapon_id": "wpn_sword_0012",
+    "name": "热熔切割器",
+    "weapon_type": 1,
+    "rarity": 6,
+    "icon_id": "wpn_sword_0012",
+    "gem1_id": "gat_passive_attr_will",
+    "gem2_id": "gat_passive_attr_atk",
+    "gem3_id": "gst_passive_tacafter"
+  },
+  "wpn_sword_0015": {
+    "weapon_id": "wpn_sword_0015",
+    "name": "仰止",
+    "weapon_type": 1,
+    "rarity": 5,
+    "icon_id": "wpn_sword_0015",
+    "gem1_id": "gat_passive_attr_agi",
+    "gem2_id": "gat_passive_attr_phydam",
+    "gem3_id": "gst_passive_ult"
+  },
+  "wpn_sword_0019": {
+    "weapon_id": "wpn_sword_0019",
+    "name": "O.B.J.轻芒",
+    "weapon_type": 1,
+    "rarity": 5,
+    "icon_id": "wpn_sword_0019",
+    "gem1_id": "gat_passive_attr_agi",
+    "gem2_id": "gat_passive_attr_atk",
+    "gem3_id": "gst_passive_tacafter"
+  },
+  "wpn_sword_0021": {
+    "weapon_id": "wpn_sword_0021",
+    "name": "宏愿",
+    "weapon_type": 1,
+    "rarity": 6,
+    "icon_id": "wpn_sword_0021",
+    "gem1_id": "gat_passive_attr_agi",
+    "gem2_id": "gat_passive_attr_atk",
+    "gem3_id": "gst_passive_magabn"
+  }
+}
