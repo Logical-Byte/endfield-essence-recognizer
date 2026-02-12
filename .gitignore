@@ -22,4 +22,7 @@ config.json
 # enfield data table config
 src/endfield_essence_recognizer/data/endfielddata/TableCfg/**.json
 
+# IDE files
 AGENTS.md
+**/*.code-workspace
+scripts/full-check.sh

@@ -126,6 +126,7 @@ def mock_profile():
     profile.LOCK_BUTTON_ROI = Region(Point(1825, 270), Point(1857, 302))
     profile.LOCK_BUTTON_POS = Point(1839, 286)
     profile.DEPRECATE_BUTTON_POS = Point(1807, 284)
+    profile.AREA = Region(Point(1465, 79), Point(1883, 532))
 
     # Mock just one essence icon for simplicity
     profile.essence_icon_x_list = [100]
@@ -153,9 +154,11 @@ def test_scanner_engine_execution(
     # Run execute
     engine.execute(stop_event)
 
-    # Check if click was called
+    # Check if click was called (with random offset within CLICK_RANDOM_RADIUS)
     assert len(window_actions.click_calls) >= 1
-    assert window_actions.click_calls[0] == (100, 200)
+    click_x, click_y = window_actions.click_calls[0]
+    assert abs(click_x - 100) <= ScannerEngine.CLICK_RANDOM_RADIUS
+    assert abs(click_y - 200) <= ScannerEngine.CLICK_RANDOM_RADIUS
 
     # Check if recognition happened
     mock_scanner_context.attr_recognizer.recognize_roi.assert_called()
@@ -222,10 +225,25 @@ def test_recognize_once_screenshot_calls(mock_scanner_context, mock_profile):
 def test_scanner_engine_screenshot_count(
     mock_scanner_context, mock_user_setting_manager, mock_profile
 ):
-    image_source = MagicMock()
-    image_source.screenshot.return_value = np.zeros(
+    # Simulate a UI change after clicking an icon:
+    # First 2 calls (check_scene + before_img) return the "before" image,
+    # subsequent calls return a visually different "after" image so that
+    # _wait_until_stable detects the change quickly.
+    call_count = 0
+    base_image = np.zeros(
         (mock_profile.RESOLUTION[1], mock_profile.RESOLUTION[0], 3), dtype=np.uint8
     )
+    changed_image = np.full_like(base_image, 50)
+
+    def dynamic_screenshot(region=None):
+        nonlocal call_count
+        call_count += 1
+        if call_count <= 2:
+            return base_image
+        return changed_image
+
+    image_source = MagicMock()
+    image_source.screenshot.side_effect = dynamic_screenshot
     image_source.get_client_size.return_value = mock_profile.RESOLUTION
 
     window_actions = MockWindowActions()
@@ -245,5 +263,5 @@ def test_scanner_engine_screenshot_count(
     stop_event = threading.Event()
     engine.execute(stop_event)
 
-    # 1 call for check_scene + 1 call for recognize_essence
-    assert image_source.screenshot.call_count == 2
+    # 1 check_scene + 1 before_img + 2 _wait_until_stable + 1 recognize_essence = 5
+    assert image_source.screenshot.call_count == 5
