@@ -7,8 +7,7 @@ import type {
   WeaponTypeInfo,
   WeaponTypeListResponse,
 } from '@/types/staticData'
-import { ref, watch } from 'vue'
-import { useLanguage } from '@/composables/useLanguage'
+import { ref } from 'vue'
 
 const weaponsMap = ref<Map<string, WeaponInfo>>(new Map())
 const weaponTypes = ref<WeaponTypeInfo[]>([])
