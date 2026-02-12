@@ -28,8 +28,8 @@ class StaticDataService:
     TODO: Refactor the database schema (smaller jsons) before testing this service.
     """
 
-    def __init__(self, language: str = "CN"):
-        self.language = language
+    def __init__(self):
+        self.language = "CN"
         self.item_icon_base_url = "https://cos.yituliu.cn/endfield/unpack-images/items/"
         self.group_icon_base_url = (
             "https://cos.yituliu.cn/endfield/sprites_selective/wiki/groupicon/"

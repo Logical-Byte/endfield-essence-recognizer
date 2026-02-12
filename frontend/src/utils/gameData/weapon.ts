@@ -1,12 +1,4 @@
-import { computed } from 'vue'
-import {
-  gemTable,
-  gemTagIdTable,
-  getTranslation,
-  isLoaded,
-  skillPatchTable,
-  weaponBasicTable,
-} from '@/utils/gameData/gameData'
+import { useStaticData } from '@/utils/gameData/staticData'
 
 export interface EssenceStat {
   attribute: string | null
@@ -22,50 +14,25 @@ export function getEmptyStat(): EssenceStat {
   }
 }
 
-export function getGemTagName(gemTermId: string): string {
-  const gem = gemTable.value[gemTermId]
-  if (gem === undefined) {
-    return gemTermId
+export function getGemTagName(gemId: string): string {
+  const { essencesMap } = useStaticData()
+  const essence = essencesMap.value.get(gemId)
+  if (essence === undefined) {
+    return gemId
   }
-  return getTranslation(gem.tagName) || gemTermId
+  return essence.tagName
 }
 
 export function getStatsForWeapon(weaponId: string): EssenceStat {
-  const weapon = weaponBasicTable.value[weaponId]
+  const { weaponsMap } = useStaticData()
+  const weapon = weaponsMap.value.get(weaponId)
   if (!weapon) {
     return getEmptyStat()
   }
 
-  const result = getEmptyStat()
-  for (const weaponSkill of weapon.weaponSkillList) {
-    const skillPatch = skillPatchTable.value[weaponSkill]!
-    const tagId = skillPatch.SkillPatchDataBundle[0]!.tagId
-    const gemStat = gemTagIdTable.value[tagId]!
-    const gem = gemTable.value[gemStat]!
-    switch (gem.termType) {
-      case 0: {
-        result.attribute = gem.gemTermId
-        break
-      }
-      case 1: {
-        result.secondary = gem.gemTermId
-        break
-      }
-      case 2: {
-        result.skill = gem.gemTermId
-        break
-      }
-    }
+  return {
+    attribute: weapon.attributeEssenceId,
+    secondary: weapon.secondaryEssenceId,
+    skill: weapon.skillEssenceId,
   }
-  return result
 }
-
-export const statsForWeapon = computed(() => {
-  if (!isLoaded.value) {
-    return new Map<string, EssenceStat>()
-  }
-  const result: Map<string, EssenceStat> = new Map(
-    Object.keys(weaponBasicTable.value).map((weaponId) => [weaponId, getStatsForWeapon(weaponId)]),
-  )
-  return result
-})
