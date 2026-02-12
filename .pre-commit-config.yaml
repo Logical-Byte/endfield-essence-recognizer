@@ -1,5 +1,3 @@
-exclude: ^(frontend/)
-
 repos:
 - repo: https://github.com/pre-commit/pre-commit-hooks
   rev: v6.0.0
@@ -12,14 +10,17 @@ repos:
   hooks:
     # Update the uv lockfile
     - id: uv-lock
+      files: ^(pyproject\.toml|uv\.lock)$
 - repo: https://github.com/astral-sh/ruff-pre-commit
   rev: v0.15.0
   hooks:
     # Run the linter.
     - id: ruff-check
       args: [ --fix ]
+      types_or: [python, pyi]
     # Run the formatter.
     - id: ruff-format
+      types_or: [python, pyi]
 - repo: local
   hooks:
     - id: pytest
@@ -27,4 +28,16 @@ repos:
       language: system
       entry: uv run pytest tests
       types: [python]
+      pass_filenames: false
+    - id: frontend-lint
+      name: Frontend Lint
+      language: system
+      entry: npm run --prefix frontend lint
+      files: ^frontend/
+      pass_filenames: false
+    - id: frontend-typecheck
+      name: Frontend Typecheck
+      language: system
+      entry: npm run --prefix frontend type-check
+      files: ^frontend/
       pass_filenames: false
