@@ -28,18 +28,18 @@ def build_attribute_profile() -> RecognitionProfile[str]:
     """
     Build the recognition profile for essence attributes (ATK, HP, etc.).
     """
-    # Lazy import the game data. Some integration tests may not need it
-    from endfield_essence_recognizer.game_data.weapon import (
-        all_attribute_stats,
-        all_secondary_stats,
-        all_skill_stats,
-    )
+    # We need static game data to get all possible attribute stats
+    from endfield_essence_recognizer.dependencies import get_static_game_data
+
+    static_game_data = get_static_game_data()
+    all_gems = static_game_data.list_gems()
+    all_gem_ids = [essence.gem_id for essence in all_gems]
 
     templates_dir = (
         importlib.resources.files("endfield_essence_recognizer") / "templates/generated"
     )
-
-    labels = all_attribute_stats + all_secondary_stats + all_skill_stats
+    # The templates are named after the essence IDs
+    labels = all_gem_ids
     templates: list[TemplateDescriptor[str]] = []
 
     for label in labels:

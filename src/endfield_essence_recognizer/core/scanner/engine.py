@@ -66,9 +66,10 @@ def recognize_essence(
     ctx: ScannerContext,
     profile: ResolutionProfile,
 ) -> EssenceData:
-    from endfield_essence_recognizer.game_data.weapon import (
-        get_gem_tag_name,
-    )
+    # we need static game data to get gem names for logging
+    from endfield_essence_recognizer.dependencies import get_static_game_data
+
+    static_game_data = get_static_game_data()
 
     stats: list[str | None] = []
     levels: list[int | None] = []
@@ -125,7 +126,13 @@ def recognize_essence(
         if stat is None:
             stats_name_parts.append("无")
         else:
-            stat_name = get_gem_tag_name(stat, "CN")
+            gem = static_game_data.get_gem(stat)
+            if gem is not None:
+                stat_name = gem.name
+            else:
+                # this should not happen
+                logger.warning(f"无法在静态数据中找到基质 ID: {stat} 的名称")
+                stat_name = stat
             if i < len(levels) and levels[i] is not None:
                 stats_name_parts.append(f"{stat_name}+{levels[i]}")
             else:

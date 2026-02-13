@@ -24,17 +24,10 @@ def evaluate_essence(data: EssenceData, setting: UserSetting) -> EvaluationResul
     Returns:
         EvaluationResult containing the decision, log message, and reasoning.
     """
-    from endfield_essence_recognizer.game_data import (
-        gem_table,
-        get_translation,
-        weapon_basic_table,
-    )
-    from endfield_essence_recognizer.game_data.item import get_item_name
-    from endfield_essence_recognizer.game_data.weapon import (
-        get_gem_tag_name,
-        weapon_stats_dict,
-        weapon_type_int_to_translation_key,
-    )
+    # we need static game data to get gem info and match weapons
+    from endfield_essence_recognizer.dependencies import get_static_game_data
+
+    static_game_data = get_static_game_data()
 
     stats = data.stats
     levels = data.levels
@@ -49,15 +42,25 @@ def evaluate_essence(data: EssenceData, setting: UserSetting) -> EvaluationResul
             setting.high_level_treasure_secondary_threshold,  # secondary stat threshold
             setting.high_level_treasure_skill_threshold,  # skill stat threshold
         ]
+        # Mapping for V2 GemType to threshold index
+        type_to_index = {
+            "ATTRIBUTE": 0,
+            "SECONDARY": 1,
+            "SKILL": 2,
+        }
         for stat, level in zip(stats, levels, strict=True):
             if stat is not None and level is not None:
-                gem = gem_table.get(stat)
+                gem = static_game_data.get_gem(stat)
                 if gem is not None:
-                    threshold = thresholds[gem["termType"]]
-                    if level >= threshold:
-                        is_high_level_treasure = True
-                        high_level_info = f"（含高等级属性词条：{get_gem_tag_name(stat, 'CN')}+{level}）"
-                        break
+                    idx = type_to_index.get(gem.type)
+                    if idx is not None:
+                        threshold = thresholds[idx]
+                        if level >= threshold:
+                            is_high_level_treasure = True
+                            high_level_info = (
+                                f"（含高等级属性词条：{gem.name}+{level}）"
+                            )
+                            break
 
     # 尝试匹配用户自定义的宝藏基质条件
     for treasure_stat in setting.treasure_essence_stats:
@@ -73,15 +76,9 @@ def evaluate_essence(data: EssenceData, setting: UserSetting) -> EvaluationResul
             )
 
     # 尝试匹配已实装武器
-    matched_weapon_ids: set[str] = set()
-    for weapon_id in weapon_basic_table:
-        weapon_stats = weapon_stats_dict[weapon_id]
-        if (
-            weapon_stats["attribute"] == stats[0]
-            and weapon_stats["secondary"] == stats[1]
-            and weapon_stats["skill"] == stats[2]
-        ):
-            matched_weapon_ids.add(weapon_id)
+    matched_weapon_ids = set(
+        static_game_data.find_weapons_by_stats(stats[0], stats[1], stats[2])
+    )
 
     if not matched_weapon_ids:
         # 未匹配到任何已实装武器
@@ -103,12 +100,14 @@ def evaluate_essence(data: EssenceData, setting: UserSetting) -> EvaluationResul
 
     def format_weapon_description(weapon_id: str) -> str:
         """格式化武器描述，如`名称（稀有度★ 类型）`"""
-        weapon_basic = weapon_basic_table[weapon_id]
-        weapon_name = get_item_name(weapon_id, "CN")
-        weapon_type = get_translation(
-            weapon_type_int_to_translation_key[weapon_id], "CN"
-        )
-        return f"<bold>{weapon_name}（{weapon_basic['rarity']}★ {weapon_type}）</>"
+        weapon = static_game_data.get_weapon(weapon_id)
+        if not weapon:
+            return f"<bold>{weapon_id}</>"
+
+        weapon_type = static_game_data.get_weapon_type(weapon.weapon_type)
+        type_name = weapon_type.name if weapon_type else "未知类型"
+
+        return f"<bold>{weapon.name}（{weapon.rarity}★ {type_name}）</>"
 
     if non_trash_weapon_ids:
         # 只要有一个匹配武器未被拦截，就是宝藏

@@ -1,14 +1,4 @@
-from endfield_essence_recognizer.game_data import (
-    gem_table,
-    get_translation,
-    item_table,
-    rarity_color_table,
-    weapon_basic_table,
-    wiki_entry_data_table,
-    wiki_entry_table,
-    wiki_group_table,
-)
-from endfield_essence_recognizer.game_data.weapon import get_stats_for_weapon
+from endfield_essence_recognizer.game_data.static_game_data import StaticGameData
 from endfield_essence_recognizer.schemas.static_data import (
     EssenceInfo,
     EssenceListResponse,
@@ -24,16 +14,15 @@ from endfield_essence_recognizer.schemas.static_data import (
 class StaticDataService:
     """
     Static data service for retrieving game-related information.
-
-    TODO: Refactor the database schema (smaller jsons) before testing this service.
     """
 
-    def __init__(self):
+    def __init__(self, data: StaticGameData):
         self.language = "CN"
         self.item_icon_base_url = "https://cos.yituliu.cn/endfield/unpack-images/items/"
         self.group_icon_base_url = (
             "https://cos.yituliu.cn/endfield/sprites_selective/wiki/groupicon/"
         )
+        self.data = data
 
     def _get_item_icon_url(self, icon_id: str | None) -> str:
         if not icon_id:
@@ -56,24 +45,18 @@ class StaticDataService:
             A WeaponInfo object containing name, rarity, icon, and essence stats,
             or None if the weapon is not found.
         """
-        item = item_table.get(weapon_id)
-        if not item:
+        weapon = self.data.get_weapon(weapon_id)
+        if not weapon:
             return None
-
-        weapon_basic = weapon_basic_table.get(weapon_id)
-        if not weapon_basic:
-            return None
-
-        stats = get_stats_for_weapon(weapon_id)
 
         return WeaponInfo(
-            id=weapon_id,
-            name=get_translation(item["name"], self.language),
-            icon_url=self._get_item_icon_url(item.get("iconId")),
-            rarity=item.get("rarity", 0),
-            attribute_essence_id=stats.get("attribute"),
-            secondary_essence_id=stats.get("secondary"),
-            skill_essence_id=stats.get("skill"),
+            id=weapon.weapon_id,
+            name=weapon.name,
+            icon_url=self._get_item_icon_url(weapon.icon_id),
+            rarity=weapon.rarity,
+            attribute_essence_id=weapon.gem1_id,
+            secondary_essence_id=weapon.gem2_id,
+            skill_essence_id=weapon.gem3_id,
         )
 
     def list_weapons(self, weapon_type_id: str | None = None) -> WeaponListResponse:
@@ -88,23 +71,25 @@ class StaticDataService:
         """
         weapons = []
 
-        # If weapon_type_id (groupId) is provided, we filter by wiki entries
         if weapon_type_id:
-            entries = wiki_entry_table.get(weapon_type_id, {}).get("list", [])
-            for entry_id in entries:
-                entry_data = wiki_entry_data_table.get(entry_id)
-                if entry_data:
-                    weapon_id = entry_data.get("refItemId")
-                    if weapon_id:
-                        weapon_info = self.get_weapon(weapon_id)
-                        if weapon_info:
-                            weapons.append(weapon_info)
+            # Find the internal type ID for the given Wiki Group ID
+            target_type_id = None
+            for wt in self.data.list_weapon_types():
+                if wt.wiki_group_id == weapon_type_id:
+                    target_type_id = wt.weapon_type_id
+                    break
+
+            if target_type_id is not None:
+                target_weapons = self.data.get_weapons_by_type(target_type_id)
+            else:
+                target_weapons = []
         else:
-            # Otherwise return all weapons in weapon_basic_table
-            for weapon_id in weapon_basic_table.keys():
-                weapon_info = self.get_weapon(weapon_id)
-                if weapon_info:
-                    weapons.append(weapon_info)
+            target_weapons = self.data.list_weapons()
+
+        for w in target_weapons:
+            weapon_info = self.get_weapon(w.weapon_id)
+            if weapon_info:
+                weapons.append(weapon_info)
 
         return WeaponListResponse(weapons=weapons)
 
@@ -116,29 +101,19 @@ class StaticDataService:
             A WeaponTypeListResponse containing category metadata and weapon IDs.
         """
         weapon_types = []
-        # Get all weapon groups from wiki_group_table. Each group represents a weapon type.
-        groups = wiki_group_table.get("wiki_type_weapon", {}).get("list", [])
+        raw_types = self.data.list_weapon_types()
 
-        for i, group in enumerate(groups):
-            group_id = group.get("groupId")
-            if group_id is None:
-                continue
-            # The wiki entries of this weapon type
-            entries = wiki_entry_table.get(group_id, {}).get("list", [])
-
-            weapon_ids = []
-            for entry_id in entries:
-                entry_data = wiki_entry_data_table.get(entry_id)
-                if entry_data:
-                    ref_item_id = entry_data.get("refItemId")
-                    if ref_item_id:
-                        weapon_ids.append(ref_item_id)
+        for i, wt in enumerate(raw_types):
+            # Get all weapon IDs associated with this type
+            weapon_ids = [
+                w.weapon_id for w in self.data.get_weapons_by_type(wt.weapon_type_id)
+            ]
 
             weapon_types.append(
                 WeaponTypeInfo(
-                    id=group_id,
-                    name=get_translation(group["groupName"], self.language),
-                    icon_url=self._get_group_icon_url(group.get("iconId")),
+                    id=wt.wiki_group_id,
+                    name=wt.name,
+                    icon_url=self._get_group_icon_url(wt.icon_id),
                     sort_order=i,
                     weapon_ids=weapon_ids,
                 )
@@ -154,12 +129,9 @@ class StaticDataService:
             A RarityColorResponse mapping integers (1-6) to hex strings.
         """
         colors = {}
-        for rarity, data in rarity_color_table.items():
-            try:
-                r_int = int(rarity)
-                colors[r_int] = f"#{data.get('color', 'FFFFFF')}"
-            except ValueError:
-                continue
+        # We check rarities from 1 to 6 as defined in the game
+        for r in range(1, 7):
+            colors[r] = self.data.get_rarity_color(r)
         return RarityColorResponse(colors=colors)
 
     def get_essence(self, essence_id: str) -> EssenceInfo | None:
@@ -172,32 +144,15 @@ class StaticDataService:
         Returns:
             An EssenceInfo object containing name, tag name and type, or None if not found.
         """
-        gem = gem_table.get(essence_id)
+        gem = self.data.get_gem(essence_id)
         if not gem:
             return None
 
-        tag_name_data = gem.get("tagName")
-        if not tag_name_data:
-            return None
-
-        # termType: 0=Attribute, 1=Secondary, 2=Skill
-        match gem.get("termType", None):
-            case 0:
-                essence_type = EssenceType.ATTRIBUTE
-            case 1:
-                essence_type = EssenceType.SECONDARY
-            case 2:
-                essence_type = EssenceType.SKILL
-            case _:
-                return None  # Unknown term type
-
-        name = get_translation(tag_name_data, self.language)
-
         return EssenceInfo(
-            id=essence_id,
-            name=name,
-            tag_name=name,
-            type=essence_type,
+            id=gem.gem_id,
+            name=gem.name,
+            tag_name=gem.name,  # Simplified to name in V2
+            type=EssenceType(gem.type),
         )
 
     def list_essences(self) -> EssenceListResponse:
@@ -208,8 +163,8 @@ class StaticDataService:
             An EssenceListResponse containing the full list of essences.
         """
         essences = []
-        for gem_id in gem_table.keys():
-            essence = self.get_essence(gem_id)
+        for gem in self.data.list_gems():
+            essence = self.get_essence(gem.gem_id)
             if essence:
                 essences.append(essence)
         return EssenceListResponse(essences=essences)

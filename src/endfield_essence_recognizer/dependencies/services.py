@@ -1,5 +1,7 @@
 from functools import lru_cache
 
+from fastapi import Depends
+
 from endfield_essence_recognizer.game_data.static_game_data import StaticGameData
 from endfield_essence_recognizer.services.audio_service import (
     AudioService,
@@ -46,16 +48,17 @@ def get_screenshot_service() -> ScreenshotService:
 
 
 @lru_cache
-def get_static_data_service() -> StaticDataService:
-    """
-    Get the StaticDataService singleton.
-    """
-    return StaticDataService()
-
-
-@lru_cache
 def get_static_game_data() -> StaticGameData:
     """
     Get the StaticGameData singleton.
     """
     return StaticGameData()
+
+
+def get_static_data_service(
+    static_data: StaticGameData = Depends(get_static_game_data),
+) -> StaticDataService:
+    """
+    Get the StaticDataService singleton.
+    """
+    return StaticDataService(static_data)
