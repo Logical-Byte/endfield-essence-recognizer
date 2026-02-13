@@ -1,5 +1,5 @@
 """
-Legacy game data module, keeped for generate_templates.py script.
+Legacy game data module, kept for generate_templates.py script.
 """
 
 from __future__ import annotations

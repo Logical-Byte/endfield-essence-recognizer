@@ -61,6 +61,9 @@ def get_static_data_service(
     static_data: StaticGameData = Depends(get_static_game_data),
 ) -> StaticDataService:
     """
-    Get the StaticDataService singleton.
+    Get a StaticDataService instance.
+
+    StaticDataService is lightweight so it is ok to create a new
+    instance per request.
     """
     return StaticDataService(static_data)
