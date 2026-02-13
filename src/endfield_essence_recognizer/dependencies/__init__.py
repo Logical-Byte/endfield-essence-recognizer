@@ -22,6 +22,7 @@ from .services import (
     get_scanner_service,
     get_screenshot_service,
     get_static_data_service,
+    get_static_game_data,
     get_system_service,
 )
 from .settings import (
@@ -58,6 +59,7 @@ __all__ = [
     "get_screenshot_service",
     "get_screenshots_dir_dep",
     "get_static_data_service",
+    "get_static_game_data",
     "get_system_service",
     "get_ui_scene_recognizer_dep",
     "get_user_setting_manager_at",
