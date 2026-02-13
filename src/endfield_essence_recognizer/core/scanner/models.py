@@ -5,6 +5,10 @@ from endfield_essence_recognizer.core.recognition import (
     AbandonStatusLabel,
     LockStatusLabel,
 )
+from endfield_essence_recognizer.game_data.models.v2 import (
+    EssenceId,
+    WeaponId,
+)
 
 
 class EssenceQuality(StrEnum):
@@ -21,7 +25,7 @@ class EssenceQuality(StrEnum):
 class EssenceData:
     """Raw recognition data for a single essence."""
 
-    stats: list[str | None]
+    stats: list[EssenceId | None]
     """List of identified attribute IDs on the essence."""
 
     levels: list[int | None]
@@ -44,7 +48,7 @@ class EvaluationResult:
     log_message: str
     """The formatted log message to show to the user (contains color tags)."""
 
-    matched_weapons: set[str] = field(default_factory=set)
+    matched_weapons: set[WeaponId] = field(default_factory=set)
     """Set of weapon IDs that this essence is suitable for."""
 
     is_high_level: bool = False
