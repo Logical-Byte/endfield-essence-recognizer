@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -16,17 +16,15 @@ from endfield_essence_recognizer.schemas.user_setting import EssenceStats, UserS
 
 @pytest.fixture
 def mock_static_game_data():
-    with patch("endfield_essence_recognizer.dependencies.get_static_game_data") as m:
-        mock_data = MagicMock()
-        m.return_value = mock_data
+    mock_data = MagicMock()
 
-        # Default behaviors
-        mock_data.get_gem.return_value = None
-        mock_data.find_weapons_by_stats.return_value = []
-        mock_data.get_weapon.return_value = None
-        mock_data.get_weapon_type.return_value = None
+    # Default behaviors
+    mock_data.get_gem.return_value = None
+    mock_data.find_weapons_by_stats.return_value = []
+    mock_data.get_weapon.return_value = None
+    mock_data.get_weapon_type.return_value = None
 
-        yield mock_data
+    return mock_data
 
 
 @pytest.fixture
@@ -90,10 +88,15 @@ def test_evaluate_treasure_weapon_match(
     Test that an essence matching a known weapon is evaluated as TREASURE.
     """
     mock_static_game_data.find_weapons_by_stats.return_value = ["wpn_test"]
-    mock_static_game_data.get_weapon.return_value = MagicMock(
-        weapon_id="wpn_test", name="TestWeapon", rarity=6, weapon_type=1
-    )
-    mock_static_game_data.get_weapon_type.return_value = MagicMock(name="TestType")
+    weapon_mock = MagicMock()
+    weapon_mock.weapon_id = "wpn_test"
+    weapon_mock.name = "TestWeapon"
+    weapon_mock.rarity = 6
+    weapon_mock.weapon_type = 1
+    mock_static_game_data.get_weapon.return_value = weapon_mock
+    weapon_type_mock = MagicMock()
+    weapon_type_mock.name = "TestType"
+    mock_static_game_data.get_weapon_type.return_value = weapon_type_mock
 
     result = evaluate_essence(
         default_essence_data, default_settings, mock_static_game_data
@@ -111,10 +114,15 @@ def test_evaluate_weapon_match_trash_filter(
     Test that an essence matching a known weapon is evaluated as TRASH if that weapon is filtered.
     """
     mock_static_game_data.find_weapons_by_stats.return_value = ["wpn_test"]
-    mock_static_game_data.get_weapon.return_value = MagicMock(
-        weapon_id="wpn_test", name="TestWeapon", rarity=6, weapon_type=1
-    )
-    mock_static_game_data.get_weapon_type.return_value = MagicMock(name="TestType")
+    weapon_mock = MagicMock()
+    weapon_mock.weapon_id = "wpn_test"
+    weapon_mock.name = "TestWeapon"
+    weapon_mock.rarity = 6
+    weapon_mock.weapon_type = 1
+    mock_static_game_data.get_weapon.return_value = weapon_mock
+    weapon_type_mock = MagicMock()
+    weapon_type_mock.name = "TestType"
+    mock_static_game_data.get_weapon_type.return_value = weapon_type_mock
 
     # Filter it out
     default_settings.trash_weapon_ids = ["wpn_test"]

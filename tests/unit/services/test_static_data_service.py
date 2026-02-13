@@ -24,13 +24,13 @@ def service(static_game_data):
 def test_get_weapon_service(service):
     # This depends on data being present
     weapons = service.list_weapons().weapons
-    if weapons:
-        w_id = weapons[0].id
-        weapon_info = service.get_weapon(w_id)
-        assert weapon_info is not None
-        assert weapon_info.id == w_id
-        assert weapon_info.name != ""
-        assert weapon_info.icon_url.startswith("http")
+    assert len(weapons) > 0, "Weapon dataset must not be empty"
+    w_id = weapons[0].id
+    weapon_info = service.get_weapon(w_id)
+    assert weapon_info is not None
+    assert weapon_info.id == w_id
+    assert weapon_info.name != ""
+    assert weapon_info.icon_url.startswith("http")
 
 
 def test_list_weapon_types_service(service):
@@ -53,14 +53,14 @@ def test_get_rarity_colors_service(service):
 
 def test_get_essence_service(service):
     essences = service.list_essences().essences
-    if essences:
-        e_id = essences[0].id
-        essence_info = service.get_essence(e_id)
-        assert essence_info is not None
-        assert essence_info.id == e_id
-        assert essence_info.name != ""
-        assert essence_info.type in [
-            GemType.ATTRIBUTE,
-            GemType.SECONDARY,
-            GemType.SKILL,
-        ]
+    assert len(essences) > 0, "Essence dataset must not be empty"
+    e_id = essences[0].id
+    essence_info = service.get_essence(e_id)
+    assert essence_info is not None
+    assert essence_info.id == e_id
+    assert essence_info.name != ""
+    assert essence_info.type in [
+        GemType.ATTRIBUTE,
+        GemType.SECONDARY,
+        GemType.SKILL,
+    ]
