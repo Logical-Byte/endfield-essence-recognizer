@@ -1,5 +1,11 @@
+from __future__ import annotations
+
 import importlib.resources
 import json
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from importlib.resources.abc import Traversable
 
 from endfield_essence_recognizer.game_data.models.v2 import (
     EssenceGemV2,
@@ -25,7 +31,8 @@ class StaticGameData:
     this class should be accessed as a singleton for efficiency.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, data_root: Traversable) -> None:
+        self._data_root = data_root
         self._weapons: dict[WeaponId, WeaponV2] = {}
         self._gems: dict[EssenceId, EssenceGemV2] = {}
         self._weapon_types: dict[WeaponTypeId, WeaponTypeV2] = {}
@@ -46,35 +53,31 @@ class StaticGameData:
     def _load_data(self) -> None:
         """Loads all V2 JSON data files into internal dictionaries."""
         try:
-            data_root = (
-                importlib.resources.files("endfield_essence_recognizer") / "data" / "v2"
-            )
-
             # Load Weapons
-            weapon_path = data_root / "Weapon.json"
-            with importlib.resources.as_file(weapon_path) as weapon_path:
+            weapon_file = self._data_root / "Weapon.json"
+            with importlib.resources.as_file(weapon_file) as weapon_path:
                 weapon_data = json.loads(weapon_path.read_text(encoding="utf-8"))
                 for w_id, data in weapon_data.items():
                     weapon = WeaponV2(**data)
                     self._weapons[w_id] = weapon
 
             # Load Gems
-            gem_path = data_root / "EssenceGem.json"
-            with importlib.resources.as_file(gem_path) as gem_path:
+            gem_file = self._data_root / "EssenceGem.json"
+            with importlib.resources.as_file(gem_file) as gem_path:
                 gem_data = json.loads(gem_path.read_text(encoding="utf-8"))
                 for g_id, data in gem_data.items():
                     self._gems[g_id] = EssenceGemV2(**data)
 
             # Load Weapon Types
-            type_path = data_root / "WeaponType.json"
-            with importlib.resources.as_file(type_path) as type_path:
+            type_file = self._data_root / "WeaponType.json"
+            with importlib.resources.as_file(type_file) as type_path:
                 type_data = json.loads(type_path.read_text(encoding="utf-8"))
                 for t_id, data in type_data.items():
                     self._weapon_types[int(t_id)] = WeaponTypeV2(**data)
 
             # Load Rarity Colors
-            rarity_path = data_root / "RarityColor.json"
-            with importlib.resources.as_file(rarity_path) as rarity_path:
+            rarity_file = self._data_root / "RarityColor.json"
+            with importlib.resources.as_file(rarity_file) as rarity_path:
                 rarity_data = json.loads(rarity_path.read_text(encoding="utf-8"))
                 for r_id, data in rarity_data.items():
                     self._rarity_colors[int(r_id)] = data["color"]

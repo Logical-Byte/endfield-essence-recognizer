@@ -1,3 +1,5 @@
+import importlib.resources
+
 import pytest
 
 from endfield_essence_recognizer.game_data.models.v2 import (
@@ -10,7 +12,8 @@ from endfield_essence_recognizer.services.static_data_service import StaticDataS
 @pytest.fixture
 def static_game_data():
     # We can use a real one or mock it. Using real one for integration-like unit test.
-    return StaticGameData()
+    data_root = importlib.resources.files("endfield_essence_recognizer") / "data" / "v2"
+    return StaticGameData(data_root)
 
 
 @pytest.fixture

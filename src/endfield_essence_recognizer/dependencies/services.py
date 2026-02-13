@@ -1,3 +1,4 @@
+import importlib.resources
 from functools import lru_cache
 
 from fastapi import Depends
@@ -52,7 +53,8 @@ def get_static_game_data() -> StaticGameData:
     """
     Get the StaticGameData singleton.
     """
-    return StaticGameData()
+    data_root = importlib.resources.files("endfield_essence_recognizer") / "data" / "v2"
+    return StaticGameData(data_root)
 
 
 def get_static_data_service(
