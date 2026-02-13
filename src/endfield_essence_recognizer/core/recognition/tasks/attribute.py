@@ -6,6 +6,7 @@ from endfield_essence_recognizer.core.recognition.base import (
     RecognitionProfile,
     TemplateDescriptor,
 )
+from endfield_essence_recognizer.game_data.static_game_data import StaticGameData
 from endfield_essence_recognizer.utils.image import (
     linear_operation,
     to_gray_image,
@@ -24,14 +25,13 @@ def preprocess_text_template(template_image: MatLike) -> MatLike:
     return linear_operation(template_image, 128, 255)
 
 
-def build_attribute_profile() -> RecognitionProfile[str]:
+def build_attribute_profile(
+    static_game_data: StaticGameData,
+) -> RecognitionProfile[str]:
     """
     Build the recognition profile for essence attributes (ATK, HP, etc.).
     """
     # We need static game data to get all possible attribute stats
-    from endfield_essence_recognizer.dependencies import get_static_game_data
-
-    static_game_data = get_static_game_data()
     all_gems = static_game_data.list_gems()
     all_gem_ids = [essence.gem_id for essence in all_gems]
 

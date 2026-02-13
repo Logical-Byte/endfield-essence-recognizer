@@ -54,7 +54,9 @@ def test_evaluate_trash(mock_static_game_data, default_settings, default_essence
     - No high level logic enabled.
     """
     # Setup nothing in tables -> Trash
-    result = evaluate_essence(default_essence_data, default_settings)
+    result = evaluate_essence(
+        default_essence_data, default_settings, mock_static_game_data
+    )
     assert result.quality == EssenceQuality.TRASH
     assert "养成材料" in result.log_message
 
@@ -73,7 +75,9 @@ def test_evaluate_treasure_custom(
         EssenceStats(attribute="A", secondary="B", skill="C")
     ]
 
-    result = evaluate_essence(default_essence_data, default_settings)
+    result = evaluate_essence(
+        default_essence_data, default_settings, mock_static_game_data
+    )
     assert result.quality == EssenceQuality.TREASURE
     assert "宝藏" in result.log_message
     assert "符合你设定的宝藏基质条件" in result.log_message
@@ -91,7 +95,9 @@ def test_evaluate_treasure_weapon_match(
     )
     mock_static_game_data.get_weapon_type.return_value = MagicMock(name="TestType")
 
-    result = evaluate_essence(default_essence_data, default_settings)
+    result = evaluate_essence(
+        default_essence_data, default_settings, mock_static_game_data
+    )
     assert result.quality == EssenceQuality.TREASURE
     assert "TestWeapon" in result.log_message
     assert "TestType" in result.log_message
@@ -113,7 +119,9 @@ def test_evaluate_weapon_match_trash_filter(
     # Filter it out
     default_settings.trash_weapon_ids = ["wpn_test"]
 
-    result = evaluate_essence(default_essence_data, default_settings)
+    result = evaluate_essence(
+        default_essence_data, default_settings, mock_static_game_data
+    )
     assert result.quality == EssenceQuality.TRASH
     assert "手动拦截" in result.log_message
     assert "wpn_test" in result.matched_weapons
@@ -137,7 +145,9 @@ def test_evaluate_high_level(
     # Level 11 >= Threshold 10
     default_essence_data.levels = [11, 0, 0]
 
-    result = evaluate_essence(default_essence_data, default_settings)
+    result = evaluate_essence(
+        default_essence_data, default_settings, mock_static_game_data
+    )
     assert result.is_high_level is True
     assert "AttrA+11" in result.log_message
     assert "宝藏" in result.log_message

@@ -66,11 +66,6 @@ def recognize_essence(
     ctx: ScannerContext,
     profile: ResolutionProfile,
 ) -> EssenceData:
-    # we need static game data to get gem names for logging
-    from endfield_essence_recognizer.dependencies import get_static_game_data
-
-    static_game_data = get_static_game_data()
-
     stats: list[str | None] = []
     levels: list[int | None] = []
 
@@ -126,7 +121,7 @@ def recognize_essence(
         if stat is None:
             stats_name_parts.append("无")
         else:
-            gem = static_game_data.get_gem(stat)
+            gem = ctx.static_game_data.get_gem(stat)
             if gem is not None:
                 stat_name = gem.name
             else:
@@ -170,7 +165,7 @@ def recognize_once(
     ):
         return
 
-    evaluation = evaluate_essence(data, user_setting)
+    evaluation = evaluate_essence(data, user_setting, ctx.static_game_data)
     # all logs use success for simplicity
     logger.opt(colors=True).success(evaluation.log_message)
 
@@ -324,7 +319,7 @@ class ScannerEngine:
                 # early continue on uncertain recognition
                 continue
 
-            evaluation = evaluate_essence(data, user_setting)
+            evaluation = evaluate_essence(data, user_setting, self.ctx.static_game_data)
 
             # Log the result
             if (

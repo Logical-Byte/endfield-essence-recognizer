@@ -9,10 +9,12 @@ if os.getenv("GITHUB_ACTIONS") == "true":
 from endfield_essence_recognizer.core.recognition.tasks.attribute import (
     build_attribute_profile,
 )
+from endfield_essence_recognizer.game_data.static_game_data import StaticGameData
 
 
 def get_attribute_templates():
-    profile = build_attribute_profile()
+    static_game_data = StaticGameData()
+    profile = build_attribute_profile(static_game_data)
     return profile.templates
 
 

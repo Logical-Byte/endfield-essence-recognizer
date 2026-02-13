@@ -1,5 +1,7 @@
 from functools import lru_cache
 
+from endfield_essence_recognizer.game_data.static_game_data import StaticGameData
+
 from .base import (
     RecognitionProfile,
     TemplateDescriptor,
@@ -68,8 +70,12 @@ def prepare_recognizer[LabelT](
 
 
 @lru_cache
-def prepare_attribute_recognizer() -> AttributeRecognizer:
-    return prepare_recognizer("AttributeRecognizer", build_attribute_profile())
+def prepare_attribute_recognizer(
+    static_game_data: StaticGameData,
+) -> AttributeRecognizer:
+    return prepare_recognizer(
+        "AttributeRecognizer", build_attribute_profile(static_game_data)
+    )
 
 
 @lru_cache

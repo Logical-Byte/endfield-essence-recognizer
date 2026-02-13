@@ -97,12 +97,17 @@ def mock_scanner_context():
         0.9,
     )
 
+    static_game_data = MagicMock()
+    # Mock return value for get_gem to avoid errors when formatting logs
+    static_game_data.get_gem.return_value = MagicMock(name="TestGem")
+
     return ScannerContext(
         attr_recognizer=attr_recognizer,
         attr_level_recognizer=attr_level_recognizer,
         abandon_status_recognizer=abandon_status_recognizer,
         lock_status_recognizer=lock_status_recognizer,
         ui_scene_recognizer=ui_scene_recognizer,
+        static_game_data=static_game_data,
     )
 
 

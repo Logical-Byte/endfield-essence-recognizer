@@ -3,10 +3,15 @@ from endfield_essence_recognizer.core.scanner.models import (
     EssenceQuality,
     EvaluationResult,
 )
+from endfield_essence_recognizer.game_data.static_game_data import StaticGameData
 from endfield_essence_recognizer.schemas.user_setting import UserSetting
 
 
-def evaluate_essence(data: EssenceData, setting: UserSetting) -> EvaluationResult:
+def evaluate_essence(
+    data: EssenceData,
+    setting: UserSetting,
+    static_game_data: StaticGameData,
+) -> EvaluationResult:
     """
     Pure function to judge the quality of an essence based on settings and game data.
 
@@ -20,15 +25,10 @@ def evaluate_essence(data: EssenceData, setting: UserSetting) -> EvaluationResul
     Args:
         data: The raw recognition data (stats, levels).
         setting: The current user settings (thresholds, custom rules).
-
+        static_game_data: The static game data for reference.
     Returns:
         EvaluationResult containing the decision, log message, and reasoning.
     """
-    # we need static game data to get gem info and match weapons
-    from endfield_essence_recognizer.dependencies import get_static_game_data
-
-    static_game_data = get_static_game_data()
-
     stats = data.stats
     levels = data.levels
 
