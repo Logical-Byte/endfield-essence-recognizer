@@ -63,6 +63,8 @@ def main():
     wiki_entry_data_table = load_table("WikiEntryDataTable")
     i18n_table_cn = load_table("I18nTextTable_CN")
 
+    rarity_color_table = load_table("RarityColorTable")
+
     # 1. Transform WeaponType
     print("Transforming WeaponType...")
     weapon_types = {}
@@ -216,11 +218,36 @@ def main():
             **resolved_skills,
         }
 
+    # transform rarity colors
+    print("Transforming Rarity Colors...")
+    # preserve the original mapping structure:
+    # "1": {"color": "FFFFFF", "rarity": 1}, ...
+    rarity_colors = {}
+    for rarity, raw_data in rarity_color_table.items():
+        try:
+            r_int = int(rarity)
+            r_color = raw_data.get("color", None)
+            if r_color is None:
+                print(f"  Warning: Rarity {rarity} has no color defined.")
+                continue
+            rarity_colors[r_int] = {
+                "rarity": r_int,
+                "color": f"#{r_color}",
+            }
+        except ValueError:
+            print(f"  Warning: Rarity {rarity} is not a valid integer.")
+            continue
+    # print summary of rarity colors
+    print("Rarity Colors:")
+    for rarity, color_info in rarity_colors.items():
+        print(f"  Rarity {rarity}: Color {color_info['color']}")
+
     # 4. Output
     print("\nResults Summary:")
     print(f"  WeaponTypes: {len(weapon_types)}")
     print(f"  EssenceGems: {len(essence_gems)}")
     print(f"  Weapons:     {len(weapons)}")
+    print(f"  RarityColors: {len(rarity_colors)}")
 
     if args.debug:
         import pprint
@@ -231,6 +258,8 @@ def main():
         pprint.pprint(essence_gems)
         print("\nWeapons:")
         pprint.pprint(weapons)
+        print("\nRarityColors:")
+        pprint.pprint(rarity_colors)
 
     if args.dry_run:
         print("\nDry run active. No files written.")
@@ -248,6 +277,7 @@ def main():
         save_json("WeaponType", weapon_types)
         save_json("EssenceGem", essence_gems)
         save_json("Weapon", weapons)
+        save_json("RarityColor", rarity_colors)
 
 
 if __name__ == "__main__":

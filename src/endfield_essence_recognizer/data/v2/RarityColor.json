@@ -1,0 +1,26 @@
+{
+  "1": {
+    "rarity": 1,
+    "color": "#9B9B9B"
+  },
+  "2": {
+    "rarity": 2,
+    "color": "#ABCE42"
+  },
+  "3": {
+    "rarity": 3,
+    "color": "#26BBFD"
+  },
+  "4": {
+    "rarity": 4,
+    "color": "#9452FA"
+  },
+  "5": {
+    "rarity": 5,
+    "color": "#FFBB03"
+  },
+  "6": {
+    "rarity": 6,
+    "color": "#FF7100"
+  }
+}
