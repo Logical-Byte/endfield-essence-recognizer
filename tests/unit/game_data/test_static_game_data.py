@@ -2,6 +2,7 @@ import json
 
 import pytest
 
+from endfield_essence_recognizer.game_data.models.v2 import WeaponTypeId
 from endfield_essence_recognizer.game_data.static_game_data import StaticGameData
 
 
@@ -12,7 +13,7 @@ def mock_data_root(tmp_path):
         "weapon_1": {
             "weapon_id": "weapon_1",
             "name": "Weapon 1",
-            "weapon_type": 1,
+            "weapon_type": "SWORD",
             "rarity": 4,
             "icon_id": "icon_1",
             "stat1_id": "stat_a",
@@ -31,8 +32,8 @@ def mock_data_root(tmp_path):
 
     # Weapon Types
     type_data = {
-        "1": {
-            "weapon_type_id": 1,
+        "SWORD": {
+            "weapon_type_id": "SWORD",
             "name": "Sword",
             "wiki_group_id": "group_1",
             "icon_id": "icon_t1",
@@ -83,15 +84,15 @@ def test_get_stat(static_game_data):
 
 
 def test_get_weapon_type(static_game_data):
-    target = static_game_data.get_weapon_type(1)
+    target = static_game_data.get_weapon_type(WeaponTypeId.SWORD)
     assert target is not None
     assert target.name == "Sword"
 
-    assert static_game_data.get_weapon_type(9999) is None
+    assert static_game_data.get_weapon_type("non_existent") is None
 
 
 def test_get_weapons_by_type(static_game_data):
-    type_weapons = static_game_data.get_weapons_by_type(1)
+    type_weapons = static_game_data.get_weapons_by_type(WeaponTypeId.SWORD)
     assert len(type_weapons) == 1
     assert type_weapons[0].weapon_id == "weapon_1"
 

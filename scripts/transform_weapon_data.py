@@ -9,7 +9,7 @@ a new schema suitable for the app.
 import argparse
 import json
 import os
-from typing import Any, TypedDict
+from typing import Any, Literal, TypedDict
 
 
 class TranslationKey(TypedDict):
@@ -23,6 +23,15 @@ def get_cn_text(data: TranslationKey, i18n_table: dict[str, str]) -> str:
     if text_id in i18n_table:
         return i18n_table[text_id]
     return data.get("text", "")
+
+
+type WeaponTypeEnum = Literal[
+    "SWORD",  # 单手剑
+    "CLAYM",  # 双手剑
+    "LANCE",  # 长柄武器
+    "PISTOL",  # 手铳
+    "WAND",  # 施术单元
+]
 
 
 def main():
@@ -70,13 +79,33 @@ def main():
     weapon_types = {}
     item_to_weapon_type_id = {}
 
+    def get_weapon_type_enum(group_type_id: str) -> WeaponTypeEnum:
+        """
+        Get a WeaponTypeEnum based on the wiki group type id.
+
+        The group type ids are like `wiki_group_weapon_{}`, where
+        the {} is `sword`, `claymores`, `lance`, `pistol`, `wand` for the 5 weapon types.
+        """
+        match group_type_id.rsplit("_", maxsplit=1)[-1]:
+            case "sword":
+                return "SWORD"
+            case "claymores":
+                return "CLAYM"
+            case "lance":
+                return "LANCE"
+            case "pistol":
+                return "PISTOL"
+            case "wand":
+                return "WAND"
+            case _:
+                raise ValueError(f"Unknown weapon group type id: {group_type_id}")
+
     # wiki_type_weapon contains list of weapon categories
     weapon_groups = wiki_group_table.get("wiki_type_weapon", {}).get("list", [])
-    for i, group in enumerate(weapon_groups):
-        # 1-based index (matches WeaponBasic.weaponType)
-        # this is based on the order in wiki_type_weapon
-        weapon_type_id = i + 1
+    for _, group in enumerate(weapon_groups):
         wiki_group_id = group.get("groupId")
+        # use a enum for weapon type id, which is more stable
+        weapon_type_id = get_weapon_type_enum(wiki_group_id)
         name = get_cn_text(group.get("groupName", {}), i18n_table_cn)
 
         weapon_types[weapon_type_id] = {

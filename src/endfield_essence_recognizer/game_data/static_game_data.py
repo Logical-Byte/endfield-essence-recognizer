@@ -73,7 +73,7 @@ class StaticGameData:
             with importlib.resources.as_file(type_file) as type_path:
                 type_data = json.loads(type_path.read_text(encoding="utf-8"))
                 for t_id, data in type_data.items():
-                    self._weapon_types[int(t_id)] = WeaponTypeV2(**data)
+                    self._weapon_types[WeaponTypeId(t_id)] = WeaponTypeV2(**data)
 
             # Load Rarity Colors
             rarity_file = self._data_root / "RarityColor.json"

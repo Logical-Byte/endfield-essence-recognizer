@@ -3,7 +3,6 @@ from enum import StrEnum
 
 type WeaponId = str
 type StatId = str
-type WeaponTypeId = int
 
 
 class StatType(StrEnum):
@@ -13,6 +12,19 @@ class StatType(StrEnum):
     """基质类型：次属性"""
     SKILL = "SKILL"
     """基质类型：技能"""
+
+
+class WeaponTypeId(StrEnum):
+    SWORD = "SWORD"
+    """单手剑"""
+    CLAYM = "CLAYM"
+    """双手剑"""
+    LANCE = "LANCE"
+    """长柄武器"""
+    PISTOL = "PISTOL"
+    """手铳"""
+    WAND = "WAND"
+    """施术单元"""
 
 
 @dataclass(frozen=True, slots=True)
