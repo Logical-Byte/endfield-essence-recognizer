@@ -121,7 +121,7 @@ def recognize_essence(
         if stat is None:
             stats_name_parts.append("无")
         else:
-            gem = ctx.static_game_data.get_gem(stat)
+            gem = ctx.static_game_data.get_stat(stat)
             if gem is not None:
                 stat_name = gem.name
             else:
