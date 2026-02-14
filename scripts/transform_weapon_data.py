@@ -271,7 +271,7 @@ def main():
         def save_json(name: str, data: dict):
             path = os.path.join(output_dir, f"{name}.json")
             with open(path, "w", encoding="utf-8") as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
+                json.dump(data, f, ensure_ascii=False, indent=2, sort_keys=True)
             print(f"Saved {path}")
 
         save_json("WeaponType", weapon_types)
