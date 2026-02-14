@@ -118,7 +118,7 @@ def test_evaluate_weapon_match_trash_filter(
     weapon_mock.weapon_id = "wpn_test"
     weapon_mock.name = "TestWeapon"
     weapon_mock.rarity = 6
-    weapon_mock.weapon_type = 1
+    weapon_mock.weapon_type = "TestType"
     mock_static_game_data.get_weapon.return_value = weapon_mock
     weapon_type_mock = MagicMock()
     weapon_type_mock.name = "TestType"
