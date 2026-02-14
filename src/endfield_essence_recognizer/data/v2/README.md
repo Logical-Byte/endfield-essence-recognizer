@@ -10,7 +10,7 @@ All text fields use the **Simplified Chinese (CN)** version of the game's i18n d
 Represents a weapon in the game.
 - **`weapon_id`** (string, PK): Original item/weapon ID (e.g., `wpn_funnel_0009`).
 - **`name`** (string): The display name of the weapon in CN.
-- **`weapon_type`** (integer, FK): Reference to `WeaponType.json`.
+- **`weapon_type`** (string, FK): Reference to `WeaponType.json` (Enum: `SWORD`, `CLAYM`, `LANCE`, `PISTOL`, `WAND`).
 - **`rarity`** (integer): The rarity levels (e.g., 3, 4, 5).
 - **`stat1_id`** (string | null, FK): Reference to `EssenceStat.json` (Attribute slot).
 - **`stat2_id`** (string | null, FK): Reference to `EssenceStat.json` (Secondary slot).
@@ -24,7 +24,7 @@ Represents an individual essence entry or sub-stat/skill.
 
 ### 3. WeaponType (`WeaponType.json`)
 Categorizes weapons into archetypes (e.g., Sword, Staff).
-- **`weapon_type_id`** (integer, PK): Unique identifier.
+- **`weapon_type_id`** (string, PK): Unique identifier (Enum: `SWORD`, `CLAYM`, `LANCE`, `PISTOL`, `WAND`).
 - **`wiki_group_id`** (string): Backward-compatibility identifier (e.g., `wiki_group_weapon_sword`).
 - **`name`** (string): Display name of the weapon type in CN.
 
