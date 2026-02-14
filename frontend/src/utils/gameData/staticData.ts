@@ -30,7 +30,7 @@ async function fetchStaticData() {
 
     weaponsMap.value = new Map(weaponsRes.weapons.map((w) => [w.id, w]))
     weaponTypes.value = weaponTypesRes.weaponTypes
-    essencesMap.value = new Map(essencesRes.essences.map((e) => [e.id, e]))
+    essencesMap.value = new Map((essencesRes.items).map((e) => [e.id, e]))
     rarityColors.value = rarityColorsRes.colors
     isLoaded.value = true
   } catch (error) {
