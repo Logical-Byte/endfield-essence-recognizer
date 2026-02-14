@@ -100,15 +100,23 @@ class StaticDataService:
         Returns:
             A WeaponTypeListResponse containing category metadata and weapon IDs.
             The weapon types are sorted by their defined sort_order.
+            Each weapon type includes a sorted list of weapon IDs. Weapons are sorted by:
+            1. Rarity (ascending)
+            2. id (alphabetically)
         """
         weapon_types = []
         raw_types = self.data.list_weapon_types()
 
         for wt in raw_types:
-            # Get all weapon IDs associated with this type
-            weapon_ids = [
-                w.weapon_id for w in self.data.get_weapons_by_type(wt.weapon_type_id)
-            ]
+            valid_weapons = filter(
+                lambda w: w is not None,
+                self.data.get_weapons_by_type(wt.weapon_type_id),
+            )
+            valid_weapons_sorted = sorted(
+                valid_weapons, key=lambda w: (w.rarity, w.weapon_id)
+            )
+
+            weapon_ids = [w.weapon_id for w in valid_weapons_sorted]
 
             weapon_types.append(
                 WeaponTypeInfo(
