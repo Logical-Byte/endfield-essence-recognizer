@@ -2,9 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from endfield_essence_recognizer.dependencies.services import get_static_data_service
 from endfield_essence_recognizer.schemas.static_data import (
-    EssenceInfo,
-    EssenceListResponse,
     RarityColorResponse,
+    StatInfo,
+    StatListResponse,
     WeaponInfo,
     WeaponListResponse,
     WeaponTypeListResponse,
@@ -59,24 +59,24 @@ async def get_rarity_colors(
     return service.get_rarity_colors()
 
 
-@router.get("/essences/{essence_id}")
+@router.get("/essences/{stat_id}")
 async def get_essence(
-    essence_id: str,
+    stat_id: str,
     service: StaticDataService = Depends(get_static_data_service),
-) -> EssenceInfo:
+) -> StatInfo:
     """
-    Get information for a specific essence (gem).
+    Get information for a specific essence (stat).
     """
-    essence = service.get_essence(essence_id)
+    essence = service.get_essence(stat_id)
     if not essence:
-        raise HTTPException(status_code=404, detail="Essence not found")
+        raise HTTPException(status_code=404, detail="Stat not found")
     return essence
 
 
 @router.get("/essences")
 async def list_essences(
     service: StaticDataService = Depends(get_static_data_service),
-) -> EssenceListResponse:
+) -> StatListResponse:
     """
     List all available essences.
     """

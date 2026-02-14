@@ -6,6 +6,7 @@ from endfield_essence_recognizer.core.recognition.base import (
     RecognitionProfile,
     TemplateDescriptor,
 )
+from endfield_essence_recognizer.game_data.static_game_data import StaticGameData
 from endfield_essence_recognizer.utils.image import (
     linear_operation,
     to_gray_image,
@@ -24,22 +25,21 @@ def preprocess_text_template(template_image: MatLike) -> MatLike:
     return linear_operation(template_image, 128, 255)
 
 
-def build_attribute_profile() -> RecognitionProfile[str]:
+def build_attribute_profile(
+    static_game_data: StaticGameData,
+) -> RecognitionProfile[str]:
     """
     Build the recognition profile for essence attributes (ATK, HP, etc.).
     """
-    # Lazy import the game data. Some integration tests may not need it
-    from endfield_essence_recognizer.game_data.weapon import (
-        all_attribute_stats,
-        all_secondary_stats,
-        all_skill_stats,
-    )
+    # We need static game data to get all possible attribute stats
+    all_stats = static_game_data.list_stats()
+    all_stat_ids = [s.stat_id for s in all_stats]
 
     templates_dir = (
         importlib.resources.files("endfield_essence_recognizer") / "templates/generated"
     )
-
-    labels = all_attribute_stats + all_secondary_stats + all_skill_stats
+    # The templates are named after the essence IDs
+    labels = all_stat_ids
     templates: list[TemplateDescriptor[str]] = []
 
     for label in labels:

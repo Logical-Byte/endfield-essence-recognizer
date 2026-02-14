@@ -1,4 +1,4 @@
-from unittest.mock import patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -15,44 +15,21 @@ from endfield_essence_recognizer.schemas.user_setting import EssenceStats, UserS
 
 
 @pytest.fixture
-def mock_game_data():
-    with (
-        patch("endfield_essence_recognizer.game_data.gem_table", new={}) as m_gem,
-        patch(
-            "endfield_essence_recognizer.game_data.weapon_basic_table", new={}
-        ) as m_weapon_basic,
-        patch(
-            "endfield_essence_recognizer.game_data.weapon.weapon_stats_dict", new={}
-        ) as m_weapon_stats,
-        patch(
-            "endfield_essence_recognizer.game_data.get_translation",
-            return_value="TestType",
-        ),
-        patch(
-            "endfield_essence_recognizer.game_data.item.get_item_name",
-            return_value="TestWeapon",
-        ),
-        patch(
-            "endfield_essence_recognizer.game_data.weapon.get_gem_tag_name",
-            return_value="TestAttr",
-        ),
-        patch(
-            "endfield_essence_recognizer.game_data.weapon.weapon_type_int_to_translation_key",
-            return_value="test.key",
-        ),
-    ):
-        yield {
-            "gem_table": m_gem,
-            "weapon_basic_table": m_weapon_basic,
-            "weapon_stats_dict": m_weapon_stats,
-        }
+def mock_static_game_data():
+    mock_data = MagicMock()
+
+    # Default behaviors
+    mock_data.get_stat.return_value = None
+    mock_data.find_weapons_by_stats.return_value = []
+    mock_data.get_weapon.return_value = None
+    mock_data.get_weapon_type.return_value = None
+
+    return mock_data
 
 
 @pytest.fixture
 def default_settings():
-    return UserSetting(
-        # Defaults
-    )
+    return UserSetting()
 
 
 @pytest.fixture
@@ -65,7 +42,7 @@ def default_essence_data():
     )
 
 
-def test_evaluate_trash(mock_game_data, default_settings, default_essence_data):
+def test_evaluate_trash(mock_static_game_data, default_settings, default_essence_data):
     """
     Test that an essence matching no rules and no weapons is evaluated as TRASH.
 
@@ -75,13 +52,15 @@ def test_evaluate_trash(mock_game_data, default_settings, default_essence_data):
     - No high level logic enabled.
     """
     # Setup nothing in tables -> Trash
-    result = evaluate_essence(default_essence_data, default_settings)
+    result = evaluate_essence(
+        default_essence_data, default_settings, mock_static_game_data
+    )
     assert result.quality == EssenceQuality.TRASH
     assert "养成材料" in result.log_message
 
 
 def test_evaluate_treasure_custom(
-    mock_game_data, default_settings, default_essence_data
+    mock_static_game_data, default_settings, default_essence_data
 ):
     """
     Test that an essence matching a user-defined custom treasure rule is evaluated as TREASURE.
@@ -94,85 +73,89 @@ def test_evaluate_treasure_custom(
         EssenceStats(attribute="A", secondary="B", skill="C")
     ]
 
-    result = evaluate_essence(default_essence_data, default_settings)
+    result = evaluate_essence(
+        default_essence_data, default_settings, mock_static_game_data
+    )
     assert result.quality == EssenceQuality.TREASURE
     assert "宝藏" in result.log_message
     assert "符合你设定的宝藏基质条件" in result.log_message
 
 
-def test_evaluate_weapon_match_treasure(
-    mock_game_data, default_settings, default_essence_data
+def test_evaluate_treasure_weapon_match(
+    mock_static_game_data, default_settings, default_essence_data
 ):
     """
-    Test that an essence matching a known weapon's stats is evaluated as TREASURE.
-
-    Condition:
-    - Game data contains 'weapon_1' with stats matching the essence.
-    - 'weapon_1' is NOT in the user's trash filter list.
+    Test that an essence matching a known weapon is evaluated as TREASURE.
     """
-    # Setup weapon dict
-    mock_game_data["weapon_stats_dict"]["weapon_1"] = {
-        "attribute": "A",
-        "secondary": "B",
-        "skill": "C",
-    }
-    # Setup basic info for rarity
-    mock_game_data["weapon_basic_table"]["weapon_1"] = {"rarity": 5}
+    mock_static_game_data.find_weapons_by_stats.return_value = ["wpn_test"]
+    weapon_mock = MagicMock()
+    weapon_mock.weapon_id = "wpn_test"
+    weapon_mock.name = "TestWeapon"
+    weapon_mock.rarity = 6
+    weapon_mock.weapon_type = 1
+    mock_static_game_data.get_weapon.return_value = weapon_mock
+    weapon_type_mock = MagicMock()
+    weapon_type_mock.name = "TestType"
+    mock_static_game_data.get_weapon_type.return_value = weapon_type_mock
 
-    result = evaluate_essence(default_essence_data, default_settings)
+    result = evaluate_essence(
+        default_essence_data, default_settings, mock_static_game_data
+    )
     assert result.quality == EssenceQuality.TREASURE
     assert "TestWeapon" in result.log_message
-    assert "weapon_1" in result.matched_weapons
+    assert "TestType" in result.log_message
+    assert "wpn_test" in result.matched_weapons
 
 
 def test_evaluate_weapon_match_trash_filter(
-    mock_game_data, default_settings, default_essence_data
+    mock_static_game_data, default_settings, default_essence_data
 ):
     """
     Test that an essence matching a known weapon is evaluated as TRASH if that weapon is filtered.
-
-    Condition:
-    - Game data matches 'weapon_1'.
-    - User setting 'trash_weapon_ids' includes 'weapon_1'.
     """
-    # Setup weapon dict
-    mock_game_data["weapon_stats_dict"]["weapon_1"] = {
-        "attribute": "A",
-        "secondary": "B",
-        "skill": "C",
-    }
-    mock_game_data["weapon_basic_table"]["weapon_1"] = {"rarity": 5}
+    mock_static_game_data.find_weapons_by_stats.return_value = ["wpn_test"]
+    weapon_mock = MagicMock()
+    weapon_mock.weapon_id = "wpn_test"
+    weapon_mock.name = "TestWeapon"
+    weapon_mock.rarity = 6
+    weapon_mock.weapon_type = "TestType"
+    mock_static_game_data.get_weapon.return_value = weapon_mock
+    weapon_type_mock = MagicMock()
+    weapon_type_mock.name = "TestType"
+    mock_static_game_data.get_weapon_type.return_value = weapon_type_mock
 
     # Filter it out
-    default_settings.trash_weapon_ids = ["weapon_1"]
+    default_settings.trash_weapon_ids = ["wpn_test"]
 
-    result = evaluate_essence(default_essence_data, default_settings)
+    result = evaluate_essence(
+        default_essence_data, default_settings, mock_static_game_data
+    )
     assert result.quality == EssenceQuality.TRASH
     assert "手动拦截" in result.log_message
-    assert "weapon_1" in result.matched_weapons
+    assert "wpn_test" in result.matched_weapons
 
 
-def test_evaluate_high_level_attribute(
-    mock_game_data, default_settings, default_essence_data
+def test_evaluate_high_level(
+    mock_static_game_data, default_settings, default_essence_data
 ):
     """
-    Test that an essence with high-level stats is evaluated as TREASURE (High Level).
-
-    Condition:
-    - 'high_level_treasure_enabled' is True.
-    - One attribute level meets or exceeds the threshold.
+    Test high-level attribute evaluation.
     """
-    # Setup high level checks
     default_settings.high_level_treasure_enabled = True
     default_settings.high_level_treasure_attribute_threshold = 10
 
-    # Mock gem table to identify stat type 0 (attribute)
-    # termType: 0=base, 1=secondary, 2=skill
-    mock_game_data["gem_table"]["A"] = {"termType": 0}
+    stat = MagicMock()
+    stat.stat_id = "A"
+    stat.name = "AttrA"
+    stat.type = "ATTRIBUTE"
+    mock_static_game_data.get_stat.return_value = stat
 
-    default_essence_data.levels = [10, 0, 0]
+    # Level 11 >= Threshold 10
+    default_essence_data.levels = [11, 0, 0]
 
-    result = evaluate_essence(default_essence_data, default_settings)
-    assert result.quality == EssenceQuality.TREASURE
-    assert result.is_high_level
-    assert "含高等级属性词条" in result.log_message
+    result = evaluate_essence(
+        default_essence_data, default_settings, mock_static_game_data
+    )
+    assert result.is_high_level is True
+    assert "AttrA+11" in result.log_message
+    assert "宝藏" in result.log_message

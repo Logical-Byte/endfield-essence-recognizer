@@ -66,10 +66,6 @@ def recognize_essence(
     ctx: ScannerContext,
     profile: ResolutionProfile,
 ) -> EssenceData:
-    from endfield_essence_recognizer.game_data.weapon import (
-        get_gem_tag_name,
-    )
-
     stats: list[str | None] = []
     levels: list[int | None] = []
 
@@ -125,7 +121,13 @@ def recognize_essence(
         if stat is None:
             stats_name_parts.append("无")
         else:
-            stat_name = get_gem_tag_name(stat, "CN")
+            gem = ctx.static_game_data.get_stat(stat)
+            if gem is not None:
+                stat_name = gem.name
+            else:
+                # this should not happen
+                logger.warning(f"无法在静态数据中找到基质 ID: {stat} 的名称")
+                stat_name = stat
             if i < len(levels) and levels[i] is not None:
                 stats_name_parts.append(f"{stat_name}+{levels[i]}")
             else:
@@ -163,7 +165,7 @@ def recognize_once(
     ):
         return
 
-    evaluation = evaluate_essence(data, user_setting)
+    evaluation = evaluate_essence(data, user_setting, ctx.static_game_data)
     # all logs use success for simplicity
     logger.opt(colors=True).success(evaluation.log_message)
 
@@ -317,7 +319,7 @@ class ScannerEngine:
                 # early continue on uncertain recognition
                 continue
 
-            evaluation = evaluate_essence(data, user_setting)
+            evaluation = evaluate_essence(data, user_setting, self.ctx.static_game_data)
 
             # Log the result
             if (

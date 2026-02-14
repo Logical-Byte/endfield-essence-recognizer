@@ -1,6 +1,6 @@
 from typing import TypedDict
 
-from endfield_essence_recognizer.game_data import (
+from . import (
     gem_table,
     gem_tag_id_table,
     get_translation,
@@ -10,7 +10,7 @@ from endfield_essence_recognizer.game_data import (
     wiki_entry_table,
     wiki_group_table,
 )
-from endfield_essence_recognizer.game_data.models import TranslationKey
+from .models import TranslationKey
 
 
 class WeaponStats(TypedDict):

@@ -3,9 +3,9 @@ export interface WeaponInfo {
   name: string
   iconUrl: string
   rarity: number
-  attributeEssenceId: string | null
-  secondaryEssenceId: string | null
-  skillEssenceId: string | null
+  attributeStatId: string | null
+  secondaryStatId: string | null
+  skillStatId: string | null
 }
 
 export interface WeaponTypeInfo {
@@ -32,7 +32,7 @@ export interface WeaponTypeListResponse {
 }
 
 export interface EssenceListResponse {
-  essences: EssenceInfo[]
+  items: EssenceInfo[]
 }
 
 export interface RarityColorResponse {

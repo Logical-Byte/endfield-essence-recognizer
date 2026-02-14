@@ -1,5 +1,9 @@
+import importlib.resources
 from functools import lru_cache
 
+from fastapi import Depends
+
+from endfield_essence_recognizer.game_data.static_game_data import StaticGameData
 from endfield_essence_recognizer.services.audio_service import (
     AudioService,
     build_audio_service_profile,
@@ -45,8 +49,21 @@ def get_screenshot_service() -> ScreenshotService:
 
 
 @lru_cache
-def get_static_data_service() -> StaticDataService:
+def get_static_game_data() -> StaticGameData:
     """
-    Get the StaticDataService singleton.
+    Get the StaticGameData singleton.
     """
-    return StaticDataService()
+    data_root = importlib.resources.files("endfield_essence_recognizer") / "data" / "v2"
+    return StaticGameData(data_root)
+
+
+def get_static_data_service(
+    static_data: StaticGameData = Depends(get_static_game_data),
+) -> StaticDataService:
+    """
+    Get a StaticDataService instance.
+
+    StaticDataService is lightweight so it is ok to create a new
+    instance per request.
+    """
+    return StaticDataService(static_data)

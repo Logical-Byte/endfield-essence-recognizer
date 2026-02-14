@@ -28,6 +28,7 @@ from endfield_essence_recognizer.core.window.adapter import WindowActionsAdapter
 from endfield_essence_recognizer.exceptions import (
     UnsupportedResolutionError,
 )
+from endfield_essence_recognizer.game_data.static_game_data import StaticGameData
 from endfield_essence_recognizer.services.audio_service import AudioService
 from endfield_essence_recognizer.services.user_setting_manager import UserSettingManager
 
@@ -42,6 +43,7 @@ from .recognition import (
 )
 from .services import (
     get_audio_service,
+    get_static_game_data,
 )
 from .settings import (
     get_user_setting_manager_dep,
@@ -90,6 +92,7 @@ def get_scanner_context_dep(
         get_lock_status_recognizer_dep
     ),
     ui_scene_recognizer: UISceneRecognizer = Depends(get_ui_scene_recognizer_dep),
+    static_data: StaticGameData = Depends(get_static_game_data),
 ) -> ScannerContext:
     """
     Get a ScannerContext instance.
@@ -100,6 +103,7 @@ def get_scanner_context_dep(
         abandon_status_recognizer=abandon_status_recognizer,
         lock_status_recognizer=lock_status_recognizer,
         ui_scene_recognizer=ui_scene_recognizer,
+        static_game_data=static_data,
     )
 
 

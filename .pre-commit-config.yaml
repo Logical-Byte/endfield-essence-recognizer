@@ -4,6 +4,8 @@ repos:
   hooks:
   - id: trailing-whitespace
   - id: end-of-file-fixer
+    # exclude json files in data folder
+    exclude: ^src/endfield_essence_recognizer/data/.*\.json$
   - id: check-yaml
 - repo: https://github.com/astral-sh/uv-pre-commit
   rev: 0.10.0

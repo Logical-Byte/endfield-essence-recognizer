@@ -31,8 +31,8 @@ export function getStatsForWeapon(weaponId: string): EssenceStat {
   }
 
   return {
-    attribute: weapon.attributeEssenceId,
-    secondary: weapon.secondaryEssenceId,
-    skill: weapon.skillEssenceId,
+    attribute: weapon.attributeStatId,
+    secondary: weapon.secondaryStatId,
+    skill: weapon.skillStatId,
   }
 }

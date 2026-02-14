@@ -1,0 +1,37 @@
+{
+  "CLAYM": {
+    "icon_id": "icon_wiki_group_weapon_claymores",
+    "name": "双手剑",
+    "sort_order": 2,
+    "weapon_type_id": "CLAYM",
+    "wiki_group_id": "wiki_group_weapon_claymores"
+  },
+  "LANCE": {
+    "icon_id": "icon_wiki_group_weapon_lance",
+    "name": "长柄武器",
+    "sort_order": 3,
+    "weapon_type_id": "LANCE",
+    "wiki_group_id": "wiki_group_weapon_lance"
+  },
+  "PISTOL": {
+    "icon_id": "icon_wiki_group_weapon_pistol",
+    "name": "手铳",
+    "sort_order": 4,
+    "weapon_type_id": "PISTOL",
+    "wiki_group_id": "wiki_group_weapon_pistol"
+  },
+  "SWORD": {
+    "icon_id": "icon_wiki_group_weapon_sword",
+    "name": "单手剑",
+    "sort_order": 1,
+    "weapon_type_id": "SWORD",
+    "wiki_group_id": "wiki_group_weapon_sword"
+  },
+  "WAND": {
+    "icon_id": "icon_wiki_group_weapon_wand",
+    "name": "施术单元",
+    "sort_order": 5,
+    "weapon_type_id": "WAND",
+    "wiki_group_id": "wiki_group_weapon_wand"
+  }
+}

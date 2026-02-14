@@ -3,13 +3,13 @@ from enum import StrEnum
 from pydantic import AliasGenerator, BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
 
-type EssenceId = str
+type StatId = str
 """
-表示基质的唯一标识符 (gemTermId)。
+表示基质的唯一标识符 (statTermId)。
 """
 
 
-class EssenceType(StrEnum):
+class StatType(StrEnum):
     ATTRIBUTE = "ATTRIBUTE"
     SECONDARY = "SECONDARY"
     SKILL = "SKILL"
@@ -20,13 +20,13 @@ class WeaponInfo(BaseModel):
     name: str = Field(description="武器名称")
     icon_url: str = Field(description="武器图片的URL")
     rarity: int = Field(description="武器稀有度，整数表示")
-    attribute_essence_id: EssenceId | None = Field(
+    attribute_stat_id: StatId | None = Field(
         default=None, description="表示武器基础属性的基质ID"
     )
-    secondary_essence_id: EssenceId | None = Field(
+    secondary_stat_id: StatId | None = Field(
         default=None, description="表示武器次要属性的基质ID"
     )
-    skill_essence_id: EssenceId | None = Field(
+    skill_stat_id: StatId | None = Field(
         default=None, description="表示武器技能属性的基质ID"
     )
 
@@ -57,11 +57,11 @@ class WeaponTypeInfo(BaseModel):
     )
 
 
-class EssenceInfo(BaseModel):
-    id: EssenceId = Field(description="基质的唯一标识符")
+class StatInfo(BaseModel):
+    id: StatId = Field(description="基质的唯一标识符")
     name: str = Field(description="基质名称")
     tag_name: str = Field(description="基质标签名称 (tagName)")
-    type: EssenceType = Field(description="基质类型")
+    type: StatType = Field(description="基质类型")
 
     model_config = ConfigDict(
         from_attributes=True,
@@ -97,8 +97,8 @@ class WeaponTypeListResponse(BaseModel):
     )
 
 
-class EssenceListResponse(BaseModel):
-    essences: list[EssenceInfo] = Field(description="基质列表")
+class StatListResponse(BaseModel):
+    items: list[StatInfo] = Field(description="基质列表")
 
     model_config = ConfigDict(
         alias_generator=AliasGenerator(

@@ -16,6 +16,7 @@ from endfield_essence_recognizer.core.recognition import (
     prepare_lock_status_recognizer,
     prepare_ui_scene_recognizer,
 )
+from endfield_essence_recognizer.dependencies.services import get_static_game_data
 
 
 # Though the underlying factory functions are already cached,
@@ -26,7 +27,7 @@ def get_attribute_recognizer_dep() -> AttributeRecognizer:
     """
     Get the default attribute Recognizer instance.
     """
-    return prepare_attribute_recognizer()
+    return prepare_attribute_recognizer(get_static_game_data())
 
 
 @lru_cache
