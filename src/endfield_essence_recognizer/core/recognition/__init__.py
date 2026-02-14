@@ -10,6 +10,11 @@ from .brightness_detector import (
     BrightnessDetector,
     BrightnessDetectorProfile,
 )
+from .color_recognizer import (
+    ColorDescriptor,
+    ColorRecognitionProfile,
+    ColorRecognizer,
+)
 from .recognizer import Recognizer
 from .tasks.abandon_lock_status import (
     AbandonStatusLabel,
@@ -119,6 +124,9 @@ __all__ = [
     "AttributeRecognizer",
     "BrightnessDetector",
     "BrightnessDetectorProfile",
+    "ColorDescriptor",
+    "ColorRecognitionProfile",
+    "ColorRecognizer",
     "DeliveryJobRewardLabel",
     "DeliveryJobRewardRecognizer",
     "DeliverySceneLabel",
