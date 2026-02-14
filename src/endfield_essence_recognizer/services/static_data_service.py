@@ -99,11 +99,12 @@ class StaticDataService:
 
         Returns:
             A WeaponTypeListResponse containing category metadata and weapon IDs.
+            The weapon types are sorted by their defined sort_order.
         """
         weapon_types = []
         raw_types = self.data.list_weapon_types()
 
-        for i, wt in enumerate(raw_types):
+        for wt in raw_types:
             # Get all weapon IDs associated with this type
             weapon_ids = [
                 w.weapon_id for w in self.data.get_weapons_by_type(wt.weapon_type_id)
@@ -114,7 +115,7 @@ class StaticDataService:
                     id=wt.wiki_group_id,
                     name=wt.name,
                     icon_url=self._get_group_icon_url(wt.icon_id),
-                    sort_order=i,
+                    sort_order=wt.sort_order,
                     weapon_ids=weapon_ids,
                 )
             )

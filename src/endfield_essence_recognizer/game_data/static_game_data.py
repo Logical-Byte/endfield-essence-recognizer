@@ -116,8 +116,8 @@ class StaticGameData:
         return list(self._stats.values())
 
     def list_weapon_types(self) -> list[WeaponTypeV2]:
-        """Returns a list of all weapon types."""
-        return list(self._weapon_types.values())
+        """Returns a list of all weapon types, sorted by sort_order."""
+        return sorted(self._weapon_types.values(), key=lambda x: x.sort_order)
 
     def get_weapons_by_type(self, type_id: WeaponTypeId) -> list[WeaponV2]:
         """Returns all weapons of a specific type."""

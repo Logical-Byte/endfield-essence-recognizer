@@ -79,24 +79,26 @@ def main():
     weapon_types = {}
     item_to_weapon_type_id = {}
 
-    def get_weapon_type_enum(group_type_id: str) -> WeaponTypeEnum:
+    def get_weapon_type_enum(group_type_id: str) -> tuple[WeaponTypeEnum, int]:
         """
         Get a WeaponTypeEnum based on the wiki group type id.
 
         The group type ids are like `wiki_group_weapon_{}`, where
         the {} is `sword`, `claymores`, `lance`, `pistol`, `wand` for the 5 weapon types.
+
+        Returns a tuple of (WeaponTypeEnum, sort_order), where sort_order is an integer for sorting the weapon types in a consistent order.
         """
         match group_type_id.rsplit("_", maxsplit=1)[-1]:
             case "sword":
-                return "SWORD"
+                return "SWORD", 1
             case "claymores":
-                return "CLAYM"
+                return "CLAYM", 2
             case "lance":
-                return "LANCE"
+                return "LANCE", 3
             case "pistol":
-                return "PISTOL"
+                return "PISTOL", 4
             case "wand":
-                return "WAND"
+                return "WAND", 5
             case _:
                 raise ValueError(f"Unknown weapon group type id: {group_type_id}")
 
@@ -105,7 +107,7 @@ def main():
     for _, group in enumerate(weapon_groups):
         wiki_group_id = group.get("groupId")
         # use a enum for weapon type id, which is more stable
-        weapon_type_id = get_weapon_type_enum(wiki_group_id)
+        weapon_type_id, sort_order = get_weapon_type_enum(wiki_group_id)
         name = get_cn_text(group.get("groupName", {}), i18n_table_cn)
 
         weapon_types[weapon_type_id] = {
@@ -113,6 +115,7 @@ def main():
             "wiki_group_id": wiki_group_id,
             "name": name,
             "icon_id": group.get("iconId"),
+            "sort_order": sort_order,
         }
 
         # Build reverse mapping from weapon_id to weapon_type_id
@@ -149,7 +152,8 @@ def main():
                     f"  Warning: Weapon ID {wpn_id} has invalid raw weaponType: {invalid_raw_type}"
                 )
         match item_to_weapon_type_id.get(wpn_id):
-            case int() as wiki_type if wiki_type > 0:
+            # now we expect the wiki weapon type id to be a valid enum value
+            case "SWORD" | "CLAYM" | "LANCE" | "PISTOL" | "WAND" as wiki_type:
                 pass
             case _ as invalid_wiki_type:
                 print(

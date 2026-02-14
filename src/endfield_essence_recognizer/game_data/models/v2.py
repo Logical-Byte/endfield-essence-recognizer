@@ -73,6 +73,8 @@ class WeaponTypeV2:
     """武器类型的中文显示名称"""
     icon_id: str
     """武器类型的图标 ID"""
+    sort_order: int
+    """武器类型的排序顺序"""
 
 
 @dataclass(frozen=True, slots=True)

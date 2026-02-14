@@ -37,7 +37,15 @@ def mock_data_root(tmp_path):
             "name": "Sword",
             "wiki_group_id": "group_1",
             "icon_id": "icon_t1",
-        }
+            "sort_order": 1,
+        },
+        "CLAYM": {
+            "weapon_type_id": "CLAYM",
+            "name": "Claymore",
+            "wiki_group_id": "group_2",
+            "icon_id": "icon_t2",
+            "sort_order": 2,
+        },
     }
     (tmp_path / "WeaponType.json").write_text(json.dumps(type_data), encoding="utf-8")
 
@@ -63,7 +71,7 @@ def test_load_data_not_empty(static_game_data):
 
     assert len(weapons) == 1
     assert len(stats) == 2
-    assert len(types) == 1
+    assert len(types) == 2
 
 
 def test_get_weapon(static_game_data):
