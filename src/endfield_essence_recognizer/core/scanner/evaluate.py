@@ -42,23 +42,23 @@ def evaluate_essence(
             setting.high_level_treasure_secondary_threshold,  # secondary stat threshold
             setting.high_level_treasure_skill_threshold,  # skill stat threshold
         ]
-        # Mapping for V2 GemType to threshold index
+        # Mapping for V2 StatType to threshold index
         type_to_index = {
             "ATTRIBUTE": 0,
             "SECONDARY": 1,
             "SKILL": 2,
         }
-        for stat, level in zip(stats, levels, strict=True):
-            if stat is not None and level is not None:
-                gem = static_game_data.get_gem(stat)
-                if gem is not None:
-                    idx = type_to_index.get(gem.type)
+        for stat_id, level in zip(stats, levels, strict=True):
+            if stat_id is not None and level is not None:
+                stat = static_game_data.get_stat(stat_id)
+                if stat is not None:
+                    idx = type_to_index.get(stat.type)
                     if idx is not None:
                         threshold = thresholds[idx]
                         if level >= threshold:
                             is_high_level_treasure = True
                             high_level_info = (
-                                f"（含高等级属性词条：{gem.name}+{level}）"
+                                f"（含高等级属性词条：{stat.name}+{level}）"
                             )
                             break
 

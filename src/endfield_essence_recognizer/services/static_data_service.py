@@ -1,9 +1,9 @@
 from endfield_essence_recognizer.game_data.static_game_data import StaticGameData
 from endfield_essence_recognizer.schemas.static_data import (
-    EssenceInfo,
-    EssenceListResponse,
-    EssenceType,
     RarityColorResponse,
+    StatInfo,
+    StatListResponse,
+    StatType,
     WeaponInfo,
     WeaponListResponse,
     WeaponTypeInfo,
@@ -54,9 +54,9 @@ class StaticDataService:
             name=weapon.name,
             icon_url=self._get_item_icon_url(weapon.icon_id),
             rarity=weapon.rarity,
-            attribute_essence_id=weapon.gem1_id,
-            secondary_essence_id=weapon.gem2_id,
-            skill_essence_id=weapon.gem3_id,
+            attribute_stat_id=weapon.stat1_id,
+            secondary_stat_id=weapon.stat2_id,
+            skill_stat_id=weapon.stat3_id,
         )
 
     def list_weapons(self, weapon_type_id: str | None = None) -> WeaponListResponse:
@@ -134,37 +134,37 @@ class StaticDataService:
             colors[r] = self.data.get_rarity_color(r)
         return RarityColorResponse(colors=colors)
 
-    def get_essence(self, essence_id: str) -> EssenceInfo | None:
+    def get_essence(self, essence_id: str) -> StatInfo | None:
         """
-        Get information for a specific essence (gem).
+        Get information for a specific essence (stat).
 
         Args:
-            essence_id: The unique identifier for the essence (gemTermId).
+            essence_id: The unique identifier for the essence (statTermId).
 
         Returns:
-            An EssenceInfo object containing name, tag name and type, or None if not found.
+            A StatInfo object containing name, tag name and type, or None if not found.
         """
-        gem = self.data.get_gem(essence_id)
-        if not gem:
+        stat = self.data.get_stat(essence_id)
+        if not stat:
             return None
 
-        return EssenceInfo(
-            id=gem.gem_id,
-            name=gem.name,
-            tag_name=gem.name,  # Simplified to name in V2
-            type=EssenceType(gem.type),
+        return StatInfo(
+            id=stat.stat_id,
+            name=stat.name,
+            tag_name=stat.name,  # Simplified to name in V2
+            type=StatType(stat.type),
         )
 
-    def list_essences(self) -> EssenceListResponse:
+    def list_essences(self) -> StatListResponse:
         """
-        List all available essences (gems).
+        List all available essences (stats).
 
         Returns:
-            An EssenceListResponse containing the full list of essences.
+            A StatListResponse containing the full list of essences.
         """
         essences = []
-        for gem in self.data.list_gems():
-            essence = self.get_essence(gem.gem_id)
+        for stat in self.data.list_stats():
+            essence = self.get_essence(stat.stat_id)
             if essence:
                 essences.append(essence)
-        return EssenceListResponse(essences=essences)
+        return StatListResponse(items=essences)

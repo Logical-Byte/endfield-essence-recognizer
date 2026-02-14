@@ -6,7 +6,7 @@ from endfield_essence_recognizer.core.recognition import (
     LockStatusLabel,
 )
 from endfield_essence_recognizer.game_data.models.v2 import (
-    EssenceId,
+    StatId,
     WeaponId,
 )
 
@@ -25,7 +25,7 @@ class EssenceQuality(StrEnum):
 class EssenceData:
     """Raw recognition data for a single essence."""
 
-    stats: list[EssenceId | None]
+    stats: list[StatId | None]
     """List of identified attribute IDs on the essence."""
 
     levels: list[int | None]

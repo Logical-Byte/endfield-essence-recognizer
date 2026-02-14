@@ -19,7 +19,7 @@ def mock_static_game_data():
     mock_data = MagicMock()
 
     # Default behaviors
-    mock_data.get_gem.return_value = None
+    mock_data.get_stat.return_value = None
     mock_data.find_weapons_by_stats.return_value = []
     mock_data.get_weapon.return_value = None
     mock_data.get_weapon_type.return_value = None
@@ -144,11 +144,11 @@ def test_evaluate_high_level(
     default_settings.high_level_treasure_enabled = True
     default_settings.high_level_treasure_attribute_threshold = 10
 
-    gem = MagicMock()
-    gem.gem_id = "A"
-    gem.name = "AttrA"
-    gem.type = "ATTRIBUTE"
-    mock_static_game_data.get_gem.return_value = gem
+    stat = MagicMock()
+    stat.stat_id = "A"
+    stat.name = "AttrA"
+    stat.type = "ATTRIBUTE"
+    mock_static_game_data.get_stat.return_value = stat
 
     # Level 11 >= Threshold 10
     default_essence_data.levels = [11, 0, 0]

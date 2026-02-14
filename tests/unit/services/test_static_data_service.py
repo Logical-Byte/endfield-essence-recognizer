@@ -3,7 +3,7 @@ import importlib.resources
 import pytest
 
 from endfield_essence_recognizer.game_data.models.v2 import (
-    GemType,
+    StatType,
 )
 from endfield_essence_recognizer.game_data.static_game_data import StaticGameData
 from endfield_essence_recognizer.services.static_data_service import StaticDataService
@@ -52,7 +52,7 @@ def test_get_rarity_colors_service(service):
 
 
 def test_get_essence_service(service):
-    essences = service.list_essences().essences
+    essences = service.list_essences().items
     assert len(essences) > 0, "Essence dataset must not be empty"
     e_id = essences[0].id
     essence_info = service.get_essence(e_id)
@@ -60,7 +60,7 @@ def test_get_essence_service(service):
     assert essence_info.id == e_id
     assert essence_info.name != ""
     assert essence_info.type in [
-        GemType.ATTRIBUTE,
-        GemType.SECONDARY,
-        GemType.SKILL,
+        StatType.ATTRIBUTE,
+        StatType.SECONDARY,
+        StatType.SKILL,
     ]

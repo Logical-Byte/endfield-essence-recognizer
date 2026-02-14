@@ -12,13 +12,13 @@ Represents a weapon in the game.
 - **`name`** (string): The display name of the weapon in CN.
 - **`weapon_type`** (integer, FK): Reference to `WeaponType.json`.
 - **`rarity`** (integer): The rarity levels (e.g., 3, 4, 5).
-- **`gem1_id`** (string | null, FK): Reference to `EssenceGem.json` (Attribute slot).
-- **`gem2_id`** (string | null, FK): Reference to `EssenceGem.json` (Secondary slot).
-- **`gem3_id`** (string | null, FK): Reference to `EssenceGem.json` (Skill slot).
+- **`stat1_id`** (string | null, FK): Reference to `EssenceStat.json` (Attribute slot).
+- **`stat2_id`** (string | null, FK): Reference to `EssenceStat.json` (Secondary slot).
+- **`stat3_id`** (string | null, FK): Reference to `EssenceStat.json` (Skill slot).
 
-### 2. EssenceGem (`EssenceGem.json`)
+### 2. EssenceStat (`EssenceStat.json`)
 Represents an individual essence entry or sub-stat/skill.
-- **`gem_id`** (string, PK): Unique identifier for the essence.
+- **`stat_id`** (string, PK): Unique identifier for the essence.
 - **`name`** (string): The display name of the essence effect in CN.
 - **`type`** (string): Enum: `ATTRIBUTE`, `SECONDARY`, `SKILL`.
 

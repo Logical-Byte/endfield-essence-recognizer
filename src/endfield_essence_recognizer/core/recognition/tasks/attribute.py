@@ -32,14 +32,14 @@ def build_attribute_profile(
     Build the recognition profile for essence attributes (ATK, HP, etc.).
     """
     # We need static game data to get all possible attribute stats
-    all_gems = static_game_data.list_gems()
-    all_gem_ids = [essence.gem_id for essence in all_gems]
+    all_stats = static_game_data.list_stats()
+    all_stat_ids = [s.stat_id for s in all_stats]
 
     templates_dir = (
         importlib.resources.files("endfield_essence_recognizer") / "templates/generated"
     )
     # The templates are named after the essence IDs
-    labels = all_gem_ids
+    labels = all_stat_ids
     templates: list[TemplateDescriptor[str]] = []
 
     for label in labels:

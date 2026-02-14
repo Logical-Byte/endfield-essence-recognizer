@@ -5,9 +5,9 @@
     "weapon_type": 2,
     "rarity": 4,
     "icon_id": "wpn_claym_0003",
-    "gem1_id": "gat_passive_attr_str",
-    "gem2_id": "gat_passive_attr_atk",
-    "gem3_id": "gst_passive_tactic"
+    "stat1_id": "gat_passive_attr_str",
+    "stat2_id": "gat_passive_attr_atk",
+    "stat3_id": "gst_passive_tactic"
   },
   "wpn_funnel_0009": {
     "weapon_id": "wpn_funnel_0009",
@@ -15,9 +15,9 @@
     "weapon_type": 5,
     "rarity": 6,
     "icon_id": "wpn_funnel_0009",
-    "gem1_id": "gat_passive_attr_wisd",
-    "gem2_id": "gat_passive_attr_magicdam",
-    "gem3_id": "gst_passive_ult"
+    "stat1_id": "gat_passive_attr_wisd",
+    "stat2_id": "gat_passive_attr_magicdam",
+    "stat3_id": "gst_passive_ult"
   },
   "wpn_claym_0004": {
     "weapon_id": "wpn_claym_0004",
@@ -25,9 +25,9 @@
     "weapon_type": 2,
     "rarity": 6,
     "icon_id": "wpn_claym_0004",
-    "gem1_id": "gat_passive_attr_main",
-    "gem2_id": "gat_passive_attr_atk",
-    "gem3_id": "gst_passive_tactic"
+    "stat1_id": "gat_passive_attr_main",
+    "stat2_id": "gat_passive_attr_atk",
+    "stat3_id": "gst_passive_tactic"
   },
   "wpn_claym_0008": {
     "weapon_id": "wpn_claym_0008",
@@ -35,9 +35,9 @@
     "weapon_type": 2,
     "rarity": 6,
     "icon_id": "wpn_claym_0008",
-    "gem1_id": "gat_passive_attr_str",
-    "gem2_id": "gat_passive_attr_crirate",
-    "gem3_id": "gst_passive_smash"
+    "stat1_id": "gat_passive_attr_str",
+    "stat2_id": "gat_passive_attr_crirate",
+    "stat3_id": "gst_passive_smash"
   },
   "wpn_claym_0006": {
     "weapon_id": "wpn_claym_0006",
@@ -45,9 +45,9 @@
     "weapon_type": 2,
     "rarity": 6,
     "icon_id": "wpn_claym_0006",
-    "gem1_id": "gat_passive_attr_will",
-    "gem2_id": "gat_passive_attr_hp",
-    "gem3_id": "gst_passive_keyword"
+    "stat1_id": "gat_passive_attr_will",
+    "stat2_id": "gat_passive_attr_hp",
+    "stat3_id": "gst_passive_keyword"
   },
   "wpn_claym_0007": {
     "weapon_id": "wpn_claym_0007",
@@ -55,9 +55,9 @@
     "weapon_type": 2,
     "rarity": 6,
     "icon_id": "wpn_claym_0007",
-    "gem1_id": "gat_passive_attr_str",
-    "gem2_id": "gat_passive_attr_hp",
-    "gem3_id": "gst_passive_heal"
+    "stat1_id": "gat_passive_attr_str",
+    "stat2_id": "gat_passive_attr_hp",
+    "stat3_id": "gst_passive_heal"
   },
   "wpn_pistol_0006": {
     "weapon_id": "wpn_pistol_0006",
@@ -65,9 +65,9 @@
     "weapon_type": 4,
     "rarity": 5,
     "icon_id": "wpn_pistol_0006",
-    "gem1_id": "gat_passive_attr_agi",
-    "gem2_id": "gat_passive_attr_magicdam",
-    "gem3_id": "gst_passive_magabn"
+    "stat1_id": "gat_passive_attr_agi",
+    "stat2_id": "gat_passive_attr_magicdam",
+    "stat3_id": "gst_passive_magabn"
   },
   "wpn_claym_0009": {
     "weapon_id": "wpn_claym_0009",
@@ -75,9 +75,9 @@
     "weapon_type": 2,
     "rarity": 4,
     "icon_id": "wpn_claym_0009",
-    "gem1_id": "gat_passive_attr_will",
-    "gem2_id": "gat_passive_attr_hp",
-    "gem3_id": "gst_passive_smash"
+    "stat1_id": "gat_passive_attr_will",
+    "stat2_id": "gat_passive_attr_hp",
+    "stat3_id": "gst_passive_smash"
   },
   "wpn_funnel_0010": {
     "weapon_id": "wpn_funnel_0010",
@@ -85,9 +85,9 @@
     "weapon_type": 5,
     "rarity": 6,
     "icon_id": "wpn_funnel_0008",
-    "gem1_id": "gat_passive_attr_will",
-    "gem2_id": "gat_passive_attr_hp",
-    "gem3_id": "gst_passive_heal"
+    "stat1_id": "gat_passive_attr_will",
+    "stat2_id": "gat_passive_attr_hp",
+    "stat3_id": "gst_passive_heal"
   },
   "wpn_claym_0010": {
     "weapon_id": "wpn_claym_0010",
@@ -95,9 +95,9 @@
     "weapon_type": 2,
     "rarity": 3,
     "icon_id": "wpn_claym_0010",
-    "gem1_id": "gat_passive_attr_main",
-    "gem2_id": null,
-    "gem3_id": "gst_passive_force"
+    "stat1_id": "gat_passive_attr_main",
+    "stat2_id": null,
+    "stat3_id": "gst_passive_force"
   },
   "wpn_sword_0013": {
     "weapon_id": "wpn_sword_0013",
@@ -105,9 +105,9 @@
     "weapon_type": 1,
     "rarity": 6,
     "icon_id": "wpn_sword_0013",
-    "gem1_id": "gat_passive_attr_main",
-    "gem2_id": "gat_passive_attr_phydam",
-    "gem3_id": "gst_passive_break"
+    "stat1_id": "gat_passive_attr_main",
+    "stat2_id": "gat_passive_attr_phydam",
+    "stat3_id": "gst_passive_break"
   },
   "wpn_claym_0011": {
     "weapon_id": "wpn_claym_0011",
@@ -115,9 +115,9 @@
     "weapon_type": 2,
     "rarity": 5,
     "icon_id": "wpn_claym_0011",
-    "gem1_id": "gat_passive_attr_str",
-    "gem2_id": "gat_passive_attr_usp",
-    "gem3_id": "gst_passive_burst"
+    "stat1_id": "gat_passive_attr_str",
+    "stat2_id": "gat_passive_attr_usp",
+    "stat3_id": "gst_passive_burst"
   },
   "wpn_claym_0012": {
     "weapon_id": "wpn_claym_0012",
@@ -125,9 +125,9 @@
     "weapon_type": 2,
     "rarity": 5,
     "icon_id": "wpn_claym_0012",
-    "gem1_id": "gat_passive_attr_str",
-    "gem2_id": "gat_passive_attr_hp",
-    "gem3_id": "gst_passive_heal"
+    "stat1_id": "gat_passive_attr_str",
+    "stat2_id": "gat_passive_attr_hp",
+    "stat3_id": "gst_passive_heal"
   },
   "wpn_lance_0008": {
     "weapon_id": "wpn_lance_0008",
@@ -135,9 +135,9 @@
     "weapon_type": 3,
     "rarity": 4,
     "icon_id": "wpn_lance_0008",
-    "gem1_id": "gat_passive_attr_will",
-    "gem2_id": "gat_passive_attr_magicdam",
-    "gem3_id": "gst_passive_tactic"
+    "stat1_id": "gat_passive_attr_will",
+    "stat2_id": "gat_passive_attr_magicdam",
+    "stat3_id": "gst_passive_tactic"
   },
   "wpn_sword_0011": {
     "weapon_id": "wpn_sword_0011",
@@ -145,9 +145,9 @@
     "weapon_type": 1,
     "rarity": 6,
     "icon_id": "wpn_sword_0011",
-    "gem1_id": "gat_passive_attr_main",
-    "gem2_id": "gat_passive_attr_crirate",
-    "gem3_id": "gst_passive_ult"
+    "stat1_id": "gat_passive_attr_main",
+    "stat2_id": "gat_passive_attr_crirate",
+    "stat3_id": "gst_passive_ult"
   },
   "wpn_claym_0013": {
     "weapon_id": "wpn_claym_0013",
@@ -155,9 +155,9 @@
     "weapon_type": 2,
     "rarity": 6,
     "icon_id": "wpn_claym_0013",
-    "gem1_id": "gat_passive_attr_str",
-    "gem2_id": "gat_passive_attr_atk",
-    "gem3_id": "gst_passive_burst"
+    "stat1_id": "gat_passive_attr_str",
+    "stat2_id": "gat_passive_attr_atk",
+    "stat3_id": "gst_passive_burst"
   },
   "wpn_funnel_0006": {
     "weapon_id": "wpn_funnel_0006",
@@ -165,9 +165,9 @@
     "weapon_type": 5,
     "rarity": 6,
     "icon_id": "wpn_funnel_0006",
-    "gem1_id": "gat_passive_attr_will",
-    "gem2_id": "gat_passive_attr_naturaldam",
-    "gem3_id": "gst_passive_tactic"
+    "stat1_id": "gat_passive_attr_will",
+    "stat2_id": "gat_passive_attr_naturaldam",
+    "stat3_id": "gst_passive_tactic"
   },
   "wpn_lance_0009": {
     "weapon_id": "wpn_lance_0009",
@@ -175,9 +175,9 @@
     "weapon_type": 3,
     "rarity": 3,
     "icon_id": "wpn_lance_0009",
-    "gem1_id": "gat_passive_attr_main",
-    "gem2_id": null,
-    "gem3_id": "gst_passive_force"
+    "stat1_id": "gat_passive_attr_main",
+    "stat2_id": null,
+    "stat3_id": "gst_passive_force"
   },
   "wpn_sword_0010": {
     "weapon_id": "wpn_sword_0010",
@@ -185,9 +185,9 @@
     "weapon_type": 1,
     "rarity": 6,
     "icon_id": "wpn_sword_0010",
-    "gem1_id": "gat_passive_attr_wisd",
-    "gem2_id": "gat_passive_attr_firedam",
-    "gem3_id": "gst_passive_magabn"
+    "stat1_id": "gat_passive_attr_wisd",
+    "stat2_id": "gat_passive_attr_firedam",
+    "stat3_id": "gst_passive_magabn"
   },
   "wpn_claym_0014": {
     "weapon_id": "wpn_claym_0014",
@@ -195,9 +195,9 @@
     "weapon_type": 2,
     "rarity": 5,
     "icon_id": "wpn_claym_0014",
-    "gem1_id": "gat_passive_attr_str",
-    "gem2_id": "gat_passive_attr_physpell",
-    "gem3_id": "gst_passive_break"
+    "stat1_id": "gat_passive_attr_str",
+    "stat2_id": "gat_passive_attr_physpell",
+    "stat3_id": "gst_passive_break"
   },
   "wpn_funnel_0003": {
     "weapon_id": "wpn_funnel_0003",
@@ -205,9 +205,9 @@
     "weapon_type": 5,
     "rarity": 4,
     "icon_id": "wpn_funnel_0003",
-    "gem1_id": "gat_passive_attr_will",
-    "gem2_id": "gat_passive_attr_atk",
-    "gem3_id": "gst_passive_tactic"
+    "stat1_id": "gat_passive_attr_will",
+    "stat2_id": "gat_passive_attr_atk",
+    "stat3_id": "gst_passive_tactic"
   },
   "wpn_claym_0015": {
     "weapon_id": "wpn_claym_0015",
@@ -215,9 +215,9 @@
     "weapon_type": 2,
     "rarity": 5,
     "icon_id": "wpn_claym_0015",
-    "gem1_id": "gat_passive_attr_str",
-    "gem2_id": "gat_passive_attr_hp",
-    "gem3_id": "gst_passive_keyword"
+    "stat1_id": "gat_passive_attr_str",
+    "stat2_id": "gat_passive_attr_hp",
+    "stat3_id": "gst_passive_keyword"
   },
   "wpn_funnel_0001": {
     "weapon_id": "wpn_funnel_0001",
@@ -225,9 +225,9 @@
     "weapon_type": 5,
     "rarity": 4,
     "icon_id": "wpn_funnel_0001",
-    "gem1_id": "gat_passive_attr_wisd",
-    "gem2_id": "gat_passive_attr_magicdam",
-    "gem3_id": "gst_passive_spirit"
+    "stat1_id": "gat_passive_attr_wisd",
+    "stat2_id": "gat_passive_attr_magicdam",
+    "stat3_id": "gst_passive_spirit"
   },
   "wpn_funnel_0002": {
     "weapon_id": "wpn_funnel_0002",
@@ -235,9 +235,9 @@
     "weapon_type": 5,
     "rarity": 3,
     "icon_id": "wpn_funnel_0002",
-    "gem1_id": "gat_passive_attr_main",
-    "gem2_id": null,
-    "gem3_id": "gst_passive_force"
+    "stat1_id": "gat_passive_attr_main",
+    "stat2_id": null,
+    "stat3_id": "gst_passive_force"
   },
   "wpn_sword_0007": {
     "weapon_id": "wpn_sword_0007",
@@ -245,9 +245,9 @@
     "weapon_type": 1,
     "rarity": 5,
     "icon_id": "wpn_sword_0007",
-    "gem1_id": "gat_passive_attr_wisd",
-    "gem2_id": "gat_passive_attr_usp",
-    "gem3_id": "gst_passive_spirit"
+    "stat1_id": "gat_passive_attr_wisd",
+    "stat2_id": "gat_passive_attr_usp",
+    "stat3_id": "gst_passive_spirit"
   },
   "wpn_funnel_0004": {
     "weapon_id": "wpn_funnel_0004",
@@ -255,9 +255,9 @@
     "weapon_type": 5,
     "rarity": 5,
     "icon_id": "wpn_funnel_0004",
-    "gem1_id": "gat_passive_attr_wisd",
-    "gem2_id": "gat_passive_attr_pulsedam",
-    "gem3_id": "gst_passive_magabn"
+    "stat1_id": "gat_passive_attr_wisd",
+    "stat2_id": "gat_passive_attr_pulsedam",
+    "stat3_id": "gst_passive_magabn"
   },
   "wpn_sword_0018": {
     "weapon_id": "wpn_sword_0018",
@@ -265,9 +265,9 @@
     "weapon_type": 1,
     "rarity": 5,
     "icon_id": "wpn_sword_0018",
-    "gem1_id": "gat_passive_attr_agi",
-    "gem2_id": "gat_passive_attr_atk",
-    "gem3_id": "gst_passive_magabn"
+    "stat1_id": "gat_passive_attr_agi",
+    "stat2_id": "gat_passive_attr_atk",
+    "stat3_id": "gst_passive_magabn"
   },
   "wpn_funnel_0005": {
     "weapon_id": "wpn_funnel_0005",
@@ -275,9 +275,9 @@
     "weapon_type": 5,
     "rarity": 5,
     "icon_id": "wpn_funnel_0005",
-    "gem1_id": "gat_passive_attr_wisd",
-    "gem2_id": "gat_passive_attr_atk",
-    "gem3_id": "gst_passive_ult"
+    "stat1_id": "gat_passive_attr_wisd",
+    "stat2_id": "gat_passive_attr_atk",
+    "stat3_id": "gst_passive_ult"
   },
   "wpn_funnel_0007": {
     "weapon_id": "wpn_funnel_0007",
@@ -285,9 +285,9 @@
     "weapon_type": 5,
     "rarity": 5,
     "icon_id": "wpn_funnel_0007",
-    "gem1_id": "gat_passive_attr_will",
-    "gem2_id": "gat_passive_attr_usp",
-    "gem3_id": "gst_passive_spirit"
+    "stat1_id": "gat_passive_attr_will",
+    "stat2_id": "gat_passive_attr_usp",
+    "stat3_id": "gst_passive_spirit"
   },
   "wpn_sword_0008": {
     "weapon_id": "wpn_sword_0008",
@@ -295,9 +295,9 @@
     "weapon_type": 1,
     "rarity": 4,
     "icon_id": "wpn_sword_0008",
-    "gem1_id": "gat_passive_attr_agi",
-    "gem2_id": "gat_passive_attr_phydam",
-    "gem3_id": "gst_passive_tactic"
+    "stat1_id": "gat_passive_attr_agi",
+    "stat2_id": "gat_passive_attr_phydam",
+    "stat3_id": "gst_passive_tactic"
   },
   "wpn_sword_0020": {
     "weapon_id": "wpn_sword_0020",
@@ -305,9 +305,9 @@
     "weapon_type": 1,
     "rarity": 5,
     "icon_id": "wpn_sword_0020",
-    "gem1_id": "gat_passive_attr_str",
-    "gem2_id": "gat_passive_attr_icedam",
-    "gem3_id": "gst_passive_tactic"
+    "stat1_id": "gat_passive_attr_str",
+    "stat2_id": "gat_passive_attr_icedam",
+    "stat3_id": "gst_passive_tactic"
   },
   "wpn_funnel_0008": {
     "weapon_id": "wpn_funnel_0008",
@@ -315,9 +315,9 @@
     "weapon_type": 5,
     "rarity": 6,
     "icon_id": "wpn_funnel_0010",
-    "gem1_id": "gat_passive_attr_main",
-    "gem2_id": "gat_passive_attr_physpell",
-    "gem3_id": "gst_passive_burst"
+    "stat1_id": "gat_passive_attr_main",
+    "stat2_id": "gat_passive_attr_physpell",
+    "stat3_id": "gst_passive_burst"
   },
   "wpn_funnel_0011": {
     "weapon_id": "wpn_funnel_0011",
@@ -325,9 +325,9 @@
     "weapon_type": 5,
     "rarity": 6,
     "icon_id": "wpn_funnel_0011",
-    "gem1_id": "gat_passive_attr_will",
-    "gem2_id": "gat_passive_attr_usp",
-    "gem3_id": "gst_passive_combo"
+    "stat1_id": "gat_passive_attr_will",
+    "stat2_id": "gat_passive_attr_usp",
+    "stat3_id": "gst_passive_combo"
   },
   "wpn_funnel_0012": {
     "weapon_id": "wpn_funnel_0012",
@@ -335,9 +335,9 @@
     "weapon_type": 5,
     "rarity": 5,
     "icon_id": "wpn_funnel_0012",
-    "gem1_id": "gat_passive_attr_will",
-    "gem2_id": "gat_passive_attr_heal",
-    "gem3_id": "gst_passive_heal"
+    "stat1_id": "gat_passive_attr_will",
+    "stat2_id": "gat_passive_attr_heal",
+    "stat3_id": "gst_passive_heal"
   },
   "wpn_lance_0006": {
     "weapon_id": "wpn_lance_0006",
@@ -345,9 +345,9 @@
     "weapon_type": 3,
     "rarity": 5,
     "icon_id": "wpn_lance_0006",
-    "gem1_id": "gat_passive_attr_will",
-    "gem2_id": "gat_passive_attr_pulsedam",
-    "gem3_id": "gst_passive_tactic"
+    "stat1_id": "gat_passive_attr_will",
+    "stat2_id": "gat_passive_attr_pulsedam",
+    "stat3_id": "gst_passive_tactic"
   },
   "wpn_funnel_0013": {
     "weapon_id": "wpn_funnel_0013",
@@ -355,9 +355,9 @@
     "weapon_type": 5,
     "rarity": 6,
     "icon_id": "wpn_funnel_0013",
-    "gem1_id": "gat_passive_attr_wisd",
-    "gem2_id": "gat_passive_attr_heal",
-    "gem3_id": "gst_passive_magabn"
+    "stat1_id": "gat_passive_attr_wisd",
+    "stat2_id": "gat_passive_attr_heal",
+    "stat3_id": "gst_passive_magabn"
   },
   "wpn_funnel_0014": {
     "weapon_id": "wpn_funnel_0014",
@@ -365,9 +365,9 @@
     "weapon_type": 5,
     "rarity": 5,
     "icon_id": "wpn_funnel_0014",
-    "gem1_id": "gat_passive_attr_wisd",
-    "gem2_id": "gat_passive_attr_physpell",
-    "gem3_id": "gst_passive_combo"
+    "stat1_id": "gat_passive_attr_wisd",
+    "stat2_id": "gat_passive_attr_physpell",
+    "stat3_id": "gst_passive_combo"
   },
   "wpn_lance_0003": {
     "weapon_id": "wpn_lance_0003",
@@ -375,9 +375,9 @@
     "weapon_type": 3,
     "rarity": 4,
     "icon_id": "wpn_lance_0003",
-    "gem1_id": "gat_passive_attr_agi",
-    "gem2_id": "gat_passive_attr_atk",
-    "gem3_id": "gst_passive_spirit"
+    "stat1_id": "gat_passive_attr_agi",
+    "stat2_id": "gat_passive_attr_atk",
+    "stat3_id": "gst_passive_spirit"
   },
   "wpn_lance_0004": {
     "weapon_id": "wpn_lance_0004",
@@ -385,9 +385,9 @@
     "weapon_type": 3,
     "rarity": 5,
     "icon_id": "wpn_lance_0004",
-    "gem1_id": "gat_passive_attr_str",
-    "gem2_id": "gat_passive_attr_usp",
-    "gem3_id": "gst_passive_break"
+    "stat1_id": "gat_passive_attr_str",
+    "stat2_id": "gat_passive_attr_usp",
+    "stat3_id": "gst_passive_break"
   },
   "wpn_lance_0010": {
     "weapon_id": "wpn_lance_0010",
@@ -395,9 +395,9 @@
     "weapon_type": 3,
     "rarity": 6,
     "icon_id": "wpn_lance_0010",
-    "gem1_id": "gat_passive_attr_agi",
-    "gem2_id": "gat_passive_attr_phydam",
-    "gem3_id": "gst_passive_phyabn"
+    "stat1_id": "gat_passive_attr_agi",
+    "stat2_id": "gat_passive_attr_phydam",
+    "stat3_id": "gst_passive_phyabn"
   },
   "wpn_lance_0011": {
     "weapon_id": "wpn_lance_0011",
@@ -405,9 +405,9 @@
     "weapon_type": 3,
     "rarity": 6,
     "icon_id": "wpn_lance_0011",
-    "gem1_id": "gat_passive_attr_main",
-    "gem2_id": "gat_passive_attr_atk",
-    "gem3_id": "gst_passive_tactic"
+    "stat1_id": "gat_passive_attr_main",
+    "stat2_id": "gat_passive_attr_atk",
+    "stat3_id": "gst_passive_tactic"
   },
   "wpn_lance_0012": {
     "weapon_id": "wpn_lance_0012",
@@ -415,9 +415,9 @@
     "weapon_type": 3,
     "rarity": 6,
     "icon_id": "wpn_lance_0012",
-    "gem1_id": "gat_passive_attr_agi",
-    "gem2_id": "gat_passive_attr_phydam",
-    "gem3_id": "gst_passive_keyword"
+    "stat1_id": "gat_passive_attr_agi",
+    "stat2_id": "gat_passive_attr_phydam",
+    "stat3_id": "gst_passive_keyword"
   },
   "wpn_pistol_0010": {
     "weapon_id": "wpn_pistol_0010",
@@ -425,9 +425,9 @@
     "weapon_type": 4,
     "rarity": 6,
     "icon_id": "wpn_pistol_0010",
-    "gem1_id": "gat_passive_attr_wisd",
-    "gem2_id": "gat_passive_attr_crirate",
-    "gem3_id": "gst_passive_crit"
+    "stat1_id": "gat_passive_attr_wisd",
+    "stat2_id": "gat_passive_attr_crirate",
+    "stat3_id": "gst_passive_crit"
   },
   "wpn_lance_0013": {
     "weapon_id": "wpn_lance_0013",
@@ -435,9 +435,9 @@
     "weapon_type": 3,
     "rarity": 5,
     "icon_id": "wpn_lance_0013",
-    "gem1_id": "gat_passive_attr_will",
-    "gem2_id": "gat_passive_attr_phydam",
-    "gem3_id": "gst_passive_magabn"
+    "stat1_id": "gat_passive_attr_will",
+    "stat2_id": "gat_passive_attr_phydam",
+    "stat3_id": "gst_passive_magabn"
   },
   "wpn_pistol_0001": {
     "weapon_id": "wpn_pistol_0001",
@@ -445,9 +445,9 @@
     "weapon_type": 4,
     "rarity": 3,
     "icon_id": "wpn_pistol_0001",
-    "gem1_id": "gat_passive_attr_main",
-    "gem2_id": null,
-    "gem3_id": "gst_passive_force"
+    "stat1_id": "gat_passive_attr_main",
+    "stat2_id": null,
+    "stat3_id": "gst_passive_force"
   },
   "wpn_pistol_0002": {
     "weapon_id": "wpn_pistol_0002",
@@ -455,9 +455,9 @@
     "weapon_type": 4,
     "rarity": 4,
     "icon_id": "wpn_pistol_0002",
-    "gem1_id": "gat_passive_attr_wisd",
-    "gem2_id": "gat_passive_attr_atk",
-    "gem3_id": "gst_passive_tactic"
+    "stat1_id": "gat_passive_attr_wisd",
+    "stat2_id": "gat_passive_attr_atk",
+    "stat3_id": "gst_passive_tactic"
   },
   "wpn_pistol_0003": {
     "weapon_id": "wpn_pistol_0003",
@@ -465,9 +465,9 @@
     "weapon_type": 4,
     "rarity": 4,
     "icon_id": "wpn_pistol_0003",
-    "gem1_id": "gat_passive_attr_str",
-    "gem2_id": "gat_passive_attr_magicdam",
-    "gem3_id": "gst_passive_combo"
+    "stat1_id": "gat_passive_attr_str",
+    "stat2_id": "gat_passive_attr_magicdam",
+    "stat3_id": "gst_passive_combo"
   },
   "wpn_sword_0014": {
     "weapon_id": "wpn_sword_0014",
@@ -475,9 +475,9 @@
     "weapon_type": 1,
     "rarity": 6,
     "icon_id": "wpn_sword_0014",
-    "gem1_id": "gat_passive_attr_main",
-    "gem2_id": "gat_passive_attr_physpell",
-    "gem3_id": "gst_passive_magabn"
+    "stat1_id": "gat_passive_attr_main",
+    "stat2_id": "gat_passive_attr_physpell",
+    "stat3_id": "gst_passive_magabn"
   },
   "wpn_pistol_0004": {
     "weapon_id": "wpn_pistol_0004",
@@ -485,9 +485,9 @@
     "weapon_type": 4,
     "rarity": 5,
     "icon_id": "wpn_pistol_0004",
-    "gem1_id": "gat_passive_attr_str",
-    "gem2_id": "gat_passive_attr_firedam",
-    "gem3_id": "gst_passive_combo"
+    "stat1_id": "gat_passive_attr_str",
+    "stat2_id": "gat_passive_attr_firedam",
+    "stat3_id": "gst_passive_combo"
   },
   "wpn_pistol_0005": {
     "weapon_id": "wpn_pistol_0005",
@@ -495,9 +495,9 @@
     "weapon_type": 4,
     "rarity": 6,
     "icon_id": "wpn_pistol_0005",
-    "gem1_id": "gat_passive_attr_wisd",
-    "gem2_id": "gat_passive_attr_icedam",
-    "gem3_id": "gst_passive_magabn"
+    "stat1_id": "gat_passive_attr_wisd",
+    "stat2_id": "gat_passive_attr_icedam",
+    "stat3_id": "gst_passive_magabn"
   },
   "wpn_pistol_0008": {
     "weapon_id": "wpn_pistol_0008",
@@ -505,9 +505,9 @@
     "weapon_type": 4,
     "rarity": 6,
     "icon_id": "wpn_pistol_0008",
-    "gem1_id": "gat_passive_attr_main",
-    "gem2_id": "gat_passive_attr_crirate",
-    "gem3_id": "gst_passive_magabn"
+    "stat1_id": "gat_passive_attr_main",
+    "stat2_id": "gat_passive_attr_crirate",
+    "stat3_id": "gst_passive_magabn"
   },
   "wpn_sword_0006": {
     "weapon_id": "wpn_sword_0006",
@@ -515,9 +515,9 @@
     "weapon_type": 1,
     "rarity": 6,
     "icon_id": "wpn_sword_0006",
-    "gem1_id": "gat_passive_attr_wisd",
-    "gem2_id": "gat_passive_attr_atk",
-    "gem3_id": "gst_passive_ult"
+    "stat1_id": "gat_passive_attr_wisd",
+    "stat2_id": "gat_passive_attr_atk",
+    "stat3_id": "gst_passive_ult"
   },
   "wpn_pistol_0009": {
     "weapon_id": "wpn_pistol_0009",
@@ -525,9 +525,9 @@
     "weapon_type": 4,
     "rarity": 6,
     "icon_id": "wpn_pistol_0009",
-    "gem1_id": "gat_passive_attr_main",
-    "gem2_id": "gat_passive_attr_magicdam",
-    "gem3_id": "gst_passive_magabn"
+    "stat1_id": "gat_passive_attr_main",
+    "stat2_id": "gat_passive_attr_magicdam",
+    "stat3_id": "gst_passive_magabn"
   },
   "wpn_sword_0016": {
     "weapon_id": "wpn_sword_0016",
@@ -535,9 +535,9 @@
     "weapon_type": 1,
     "rarity": 6,
     "icon_id": "wpn_sword_0016",
-    "gem1_id": "gat_passive_attr_will",
-    "gem2_id": "gat_passive_attr_atk",
-    "gem3_id": "gst_passive_tacafter"
+    "stat1_id": "gat_passive_attr_will",
+    "stat2_id": "gat_passive_attr_atk",
+    "stat3_id": "gst_passive_tacafter"
   },
   "wpn_pistol_0012": {
     "weapon_id": "wpn_pistol_0012",
@@ -545,9 +545,9 @@
     "weapon_type": 4,
     "rarity": 5,
     "icon_id": "wpn_pistol_0012",
-    "gem1_id": "gat_passive_attr_agi",
-    "gem2_id": "gat_passive_attr_usp",
-    "gem3_id": "gst_passive_burst"
+    "stat1_id": "gat_passive_attr_agi",
+    "stat2_id": "gat_passive_attr_usp",
+    "stat3_id": "gst_passive_burst"
   },
   "wpn_sword_0003": {
     "weapon_id": "wpn_sword_0003",
@@ -555,9 +555,9 @@
     "weapon_type": 1,
     "rarity": 3,
     "icon_id": "wpn_sword_0003",
-    "gem1_id": "gat_passive_attr_main",
-    "gem2_id": null,
-    "gem3_id": "gst_passive_force"
+    "stat1_id": "gat_passive_attr_main",
+    "stat2_id": null,
+    "stat3_id": "gst_passive_force"
   },
   "wpn_sword_0005": {
     "weapon_id": "wpn_sword_0005",
@@ -565,9 +565,9 @@
     "weapon_type": 1,
     "rarity": 5,
     "icon_id": "wpn_sword_0005",
-    "gem1_id": "gat_passive_attr_agi",
-    "gem2_id": "gat_passive_attr_phydam",
-    "gem3_id": "gst_passive_phyabn"
+    "stat1_id": "gat_passive_attr_agi",
+    "stat2_id": "gat_passive_attr_phydam",
+    "stat3_id": "gst_passive_phyabn"
   },
   "wpn_sword_0009": {
     "weapon_id": "wpn_sword_0009",
@@ -575,9 +575,9 @@
     "weapon_type": 1,
     "rarity": 4,
     "icon_id": "wpn_sword_0009",
-    "gem1_id": "gat_passive_attr_wisd",
-    "gem2_id": "gat_passive_attr_atk",
-    "gem3_id": "gst_passive_combo"
+    "stat1_id": "gat_passive_attr_wisd",
+    "stat2_id": "gat_passive_attr_atk",
+    "stat3_id": "gst_passive_combo"
   },
   "wpn_sword_0012": {
     "weapon_id": "wpn_sword_0012",
@@ -585,9 +585,9 @@
     "weapon_type": 1,
     "rarity": 6,
     "icon_id": "wpn_sword_0012",
-    "gem1_id": "gat_passive_attr_will",
-    "gem2_id": "gat_passive_attr_atk",
-    "gem3_id": "gst_passive_tacafter"
+    "stat1_id": "gat_passive_attr_will",
+    "stat2_id": "gat_passive_attr_atk",
+    "stat3_id": "gst_passive_tacafter"
   },
   "wpn_sword_0015": {
     "weapon_id": "wpn_sword_0015",
@@ -595,9 +595,9 @@
     "weapon_type": 1,
     "rarity": 5,
     "icon_id": "wpn_sword_0015",
-    "gem1_id": "gat_passive_attr_agi",
-    "gem2_id": "gat_passive_attr_phydam",
-    "gem3_id": "gst_passive_ult"
+    "stat1_id": "gat_passive_attr_agi",
+    "stat2_id": "gat_passive_attr_phydam",
+    "stat3_id": "gst_passive_ult"
   },
   "wpn_sword_0019": {
     "weapon_id": "wpn_sword_0019",
@@ -605,9 +605,9 @@
     "weapon_type": 1,
     "rarity": 5,
     "icon_id": "wpn_sword_0019",
-    "gem1_id": "gat_passive_attr_agi",
-    "gem2_id": "gat_passive_attr_atk",
-    "gem3_id": "gst_passive_tacafter"
+    "stat1_id": "gat_passive_attr_agi",
+    "stat2_id": "gat_passive_attr_atk",
+    "stat3_id": "gst_passive_tacafter"
   },
   "wpn_sword_0021": {
     "weapon_id": "wpn_sword_0021",
@@ -615,8 +615,8 @@
     "weapon_type": 1,
     "rarity": 6,
     "icon_id": "wpn_sword_0021",
-    "gem1_id": "gat_passive_attr_agi",
-    "gem2_id": "gat_passive_attr_atk",
-    "gem3_id": "gst_passive_magabn"
+    "stat1_id": "gat_passive_attr_agi",
+    "stat2_id": "gat_passive_attr_atk",
+    "stat3_id": "gst_passive_magabn"
   }
 }

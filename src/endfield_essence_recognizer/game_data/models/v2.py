@@ -2,11 +2,11 @@ from dataclasses import dataclass
 from enum import StrEnum
 
 type WeaponId = str
-type EssenceId = str
+type StatId = str
 type WeaponTypeId = int
 
 
-class GemType(StrEnum):
+class StatType(StrEnum):
     ATTRIBUTE = "ATTRIBUTE"
     """基质类型：主属性"""
     SECONDARY = "SECONDARY"
@@ -29,23 +29,23 @@ class WeaponV2:
     """武器的稀有度级别（如 3, 4, 5）"""
     icon_id: str
     """武器的图标 ID，用于拼图标的 URL"""
-    gem1_id: EssenceId | None
-    """引用 EssenceGem 中的基质 ID（主属性槽位）"""
-    gem2_id: EssenceId | None
-    """引用 EssenceGem 中的基质 ID（次属性槽位）"""
-    gem3_id: EssenceId | None
-    """引用 EssenceGem 中的基质 ID（技能槽位）"""
+    stat1_id: StatId | None
+    """引用 EssenceStat 中的基质 ID（主属性槽位）"""
+    stat2_id: StatId | None
+    """引用 EssenceStat 中的基质 ID（次属性槽位）"""
+    stat3_id: StatId | None
+    """引用 EssenceStat 中的基质 ID（技能槽位）"""
 
 
 @dataclass(frozen=True, slots=True)
-class EssenceGemV2:
+class EssenceStatV2:
     """表示单个基质项或子状态/技能。"""
 
-    gem_id: EssenceId
+    stat_id: StatId
     """主键、基质的唯一标识符"""
     name: str
     """基质效果的中文显示名称"""
-    type: GemType
+    type: StatType
     """基质类型：主属性、次属性或技能"""
 
 

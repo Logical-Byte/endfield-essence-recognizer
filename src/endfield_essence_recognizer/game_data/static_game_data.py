@@ -8,8 +8,8 @@ if TYPE_CHECKING:
     from importlib.resources.abc import Traversable
 
 from endfield_essence_recognizer.game_data.models.v2 import (
-    EssenceGemV2,
-    EssenceId,
+    EssenceStatV2,
+    StatId,
     WeaponId,
     WeaponTypeId,
     WeaponTypeV2,
@@ -17,14 +17,14 @@ from endfield_essence_recognizer.game_data.models.v2 import (
 )
 
 # helper type alias
-type OptEssenceId = EssenceId | None
-type EssenceTuple = tuple[OptEssenceId, OptEssenceId, OptEssenceId]
+type OptStatId = StatId | None
+type StatTuple = tuple[OptStatId, OptStatId, OptStatId]
 
 
 class StaticGameData:
     """
     Manager for static game data (V2).
-    Centralizes access to weapons, gems, weapon types, and rarity colors.
+    Centralizes access to weapons, stats, weapon types, and rarity colors.
     Uses pre-transformed data in src/endfield_essence_recognizer/data/v2/.
 
     These files are read-only and loaded once on initialization. Therefore
@@ -34,7 +34,7 @@ class StaticGameData:
     def __init__(self, data_root: Traversable) -> None:
         self._data_root = data_root
         self._weapons: dict[WeaponId, WeaponV2] = {}
-        self._gems: dict[EssenceId, EssenceGemV2] = {}
+        self._stats: dict[StatId, EssenceStatV2] = {}
         self._weapon_types: dict[WeaponTypeId, WeaponTypeV2] = {}
         self._rarity_colors: dict[int, str] = {}
 
@@ -43,8 +43,8 @@ class StaticGameData:
         # map weapon_type_id to list of WeaponV2
         self._weapons_by_type: dict[WeaponTypeId, list[WeaponV2]] = {}
 
-        # map (gem1_id, gem2_id, gem3_id) tuple to list of weapon_ids
-        self._essence_tuple_to_weapon_ids: dict[EssenceTuple, list[WeaponId]] = {}
+        # map (stat1_id, stat2_id, stat3_id) tuple to list of weapon_ids
+        self._stat_tuple_to_weapon_ids: dict[StatTuple, list[WeaponId]] = {}
 
         # Load data on initialization, not lazy
         self._load_data()
@@ -61,12 +61,12 @@ class StaticGameData:
                     weapon = WeaponV2(**data)
                     self._weapons[w_id] = weapon
 
-            # Load Gems
-            gem_file = self._data_root / "EssenceGem.json"
-            with importlib.resources.as_file(gem_file) as gem_path:
-                gem_data = json.loads(gem_path.read_text(encoding="utf-8"))
-                for g_id, data in gem_data.items():
-                    self._gems[g_id] = EssenceGemV2(**data)
+            # Load Stats
+            stat_file = self._data_root / "EssenceStat.json"
+            with importlib.resources.as_file(stat_file) as stat_path:
+                stat_data = json.loads(stat_path.read_text(encoding="utf-8"))
+                for s_id, data in stat_data.items():
+                    self._stats[s_id] = EssenceStatV2(**data)
 
             # Load Weapon Types
             type_file = self._data_root / "WeaponType.json"
@@ -92,18 +92,16 @@ class StaticGameData:
 
         # Index weapons by stats
         for weapon in self._weapons.values():
-            key = (weapon.gem1_id, weapon.gem2_id, weapon.gem3_id)
-            self._essence_tuple_to_weapon_ids.setdefault(key, []).append(
-                weapon.weapon_id
-            )
+            key = (weapon.stat1_id, weapon.stat2_id, weapon.stat3_id)
+            self._stat_tuple_to_weapon_ids.setdefault(key, []).append(weapon.weapon_id)
 
     def get_weapon(self, weapon_id: WeaponId) -> WeaponV2 | None:
         """Returns a WeaponV2 by its ID, or None if not found."""
         return self._weapons.get(weapon_id)
 
-    def get_gem(self, gem_id: EssenceId) -> EssenceGemV2 | None:
-        """Returns an EssenceGemV2 by its ID, or None if not found."""
-        return self._gems.get(gem_id)
+    def get_stat(self, stat_id: StatId) -> EssenceStatV2 | None:
+        """Returns an EssenceStatV2 by its ID, or None if not found."""
+        return self._stats.get(stat_id)
 
     def get_weapon_type(self, type_id: WeaponTypeId) -> WeaponTypeV2 | None:
         """Returns a WeaponTypeV2 by its ID, or None if not found."""
@@ -113,9 +111,9 @@ class StaticGameData:
         """Returns a list of all weapons."""
         return list(self._weapons.values())
 
-    def list_gems(self) -> list[EssenceGemV2]:
-        """Returns a list of all gems."""
-        return list(self._gems.values())
+    def list_stats(self) -> list[EssenceStatV2]:
+        """Returns a list of all stats."""
+        return list(self._stats.values())
 
     def list_weapon_types(self) -> list[WeaponTypeV2]:
         """Returns a list of all weapon types."""
@@ -127,19 +125,19 @@ class StaticGameData:
 
     def find_weapons_by_stats(
         self,
-        attr: EssenceId | None = None,
-        sec: EssenceId | None = None,
-        skill: EssenceId | None = None,
+        attr: StatId | None = None,
+        sec: StatId | None = None,
+        skill: StatId | None = None,
     ) -> list[WeaponId]:
         """
-        Returns weapon IDs that match the provided optional gem stats.
-        Matches gem1_id with attr, gem2_id with sec, and gem3_id with skill.
+        Returns weapon IDs that match the provided optional stats.
+        Matches stat1_id with attr, stat2_id with sec, and stat3_id with skill.
         This is an exact match on the tuple; partial matches return empty.
 
         e.g. find_weapons_by_stats(attr="foo") will search for weapons with
-        gem1_id == "foo" and gem2_id == None and gem3_id == None.
+        stat1_id == "foo" and stat2_id == None and stat3_id == None.
         """
-        return self._essence_tuple_to_weapon_ids.get((attr, sec, skill), [])
+        return self._stat_tuple_to_weapon_ids.get((attr, sec, skill), [])
 
     def get_rarity_color(self, rarity: int) -> str:
         """Returns the hex color code for a given rarity, or white if not found."""

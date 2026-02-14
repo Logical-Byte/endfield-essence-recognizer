@@ -15,19 +15,19 @@ def mock_data_root(tmp_path):
             "weapon_type": 1,
             "rarity": 4,
             "icon_id": "icon_1",
-            "gem1_id": "gem_a",
-            "gem2_id": "gem_b",
-            "gem3_id": None,
+            "stat1_id": "stat_a",
+            "stat2_id": "stat_b",
+            "stat3_id": None,
         }
     }
     (tmp_path / "Weapon.json").write_text(json.dumps(weapon_data), encoding="utf-8")
 
-    # Gems
-    gem_data = {
-        "gem_a": {"gem_id": "gem_a", "name": "Gem A", "type": "ATTRIBUTE"},
-        "gem_b": {"gem_id": "gem_b", "name": "Gem B", "type": "SECONDARY"},
+    # Stats
+    stat_data = {
+        "stat_a": {"stat_id": "stat_a", "name": "Stat A", "type": "ATTRIBUTE"},
+        "stat_b": {"stat_id": "stat_b", "name": "Stat B", "type": "SECONDARY"},
     }
-    (tmp_path / "EssenceGem.json").write_text(json.dumps(gem_data), encoding="utf-8")
+    (tmp_path / "EssenceStat.json").write_text(json.dumps(stat_data), encoding="utf-8")
 
     # Weapon Types
     type_data = {
@@ -57,11 +57,11 @@ def static_game_data(mock_data_root):
 def test_load_data_not_empty(static_game_data):
     """Verify that data is loaded."""
     weapons = static_game_data.list_weapons()
-    gems = static_game_data.list_gems()
+    stats = static_game_data.list_stats()
     types = static_game_data.list_weapon_types()
 
     assert len(weapons) == 1
-    assert len(gems) == 2
+    assert len(stats) == 2
     assert len(types) == 1
 
 
@@ -74,12 +74,12 @@ def test_get_weapon(static_game_data):
     assert static_game_data.get_weapon("non_existent_id") is None
 
 
-def test_get_gem(static_game_data):
-    target = static_game_data.get_gem("gem_a")
+def test_get_stat(static_game_data):
+    target = static_game_data.get_stat("stat_a")
     assert target is not None
-    assert target.name == "Gem A"
+    assert target.name == "Stat A"
 
-    assert static_game_data.get_gem("non_existent_id") is None
+    assert static_game_data.get_stat("non_existent_id") is None
 
 
 def test_get_weapon_type(static_game_data):
@@ -98,12 +98,12 @@ def test_get_weapons_by_type(static_game_data):
 
 def test_find_weapons_by_stats(static_game_data):
     # Exact match
-    found = static_game_data.find_weapons_by_stats("gem_a", "gem_b", None)
+    found = static_game_data.find_weapons_by_stats("stat_a", "stat_b", None)
     assert "weapon_1" in found
 
     # Partial search (mapped to exact match in StaticGameData)
-    found = static_game_data.find_weapons_by_stats(attr="gem_a")
-    assert "weapon_1" not in found  # Because weapon_1 has gem2_id="gem_b"
+    found = static_game_data.find_weapons_by_stats(attr="stat_a")
+    assert "weapon_1" not in found  # Because weapon_1 has stat2_id="stat_b"
 
     # Match none
     found = static_game_data.find_weapons_by_stats(attr="invalid_attr")

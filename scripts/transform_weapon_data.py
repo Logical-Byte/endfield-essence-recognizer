@@ -55,8 +55,8 @@ def main():
     print(f"Loading tables from {input_dir}...")
     weapon_basic_table = load_table("WeaponBasicTable")
     item_table = load_table("ItemTable")
-    gem_table = load_table("GemTable")
-    gem_tag_id_table = load_table("GemTagIdTable")
+    stat_table = load_table("GemTable")
+    stat_tag_id_table = load_table("GemTagIdTable")
     skill_patch_table = load_table("SkillPatchTable")
     wiki_group_table = load_table("WikiGroupTable")
     wiki_entry_table = load_table("WikiEntryTable")
@@ -94,19 +94,19 @@ def main():
                 if entry_data and "refItemId" in entry_data:
                     item_to_weapon_type_id[entry_data["refItemId"]] = weapon_type_id
 
-    # 2. Transform EssenceGem
-    print("Transforming EssenceGem...")
-    essence_gems = {}
+    # 2. Transform EssenceStat
+    print("Transforming EssenceStat...")
+    essence_stats = {}
     term_type_map = {0: "ATTRIBUTE", 1: "SECONDARY", 2: "SKILL"}
 
-    for gem_term_id, gem_data in gem_table.items():
-        name = get_cn_text(gem_data.get("tagName", {}), i18n_table_cn)
-        gem_type = term_type_map.get(gem_data.get("termType"), "UNKNOWN")
+    for stat_term_id, stat_data in stat_table.items():
+        name = get_cn_text(stat_data.get("tagName", {}), i18n_table_cn)
+        stat_type = term_type_map.get(stat_data.get("termType"), "UNKNOWN")
 
-        essence_gems[gem_term_id] = {
-            "gem_id": gem_term_id,
+        essence_stats[stat_term_id] = {
+            "stat_id": stat_term_id,
             "name": name,
-            "type": gem_type,
+            "type": stat_type,
         }
 
     print("Validating weapon type mappings...")
@@ -178,7 +178,7 @@ def main():
 
         # Resolve skills
         skill_ids = basic_data.get("weaponSkillList", [])
-        resolved_skills = {"gem1_id": None, "gem2_id": None, "gem3_id": None}
+        resolved_skills = {"stat1_id": None, "stat2_id": None, "stat3_id": None}
 
         for skill_id in skill_ids:
             patch_bundle = skill_patch_table.get(skill_id, {}).get(
@@ -192,21 +192,21 @@ def main():
             if not tag_id:
                 continue
 
-            gem_term_id = gem_tag_id_table.get(tag_id)
-            if not gem_term_id:
+            stat_term_id = stat_tag_id_table.get(tag_id)
+            if not stat_term_id:
                 continue
 
-            gem_data = gem_table.get(gem_term_id)
-            if not gem_data:
+            stat_data = stat_table.get(stat_term_id)
+            if not stat_data:
                 continue
 
-            term_type = gem_data.get("termType")
+            term_type = stat_data.get("termType")
             if term_type == 0:
-                resolved_skills["gem1_id"] = gem_term_id
+                resolved_skills["stat1_id"] = stat_term_id
             elif term_type == 1:
-                resolved_skills["gem2_id"] = gem_term_id
+                resolved_skills["stat2_id"] = stat_term_id
             elif term_type == 2:
-                resolved_skills["gem3_id"] = gem_term_id
+                resolved_skills["stat3_id"] = stat_term_id
 
         weapons[weapon_id] = {
             "weapon_id": weapon_id,
@@ -245,7 +245,7 @@ def main():
     # 4. Output
     print("\nResults Summary:")
     print(f"  WeaponTypes: {len(weapon_types)}")
-    print(f"  EssenceGems: {len(essence_gems)}")
+    print(f"  EssenceStats: {len(essence_stats)}")
     print(f"  Weapons:     {len(weapons)}")
     print(f"  RarityColors: {len(rarity_colors)}")
 
@@ -254,8 +254,8 @@ def main():
 
         print("\nWeaponTypes:")
         pprint.pprint(weapon_types)
-        print("\nEssenceGems:")
-        pprint.pprint(essence_gems)
+        print("\nEssenceStats:")
+        pprint.pprint(essence_stats)
         print("\nWeapons:")
         pprint.pprint(weapons)
         print("\nRarityColors:")
@@ -275,7 +275,7 @@ def main():
             print(f"Saved {path}")
 
         save_json("WeaponType", weapon_types)
-        save_json("EssenceGem", essence_gems)
+        save_json("EssenceStat", essence_stats)
         save_json("Weapon", weapons)
         save_json("RarityColor", rarity_colors)
 
