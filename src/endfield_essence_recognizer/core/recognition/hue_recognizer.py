@@ -33,8 +33,8 @@ class ColorDescriptor[LabelT]:
 
 
 @dataclass
-class ColorRecognitionProfile[LabelT]:
-    """Configuration for ColorRecognizer."""
+class HueRecognitionProfile[LabelT]:
+    """Configuration for HueRecognizer."""
 
     descriptors: list[ColorDescriptor[LabelT]]
     """List of color descriptors to recognize."""
@@ -44,12 +44,12 @@ class ColorRecognitionProfile[LabelT]:
     """Minimum saturation (0-255) to consider a color valid."""
 
 
-class ColorRecognizer[LabelT]:
+class HueRecognizer[LabelT]:
     """
     Recognizes a state based on the dominant color of an ROI using Hue similarity.
     """
 
-    def __init__(self, name: str, profile: ColorRecognitionProfile[LabelT]) -> None:
+    def __init__(self, name: str, profile: HueRecognitionProfile[LabelT]) -> None:
         self.name = name
         self.profile = profile
         self._target_hues: list[tuple[LabelT, float]] = []

@@ -10,10 +10,10 @@ from .brightness_detector import (
     BrightnessDetector,
     BrightnessDetectorProfile,
 )
-from .color_recognizer import (
+from .hue_recognizer import (
     ColorDescriptor,
-    ColorRecognitionProfile,
-    ColorRecognizer,
+    HueRecognitionProfile,
+    HueRecognizer,
 )
 from .recognizer import Recognizer
 from .tasks.abandon_lock_status import (
@@ -66,7 +66,7 @@ type DeliverySceneRecognizer = Recognizer[DeliverySceneLabel]
 type DeliveryJobRewardRecognizer = Recognizer[DeliveryJobRewardLabel]
 """识别派遣奖励的识别器类型别名，返回 DeliveryJobRewardLabel 标签"""
 
-type RarityRecognizer = ColorRecognizer[RarityLabel]
+type RarityRecognizer = HueRecognizer[RarityLabel]
 """识别基质稀有度的识别器类型别名 (基于颜色)"""
 
 # Factory functions
@@ -127,7 +127,7 @@ def prepare_attribute_level_recognizer() -> AttributeLevelRecognizer:
 @lru_cache
 def prepare_rarity_recognizer() -> RarityRecognizer:
     """构造并返回一个稀有度识别器实例。"""
-    return ColorRecognizer("RarityRecognizer", build_rarity_profile())
+    return HueRecognizer("RarityRecognizer", build_rarity_profile())
 
 
 __all__ = [
@@ -138,12 +138,12 @@ __all__ = [
     "BrightnessDetector",
     "BrightnessDetectorProfile",
     "ColorDescriptor",
-    "ColorRecognitionProfile",
-    "ColorRecognizer",
     "DeliveryJobRewardLabel",
     "DeliveryJobRewardRecognizer",
     "DeliverySceneLabel",
     "DeliverySceneRecognizer",
+    "HueRecognitionProfile",
+    "HueRecognizer",
     "LockStatusLabel",
     "LockStatusRecognizer",
     "RarityLabel",

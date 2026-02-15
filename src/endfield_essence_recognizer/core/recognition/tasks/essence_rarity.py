@@ -1,8 +1,8 @@
 from enum import StrEnum
 
-from endfield_essence_recognizer.core.recognition.color_recognizer import (
+from endfield_essence_recognizer.core.recognition.hue_recognizer import (
     ColorDescriptor,
-    ColorRecognitionProfile,
+    HueRecognitionProfile,
 )
 
 
@@ -14,11 +14,11 @@ class RarityLabel(StrEnum):
     OTHER = "other"
 
 
-def build_rarity_profile() -> ColorRecognitionProfile[RarityLabel]:
+def build_rarity_profile() -> HueRecognitionProfile[RarityLabel]:
     """
     Build the recognition profile for weapon essence rarity based on color.
     """
-    return ColorRecognitionProfile(
+    return HueRecognitionProfile(
         descriptors=[
             ColorDescriptor(
                 label=RarityLabel.FIVE,

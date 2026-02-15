@@ -1,25 +1,25 @@
 import numpy as np
 from loguru import logger
 
-from endfield_essence_recognizer.core.recognition.color_recognizer import (
+from endfield_essence_recognizer.core.recognition.hue_recognizer import (
     ColorDescriptor,
-    ColorRecognitionProfile,
-    ColorRecognizer,
+    HueRecognitionProfile,
+    HueRecognizer,
 )
 
 
-def test_color_recognizer_basic():
+def test_hue_recognizer_basic():
     # Pure Red (Hue=0), Pure Green (Hue=120)
     # BGR format
     red_descriptor = ColorDescriptor(label="red", bgr=(0, 0, 255))
     green_descriptor = ColorDescriptor(label="green", bgr=(0, 255, 0))
 
-    profile = ColorRecognitionProfile(
+    profile = HueRecognitionProfile(
         descriptors=[red_descriptor, green_descriptor],
         hue_threshold_deg=20.0,
         min_saturation=50,
     )
-    recognizer = ColorRecognizer("TestRecognizer", profile)
+    recognizer = HueRecognizer("TestRecognizer", profile)
 
     # Test Red match
     red_roi = np.zeros((10, 10, 3), dtype=np.uint8)
@@ -36,32 +36,32 @@ def test_color_recognizer_basic():
     assert score > 0.99
 
 
-def test_color_recognizer_saturation_filter():
+def test_hue_recognizer_saturation_filter():
     # Gray color (Saturation = 0)
     gray_roi = np.zeros((10, 10, 3), dtype=np.uint8)
     gray_roi[:, :] = (128, 128, 128)
 
     red_descriptor = ColorDescriptor(label="red", bgr=(0, 0, 255))
-    profile = ColorRecognitionProfile(
+    profile = HueRecognitionProfile(
         descriptors=[red_descriptor], hue_threshold_deg=20.0, min_saturation=50
     )
-    recognizer = ColorRecognizer("TestRecognizer", profile)
+    recognizer = HueRecognizer("TestRecognizer", profile)
 
     label, score = recognizer.recognize_roi(gray_roi)
     assert label is None
     assert score == 0.0
 
 
-def test_color_recognizer_threshold():
+def test_hue_recognizer_threshold():
     # Target: Red (0 deg)
     # ROI: Orange (~30 deg)
     red_descriptor = ColorDescriptor(label="red", bgr=(0, 0, 255))
-    profile = ColorRecognitionProfile(
+    profile = HueRecognitionProfile(
         descriptors=[red_descriptor],
         hue_threshold_deg=20.0,  # 30 > 20
         min_saturation=50,
     )
-    recognizer = ColorRecognizer("TestRecognizer", profile)
+    recognizer = HueRecognizer("TestRecognizer", profile)
 
     # Orange ROI (approx)
     # B=0, G=128, R=255 -> Hue ~ 30
@@ -73,14 +73,14 @@ def test_color_recognizer_threshold():
     assert score < 0.9  # Roughly 1.0 - 30/180 = 0.833
 
 
-def test_color_recognizer_circular_red():
+def test_hue_recognizer_circular_red():
     # Target: Red (0 deg)
     # ROI: Deep Pink/Purple (~336 deg) -> Distance = 24 deg
     red_descriptor = ColorDescriptor(label="red", bgr=(0, 0, 255))
-    profile = ColorRecognitionProfile(
+    profile = HueRecognitionProfile(
         descriptors=[red_descriptor], hue_threshold_deg=30.0, min_saturation=50
     )
-    recognizer = ColorRecognizer("TestRecognizer", profile)
+    recognizer = HueRecognizer("TestRecognizer", profile)
 
     # Pinkish ROI
     # B=100, G=0, R=255 -> Hue ~ 336 deg (approx)
@@ -92,13 +92,13 @@ def test_color_recognizer_circular_red():
     assert score > 0.8  # 1.0 - 24/180 = 0.866
 
 
-def test_color_recognizer_fallback():
+def test_hue_recognizer_fallback():
     # Red target
     red_descriptor = ColorDescriptor(label="red", bgr=(0, 0, 255))
-    profile = ColorRecognitionProfile(
+    profile = HueRecognitionProfile(
         descriptors=[red_descriptor], hue_threshold_deg=5.0, min_saturation=50
     )
-    recognizer = ColorRecognizer("TestRecognizer", profile)
+    recognizer = HueRecognizer("TestRecognizer", profile)
 
     # Green ROI
     green_roi = np.zeros((10, 10, 3), dtype=np.uint8)
@@ -125,21 +125,21 @@ def test_initialization_warnings():
         c1 = ColorDescriptor(label="c1", bgr=(0, 0, 255))  # 0 deg
         c2 = ColorDescriptor(label="c2", bgr=(0, 44, 255))  # ~10 deg (approx)
 
-        profile = ColorRecognitionProfile(
+        profile = HueRecognitionProfile(
             descriptors=[c1, c2], hue_threshold_deg=30.0, min_saturation=50
         )
 
-        ColorRecognizer("TestWarning", profile)
+        HueRecognizer("TestWarning", profile)
         assert any("too close" in msg for msg in logs)
 
         # Low saturation warning
         logs.clear()
         gray_descriptor = ColorDescriptor(label="gray", bgr=(100, 100, 100))
-        low_sat_profile = ColorRecognitionProfile(
+        low_sat_profile = HueRecognitionProfile(
             descriptors=[gray_descriptor], min_saturation=50
         )
 
-        ColorRecognizer("TestSatWarning", low_sat_profile)
+        HueRecognizer("TestSatWarning", low_sat_profile)
         assert any("low saturation" in msg for msg in logs)
     finally:
         logger.remove(handler_id)
