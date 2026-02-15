@@ -5,10 +5,13 @@ from cv2.typing import MatLike
 
 from endfield_essence_recognizer.core.layout.base import Region
 from endfield_essence_recognizer.core.window.windows_utils import (
+    _get_client_rect,
     click_on_window,
+    drag_on_window,
     get_client_size,
     get_support_window,
     screenshot_window,
+    scroll_on_window,
 )
 from endfield_essence_recognizer.exceptions import WindowNotFoundError
 
@@ -110,3 +113,43 @@ class WindowManager:
         if window is None:
             raise WindowNotFoundError(self._supported_titles)
         click_on_window(window, relative_x, relative_y)
+
+    def scroll(self, relative_x: int, relative_y: int, clicks: int) -> None:
+        """
+        Perform a mouse scroll at the relative coordinates within the client area.
+
+        Args:
+            relative_x: X coordinate relative to the client area.
+            relative_y: Y coordinate relative to the client area.
+            clicks: The number of clicks to scroll. Positive values scroll up,
+                    negative values scroll down.
+        """
+        window = self._get_window()
+        if window is None:
+            raise WindowNotFoundError(self._supported_titles)
+        scroll_on_window(window, relative_x, relative_y, clicks)
+
+    def drag(
+        self,
+        start_x: int,
+        start_y: int,
+        end_x: int,
+        end_y: int,
+        duration: float = 0.5,
+        hold_time: float = 0.5,
+    ) -> None:
+        """
+        Perform a mouse drag operation from start to end coordinates.
+
+        Args:
+            start_x: Starting X coordinate relative to the client area.
+            start_y: Starting Y coordinate relative to the client area.
+            end_x: Ending X coordinate relative to the client area.
+            end_y: Ending Y coordinate relative to the client area.
+            duration: Duration of the drag operation in seconds.
+            hold_time: Time to hold the mouse button after reaching the end position.
+        """
+        window = self._get_window()
+        if window is None:
+            raise WindowNotFoundError(self._supported_titles)
+        drag_on_window(window, start_x, start_y, end_x, end_y, duration, hold_time)

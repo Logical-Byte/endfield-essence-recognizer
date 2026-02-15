@@ -79,3 +79,38 @@ class Resolution1080p(ResolutionProfile):
     @property
     def DELIVERY_JOB_REFRESH_BUTTON_POINT(self) -> Point:
         return Point(1745, 1003)
+
+    @property
+    def DRAG_START_POS(self) -> Point:
+        # 拖动起始位置：基质图标区域底部
+        return Point(750, 870)
+
+    @property
+    def DRAG_END_POS(self) -> Point:
+        # 拖动结束位置：向上滑动750像素
+        return Point(750, 50)
+
+    @property
+    def DRAG_DURATION(self) -> float:
+        # 拖动持续时间 1.0 秒，减缓速度让游戏UI能跟上
+        return 1.0
+
+    @property
+    def SCROLLBAR_CHECK_POS(self) -> Point:
+        # 滚动条检测位置 (1453, 950) 附近
+        return Point(1453, 950)
+
+    @property
+    def SCROLLBAR_COLOR(self) -> tuple[int, int, int]:
+        # 滚动条颜色 #C7C5C5 的 BGR 格式
+        return (197, 197, 199)
+
+    @property
+    def SCROLLBAR_BG_COLOR(self) -> tuple[int, int, int]:
+        # 滚动条背景色 #2B2927 的 BGR 格式
+        return (39, 41, 43)
+
+    @property
+    def SCROLLBAR_COLOR_TOLERANCE(self) -> int:
+        # 颜色容差值，增大以适应不同分辨率下的颜色偏差
+        return 90

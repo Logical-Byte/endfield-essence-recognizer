@@ -113,6 +113,41 @@ class WindowActions(Protocol):
         """
         ...
 
+    def scroll(self, relative_x: int, relative_y: int, clicks: int) -> None:
+        """
+        Perform a mouse scroll at the specified relative coordinates.
+
+        Args:
+            relative_x: X coordinate relative to the client area.
+            relative_y: Y coordinate relative to the client area.
+            clicks: The number of clicks to scroll. Positive values scroll up,
+                    negative values scroll down.
+        """
+        ...
+
+    def drag(
+        self,
+        start_x: int,
+        start_y: int,
+        end_x: int,
+        end_y: int,
+        duration: float = 0.5,
+        hold_time: float = 0.5,
+    ) -> None:
+        """
+        Perform a mouse drag operation from start to end coordinates.
+
+        Args:
+            start_x: Starting X coordinate relative to the client area.
+            start_y: Starting Y coordinate relative to the client area.
+            end_x: Ending X coordinate relative to the client area.
+            end_y: Ending Y coordinate relative to the client area.
+            duration: Duration of the drag operation in seconds.
+            hold_time: Time to hold the mouse button after reaching the end position.
+        """
+        ...
+
+
 
 @runtime_checkable
 class HotkeyHandler(Protocol):

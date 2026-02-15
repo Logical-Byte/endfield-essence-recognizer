@@ -139,3 +139,35 @@ class ScalableResolutionProfile(ResolutionProfile):
         return _scale_point(
             self._ref.DELIVERY_JOB_REFRESH_BUTTON_POINT, self._sx, self._sy
         )
+
+    @property
+    def DRAG_START_POS(self) -> Point:
+        return _scale_point(self._ref.DRAG_START_POS, self._sx, self._sy)
+
+    @property
+    def DRAG_END_POS(self) -> Point:
+        return _scale_point(self._ref.DRAG_END_POS, self._sx, self._sy)
+
+    @property
+    def DRAG_DURATION(self) -> float:
+        # 持续时间不随分辨率缩放
+        return self._ref.DRAG_DURATION
+
+    @property
+    def SCROLLBAR_CHECK_POS(self) -> Point:
+        return _scale_point(self._ref.SCROLLBAR_CHECK_POS, self._sx, self._sy)
+
+    @property
+    def SCROLLBAR_COLOR(self) -> tuple[int, int, int]:
+        # 颜色值不随分辨率缩放
+        return self._ref.SCROLLBAR_COLOR
+
+    @property
+    def SCROLLBAR_BG_COLOR(self) -> tuple[int, int, int]:
+        # 颜色值不随分辨率缩放
+        return self._ref.SCROLLBAR_BG_COLOR
+
+    @property
+    def SCROLLBAR_COLOR_TOLERANCE(self) -> int:
+        # 容差值不随分辨率缩放
+        return self._ref.SCROLLBAR_COLOR_TOLERANCE

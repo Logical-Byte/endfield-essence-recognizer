@@ -69,6 +69,19 @@ class MockWindowActions:
     def wait(self, seconds):
         pass
 
+    def scroll(self, relative_x, relative_y, clicks):
+        pass
+
+    def drag(self, start_x, start_y, end_x, end_y, duration=0.5, hold_time=0.5):
+        pass
+
+    def get_cursor_pos(self):
+        # 返回一个固定的模拟位置（最后一个基质图标位置）
+        return (100, 200)
+
+    def drag_from_current(self, end_x, end_y, duration=0.5, hold_time=0.3):
+        pass
+
 
 @pytest.fixture
 def mock_scanner_context():
@@ -135,6 +148,22 @@ def mock_profile():
     # Mock just one essence icon for simplicity
     profile.essence_icon_x_list = [100]
     profile.essence_icon_y_list = [200]
+
+    # Mock scroll configuration
+    profile.SCROLL_AREA_CENTER = Point(750, 500)
+    profile.SCROLL_CLICKS = -10
+
+    # Mock drag configuration
+    profile.DRAG_START_POS = Point(750, 825)
+    profile.DRAG_END_POS = Point(750, 50)
+    profile.DRAG_DURATION = 1.0
+
+    # Mock scrollbar detection configuration
+    profile.SCROLLBAR_CHECK_POS = Point(1453, 950)
+    profile.SCROLLBAR_COLOR = (197, 197, 199)
+    profile.SCROLLBAR_BG_COLOR = (39, 41, 43)
+    profile.SCROLLBAR_COLOR_TOLERANCE = 10
+
     return profile
 
 
@@ -250,5 +279,7 @@ def test_scanner_engine_screenshot_count(
     stop_event = threading.Event()
     engine.execute(stop_event)
 
-    # 1 call for check_scene + 1 call for recognize_essence
-    assert image_source.screenshot.call_count == 2
+    # With auto-scrolling and max_pages=100: scans up to 100 pages
+    # Each page: 1 call for check_scene (first page only) + 1 call for recognize_essence + 1 call for scrollbar check
+    # Total: 1 (check_scene) + 100 (recognize_essence) + 100 (scrollbar check) = 201
+    assert image_source.screenshot.call_count == 201

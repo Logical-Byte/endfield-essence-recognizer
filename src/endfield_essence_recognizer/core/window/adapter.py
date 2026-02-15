@@ -42,6 +42,20 @@ class WindowActionsAdapter(WindowActions, ImageSource):
     def click(self, relative_x: int, relative_y: int) -> None:
         self._window_manager.click(relative_x, relative_y)
 
+    def scroll(self, relative_x: int, relative_y: int, clicks: int) -> None:
+        self._window_manager.scroll(relative_x, relative_y, clicks)
+
+    def drag(
+        self,
+        start_x: int,
+        start_y: int,
+        end_x: int,
+        end_y: int,
+        duration: float = 0.5,
+        hold_time: float = 0.5,
+    ) -> None:
+        self._window_manager.drag(start_x, start_y, end_x, end_y, duration, hold_time)
+
     def wait(self, seconds: float) -> None:
         self._sleeper(seconds)
 
