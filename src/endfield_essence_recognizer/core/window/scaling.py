@@ -2,8 +2,14 @@
 Resolution scaling middleware.
 
 Provides adapter classes that normalize arbitrary screen resolutions to a standard
-logical resolution (default 1080p height), enabling resolution-independent recognition
-and interaction logic.
+logical resolution, enabling resolution-independent recognition and interaction logic.
+
+Scaling strategy:
+- Aspect ratio >= 16:9 (wide): scale by height to 1080, width >= 1920
+- Aspect ratio < 16:9 (narrow): scale by width to 1920, height > 1080
+
+This ensures the right-side attribute panel always maps to the same X coordinates
+as the 1080p reference layout.
 
 The scaling layer sits between the raw window capture (physical) and the scanner engine
 (logical), transparently converting images and coordinates in both directions.
@@ -16,36 +22,53 @@ from endfield_essence_recognizer.core.interfaces import ImageSource, WindowActio
 from endfield_essence_recognizer.core.layout.base import Region
 from endfield_essence_recognizer.utils.log import logger
 
-# Default logical height used as the normalization target.
-DEFAULT_LOGICAL_HEIGHT = 1080
+# Reference resolution (16:9 baseline).
+REF_WIDTH = 1920
+REF_HEIGHT = 1080
+REF_RATIO = REF_WIDTH / REF_HEIGHT
+
+
+def compute_logical_size(
+    physical_width: int, physical_height: int
+) -> tuple[int, int, float]:
+    """
+    Compute the logical size and scale factor for a given physical resolution.
+
+    Returns:
+        (logical_width, logical_height, scale_factor)
+    """
+    ratio = physical_width / physical_height
+    if ratio >= REF_RATIO:
+        # Wide or standard: scale by height
+        scale = REF_HEIGHT / physical_height
+    else:
+        # Narrow: scale by width
+        scale = REF_WIDTH / physical_width
+    return round(physical_width * scale), round(physical_height * scale), scale
 
 
 class ScalingImageSource(ImageSource):
     """
     An ImageSource adapter that scales captured images to a standard logical resolution.
 
-    The scaling strategy is height-based: the image is resized so that its height
-    equals ``logical_height`` (default 1080), while the width is scaled proportionally
-    to preserve the original aspect ratio.
+    Scaling strategy adapts to the aspect ratio:
+    - Wide (>= 16:9): height fixed at 1080, width >= 1920
+    - Narrow (< 16:9): width fixed at 1920, height > 1080
 
     After scaling, all ROI coordinates defined in the logical coordinate system can be
     applied directly to the scaled image.
     """
 
-    def __init__(
-        self,
-        source: ImageSource,
-        logical_height: int = DEFAULT_LOGICAL_HEIGHT,
-    ) -> None:
+    def __init__(self, source: ImageSource) -> None:
         self._source = source
-        self._logical_height = logical_height
 
         # Cache the physical size and compute scale factor once
         physical_width, physical_height = source.get_client_size()
         self._physical_width = physical_width
         self._physical_height = physical_height
-        self._scale_factor = logical_height / physical_height
-        self._logical_width = round(physical_width * self._scale_factor)
+        self._logical_width, self._logical_height, self._scale_factor = (
+            compute_logical_size(physical_width, physical_height)
+        )
 
         logger.info(
             f"ScalingImageSource: "

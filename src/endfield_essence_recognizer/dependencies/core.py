@@ -28,6 +28,7 @@ from endfield_essence_recognizer.core.window.adapter import WindowActionsAdapter
 from endfield_essence_recognizer.core.window.scaling import (
     ScalingImageSource,
     ScalingWindowActions,
+    compute_logical_size
 )
 from endfield_essence_recognizer.game_data.static_game_data import StaticGameData
 from endfield_essence_recognizer.services.audio_service import AudioService
@@ -63,8 +64,8 @@ def get_resolution_profile_dep(
         ValueError: If the screen width or height is not a positive integer.
     """
     w, h = window_manager.get_client_size()
-    logical_w = round(w * 1080 / h)
-    return build_resolution_profile(logical_w, 1080)
+    logical_w, logical_h, _ = compute_logical_size(w, h)
+    return build_resolution_profile(logical_w, logical_h)
 
 
 def get_resolution_profile() -> ResolutionProfile:
