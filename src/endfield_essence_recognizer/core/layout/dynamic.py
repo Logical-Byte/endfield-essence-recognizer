@@ -29,6 +29,7 @@ _SPACING_W = 155.4  # 水平间距（左上角到左上角）
 _SPACING_H = 155  # 垂直间距
 _FIRST_Y = 130  # 第一个卡片左上角 Y
 _CONTAINER_LEFT = 38  # 网格容器左边界
+_BOTTOM_MARGIN = 120  # 网格容器底部边距（距逻辑高度底边）
 
 # 右侧面板距右边缘的距离
 _PANEL_RIGHT_MARGIN = _BASE_WIDTH - _BASE.AREA.x0  # 455
@@ -79,13 +80,20 @@ class DynamicResolutionProfile(ResolutionProfile):
             round(first_x + _CARD_SIZE // 2 + i * _SPACING_W)
             for i in range(self._grid_cols)
         ]
+        # 计算自适应行数
+        usable_bottom = self._height - _BOTTOM_MARGIN
+        self._grid_rows = max(
+            1, int((usable_bottom - _FIRST_Y - _CARD_SIZE) / _SPACING_H) + 1
+        )
+
         self._icon_y = [
-            round(_FIRST_Y + _CARD_SIZE // 2 + i * _SPACING_H) for i in range(5)
+            round(_FIRST_Y + _CARD_SIZE // 2 + i * _SPACING_H)
+            for i in range(self._grid_rows)
         ]
 
         logger.info(
             f"DynamicResolutionProfile: {logical_width}x{logical_height}, "
-            f"grid_cols={self._grid_cols}"
+            f"grid={self._grid_cols}x{self._grid_rows}"
         )
 
     # --- helpers ---

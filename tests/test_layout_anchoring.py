@@ -24,6 +24,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 from endfield_essence_recognizer.core.layout.dynamic import (
     DynamicResolutionProfile,
+    _BOTTOM_MARGIN,
     _CARD_SIZE,
 )
 from endfield_essence_recognizer.core.recognition import (
@@ -183,11 +184,18 @@ def annotate_screenshot(img_path, output_dir, static_data, attr_rec, level_rec, 
             cv2.rectangle(scaled, (cx - half, cy - half), (cx + half, cy + half), (255, 255, 0), LINE)
             cv2.circle(scaled, (cx, cy), DOT, (0, 0, 255), -1)
 
+    # 网格底部边界线
+    grid_bottom_y = new_h - _BOTTOM_MARGIN
+    cv2.line(scaled, (0, grid_bottom_y), (new_w, grid_bottom_y), (0, 200, 200), LINE)
+    _put_text(scaled, f"网格底部 y={grid_bottom_y} (margin={_BOTTOM_MARGIN})", (10, grid_bottom_y + 4), (0, 200, 200), font)
+
     # 标题
-    title = f"{label} -> {new_w}x{new_h} (DynamicProfile, cols={len(profile.essence_icon_x_list)})"
+    rows = len(profile.essence_icon_y_list)
+    cols = len(profile.essence_icon_x_list)
+    title = f"{label} -> {new_w}x{new_h} (DynamicProfile, grid={cols}x{rows})"
     _put_text(scaled, title, (10, 8), (255, 255, 255), font)
 
-    out = output_dir / f"right_anchored_{label}.png"
+    out = output_dir / f"anchored_{label}.png"
     cv2.imwrite(str(out), scaled)
     print(f"  -> 保存: {out}")
 
