@@ -5,6 +5,7 @@ import pytest
 from endfield_essence_recognizer.core.recognition import (
     AbandonStatusLabel,
     LockStatusLabel,
+    RarityLabel,
 )
 from endfield_essence_recognizer.core.scanner.evaluate import evaluate_essence
 from endfield_essence_recognizer.core.scanner.models import (
@@ -37,6 +38,7 @@ def default_essence_data():
     return EssenceData(
         stats=["A", "B", "C"],
         levels=[0, 0, 0],
+        rarity=RarityLabel.OTHER,
         abandon_label=AbandonStatusLabel.NOT_ABANDONED,
         lock_label=LockStatusLabel.NOT_LOCKED,
     )

@@ -6,6 +6,7 @@ from endfield_essence_recognizer.core.layout.base import ResolutionProfile
 from endfield_essence_recognizer.core.recognition import (
     AbandonStatusLabel,
     LockStatusLabel,
+    RarityLabel,
 )
 from endfield_essence_recognizer.core.recognition.tasks.ui import UISceneLabel
 from endfield_essence_recognizer.core.scanner.action_logic import (
@@ -87,6 +88,13 @@ def recognize_essence(
         else:
             logger.debug(f"属性 {k} 等级识别结果: 无法识别")
 
+    # 识别稀有度（通过检测颜色）
+    rarity_screenshot = mem_source.screenshot(profile.RARITY_ROI)
+    rarity_label, score = ctx.rarity_recognizer.recognize_roi_fallback(
+        rarity_screenshot, fallback_label=RarityLabel.OTHER
+    )
+    logger.debug(f"稀有度识别结果: {rarity_label.value} (分数: {score:.3f})")
+
     screenshot_image = mem_source.screenshot(profile.DEPRECATE_BUTTON_ROI)
     abandon_label, max_val = ctx.abandon_status_recognizer.recognize_roi_fallback(
         screenshot_image,
@@ -119,11 +127,17 @@ def recognize_essence(
                 stats_name_parts.append(stat_name)
     stats_name = "、".join(stats_name_parts)
 
+    rarity_text = {
+        RarityLabel.FIVE: "5星",
+        RarityLabel.FOUR: "4星",
+        RarityLabel.OTHER: "其他",
+    }.get(rarity_label, "未知")
+
     logger.opt(colors=True).info(
-        f"已识别当前基质，属性: <magenta>{stats_name}</>, <magenta>{abandon_label.value}</>, <magenta>{locked_label.value}</>"
+        f"已识别当前基质，属性: <magenta>{stats_name}</>, 稀有度: <magenta>{rarity_text}</>, <magenta>{abandon_label.value}</>, <magenta>{locked_label.value}</>"
     )
 
-    return EssenceData(stats, levels, abandon_label, locked_label)
+    return EssenceData(stats, levels, rarity_label, abandon_label, locked_label)
 
 
 def recognize_once(
