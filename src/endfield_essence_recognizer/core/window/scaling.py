@@ -106,10 +106,14 @@ class ScalingImageSource(ImageSource):
         """
         full_physical = self._source.screenshot()
 
+        # INTER_AREA preserves edge sharpness when downscaling, which improves
+        # template matching accuracy; INTER_LINEAR is used for upscaling.
+        target = (self._logical_width, self._logical_height)
+        interpolation = cv2.INTER_AREA if self._scale_factor < 1.0 else cv2.INTER_LINEAR
         scaled = cv2.resize(
             full_physical,
-            (self._logical_width, self._logical_height),
-            interpolation=cv2.INTER_LINEAR,
+            target,
+            interpolation=interpolation,
         )
 
         if relative_region is None:
