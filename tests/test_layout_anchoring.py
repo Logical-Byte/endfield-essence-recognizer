@@ -75,7 +75,7 @@ DRAW_SAMPLE_AREA = True    # 是否绘制采样区域标记
 # 工具函数
 # ============================================================
 
-def _get_font(size: int = FONT_SIZE) -> ImageFont.FreeTypeFont:
+def _get_font(size: int = FONT_SIZE) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
     """尝试加载系统中文字体。"""
     candidates = [
         "C:/Windows/Fonts/msyh.ttc",
@@ -88,7 +88,7 @@ def _get_font(size: int = FONT_SIZE) -> ImageFont.FreeTypeFont:
     return ImageFont.load_default()
 
 
-def _put_text(img, text: str, pos: tuple[int, int], color: tuple[int, int, int], font: ImageFont.FreeTypeFont):
+def _put_text(img, text: str, pos: tuple[int, int], color: tuple[int, int, int], font: ImageFont.FreeTypeFont | ImageFont.ImageFont):
     """在 cv2 图像上用 PIL 绘制中文文本。color 为 BGR。"""
     pil_img = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
     draw = ImageDraw.Draw(pil_img)
