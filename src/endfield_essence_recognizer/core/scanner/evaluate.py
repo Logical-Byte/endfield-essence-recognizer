@@ -39,7 +39,7 @@ def evaluate_essence(
     ):
         return EvaluationResult(
             quality=EssenceQuality.SKIP,
-            log_message="这个基质是<dim>非高纯基质</>，已根据设置跳过处理。",
+            log_message="这个基质是<dim>非无瑕基质</>，已根据设置跳过处理。",
         )
 
     stats = data.stats

@@ -277,10 +277,10 @@
       <v-expansion-panel :value="2">
         <v-expansion-panel-title>操作设置</v-expansion-panel-title>
         <v-expansion-panel-text>
-          <h2>遇到非高纯基质（即遇到非橙色基质）时，该如何操作？</h2>
+          <h2>遇到非无瑕基质（即遇到非橙色基质）时，该如何操作？</h2>
           <v-radio-group v-model="nonFiveStarBehavior" color="primary" density="comfortable" inline>
             <v-radio label="跳过对它的操作" value="skip" />
-            <v-radio label="继续操作（参考高纯基质的操作）" value="process" />
+            <v-radio label="继续操作（当作无瑕基质进行操作）" value="process" />
           </v-radio-group>
           <v-divider class="my-4" />
           <h2>遇到宝藏基质或者养成材料时，该如何操作？</h2>
