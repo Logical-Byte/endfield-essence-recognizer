@@ -3,7 +3,6 @@ import threading
 
 from endfield_essence_recognizer.core.interfaces import ImageSource, WindowActions
 from endfield_essence_recognizer.core.layout.base import ResolutionProfile
-from endfield_essence_recognizer.core.layout.res_1080p import Resolution1080p
 from endfield_essence_recognizer.core.recognition import (
     AbandonStatusLabel,
     LockStatusLabel,
@@ -24,11 +23,7 @@ from endfield_essence_recognizer.core.scanner.models import (
 from endfield_essence_recognizer.core.window.adapter import InMemoryImageSource
 from endfield_essence_recognizer.schemas.user_setting import UserSetting
 from endfield_essence_recognizer.services.user_setting_manager import UserSettingManager
-from endfield_essence_recognizer.utils.image import resize_to_ref_roi
 from endfield_essence_recognizer.utils.log import logger
-
-# 模板均为 1080p，高分辨率下 ROI 截图需缩放到此尺寸再送入识别器
-_REF_PROFILE = Resolution1080p()
 
 
 def check_scene(
@@ -44,12 +39,12 @@ def check_scene(
         )
         logger.warning(
             f"当前终末地窗口分辨率为 {width}x{height}，"
-            f"请将游戏分辨率调整为 16:9 比例后重试（如 1920x1080、2560x1440、3840x2160 等）；避免在运行时调整窗口大小。"
+            f"与预期的 {profile.RESOLUTION[0]}x{profile.RESOLUTION[1]} 不一致；"
+            f"请避免在运行时调整窗口大小。"
         )
         return False
 
     screenshot = image_source.screenshot(profile.ESSENCE_UI_ROI)
-    screenshot = resize_to_ref_roi(screenshot, _REF_PROFILE.ESSENCE_UI_ROI)
     scene_label, _max_val = ctx.ui_scene_recognizer.recognize_roi_fallback(
         screenshot, fallback_label=UISceneLabel.UNKNOWN
     )
@@ -74,15 +69,9 @@ def recognize_essence(
     full_screenshot = mem_source.screenshot()
 
     rois = [profile.STATS_0_ROI, profile.STATS_1_ROI, profile.STATS_2_ROI]
-    ref_rois = [
-        _REF_PROFILE.STATS_0_ROI,
-        _REF_PROFILE.STATS_1_ROI,
-        _REF_PROFILE.STATS_2_ROI,
-    ]
 
-    for k, (roi, ref_roi) in enumerate(zip(rois, ref_rois, strict=True)):
+    for k, roi in enumerate(rois):
         screenshot_image = mem_source.screenshot(roi)
-        screenshot_image = resize_to_ref_roi(screenshot_image, ref_roi)
         attr, max_val = ctx.attr_recognizer.recognize_roi(screenshot_image)
         stats.append(attr)
         logger.debug(f"属性 {k} 识别结果: {attr} (分数: {max_val:.3f})")
@@ -99,9 +88,6 @@ def recognize_essence(
             logger.debug(f"属性 {k} 等级识别结果: 无法识别")
 
     screenshot_image = mem_source.screenshot(profile.DEPRECATE_BUTTON_ROI)
-    screenshot_image = resize_to_ref_roi(
-        screenshot_image, _REF_PROFILE.DEPRECATE_BUTTON_ROI
-    )
     abandon_label, max_val = ctx.abandon_status_recognizer.recognize_roi_fallback(
         screenshot_image,
         fallback_label=AbandonStatusLabel.MAYBE_ABANDONED,
@@ -109,7 +95,6 @@ def recognize_essence(
     logger.debug(f"弃用按钮识别结果: {abandon_label.value} (分数: {max_val:.3f})")
 
     screenshot_image = mem_source.screenshot(profile.LOCK_BUTTON_ROI)
-    screenshot_image = resize_to_ref_roi(screenshot_image, _REF_PROFILE.LOCK_BUTTON_ROI)
     locked_label, max_val = ctx.lock_status_recognizer.recognize_roi_fallback(
         screenshot_image,
         fallback_label=LockStatusLabel.MAYBE_LOCKED,
