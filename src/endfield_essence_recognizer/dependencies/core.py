@@ -26,9 +26,8 @@ from endfield_essence_recognizer.core.scanner.engine import (
 from endfield_essence_recognizer.core.window import WindowManager
 from endfield_essence_recognizer.core.window.adapter import WindowActionsAdapter
 from endfield_essence_recognizer.core.window.scaling import (
-    ScalingImageSource,
-    ScalingWindowActions,
-    compute_logical_size
+    compute_logical_size,
+    create_scaling_wrappers,
 )
 from endfield_essence_recognizer.game_data.static_game_data import StaticGameData
 from endfield_essence_recognizer.services.audio_service import AudioService
@@ -112,8 +111,7 @@ def get_scanner_engine_dep(
     Get a ScannerEngine instance with scaling middleware.
     """
     adapter = WindowActionsAdapter(window_manager)
-    image_source = ScalingImageSource(adapter)
-    window_actions = ScalingWindowActions(adapter, image_source)
+    image_source, window_actions = create_scaling_wrappers(adapter, adapter)
     return ScannerEngine(
         ctx=ctx,
         image_source=image_source,
@@ -133,8 +131,7 @@ def get_one_time_recognition_engine_dep(
     Get a OneTimeRecognitionEngine instance with scaling middleware.
     """
     adapter = WindowActionsAdapter(window_manager)
-    image_source = ScalingImageSource(adapter)
-    window_actions = ScalingWindowActions(adapter, image_source)
+    image_source, window_actions = create_scaling_wrappers(adapter, adapter)
     return OneTimeRecognitionEngine(
         ctx=ctx,
         image_source=image_source,
@@ -159,8 +156,7 @@ def get_delivery_claimer_engine_dep(
     Get a DeliveryClaimerEngine instance with scaling middleware.
     """
     adapter = WindowActionsAdapter(window_manager)
-    image_source = ScalingImageSource(adapter)
-    window_actions = ScalingWindowActions(adapter, image_source)
+    image_source, window_actions = create_scaling_wrappers(adapter, adapter)
     return DeliveryClaimerEngine(
         image_source=image_source,
         window_actions=window_actions,

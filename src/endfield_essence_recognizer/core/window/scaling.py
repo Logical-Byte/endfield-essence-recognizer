@@ -70,7 +70,7 @@ class ScalingImageSource(ImageSource):
             compute_logical_size(physical_width, physical_height)
         )
 
-        logger.info(
+        logger.debug(
             f"ScalingImageSource: "
             f"physical={physical_width}x{physical_height} -> "
             f"logical={self._logical_width}x{self._logical_height} "
@@ -139,10 +139,10 @@ class ScalingWindowActions(WindowActions):
     def __init__(
         self,
         actions: WindowActions,
-        scaling_source: ScalingImageSource,
+        scale_factor: float,
     ) -> None:
         self._actions = actions
-        self._scaling_source = scaling_source
+        self._scale_factor = scale_factor
 
     @property
     def target_exists(self) -> bool:
@@ -165,10 +165,23 @@ class ScalingWindowActions(WindowActions):
         """
         Perform a click at logical coordinates, mapped back to physical coordinates.
         """
-        scale_factor = self._scaling_source.scale_factor
-        physical_x = round(relative_x / scale_factor)
-        physical_y = round(relative_y / scale_factor)
+        physical_x = round(relative_x / self._scale_factor)
+        physical_y = round(relative_y / self._scale_factor)
         self._actions.click(physical_x, physical_y)
 
     def wait(self, seconds: float) -> None:
         self._actions.wait(seconds)
+
+
+def create_scaling_wrappers(
+    source: ImageSource,
+    actions: WindowActions,
+) -> tuple[ScalingImageSource, ScalingWindowActions]:
+    """
+    Create a consistent scaling adapter pair for one source/actions input.
+
+    The returned wrappers always share the same scale factor.
+    """
+    scaling_source = ScalingImageSource(source)
+    scaling_actions = ScalingWindowActions(actions, scaling_source.scale_factor)
+    return scaling_source, scaling_actions
