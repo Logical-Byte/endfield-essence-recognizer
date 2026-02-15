@@ -5,7 +5,7 @@ from endfield_essence_recognizer.core.delivery_claimer.engine import (
 )
 from endfield_essence_recognizer.core.layout.base import ResolutionProfile
 from endfield_essence_recognizer.core.layout.factory import (
-    build_resolution_profile_strict,
+    build_resolution_profile,
 )
 from endfield_essence_recognizer.core.recognition import (
     AbandonStatusRecognizer,
@@ -25,8 +25,9 @@ from endfield_essence_recognizer.core.scanner.engine import (
 )
 from endfield_essence_recognizer.core.window import WindowManager
 from endfield_essence_recognizer.core.window.adapter import WindowActionsAdapter
-from endfield_essence_recognizer.exceptions import (
-    UnsupportedResolutionError,
+from endfield_essence_recognizer.core.window.scaling import (
+    ScalingImageSource,
+    ScalingWindowActions,
 )
 from endfield_essence_recognizer.game_data.static_game_data import StaticGameData
 from endfield_essence_recognizer.services.audio_service import AudioService
@@ -60,17 +61,10 @@ def get_resolution_profile_dep(
     Raises:
         WindowNotFoundError: If the target window is not found.
         ValueError: If the screen width or height is not a positive integer.
-        UnsupportedResolutionError: If the screen resolution is unsupported.
     """
-    width, height = window_manager.get_client_size()  # may raise WindowNotFoundError
-    match build_resolution_profile_strict(width, height):  # may raise ValueError
-        case None:
-            # unsupported resolution
-            raise UnsupportedResolutionError(
-                f"Unsupported resolution: {width}x{height}"
-            )
-        case profile:
-            return profile
+    w, h = window_manager.get_client_size()
+    logical_w = round(w * 1080 / h)
+    return build_resolution_profile(logical_w, 1080)
 
 
 def get_resolution_profile() -> ResolutionProfile:
@@ -114,13 +108,15 @@ def get_scanner_engine_dep(
     profile: ResolutionProfile = Depends(get_resolution_profile_dep),
 ) -> ScannerEngine:
     """
-    Get a ScannerEngine instance.
+    Get a ScannerEngine instance with scaling middleware.
     """
     adapter = WindowActionsAdapter(window_manager)
+    image_source = ScalingImageSource(adapter)
+    window_actions = ScalingWindowActions(adapter, image_source)
     return ScannerEngine(
         ctx=ctx,
-        image_source=adapter,
-        window_actions=adapter,
+        image_source=image_source,
+        window_actions=window_actions,
         user_setting_manager=user_setting_manager,
         profile=profile,
     )
@@ -133,13 +129,15 @@ def get_one_time_recognition_engine_dep(
     profile: ResolutionProfile = Depends(get_resolution_profile_dep),
 ) -> OneTimeRecognitionEngine:
     """
-    Get a OneTimeRecognitionEngine instance.
+    Get a OneTimeRecognitionEngine instance with scaling middleware.
     """
     adapter = WindowActionsAdapter(window_manager)
+    image_source = ScalingImageSource(adapter)
+    window_actions = ScalingWindowActions(adapter, image_source)
     return OneTimeRecognitionEngine(
         ctx=ctx,
-        image_source=adapter,
-        window_actions=adapter,
+        image_source=image_source,
+        window_actions=window_actions,
         user_setting_manager=user_setting_manager,
         profile=profile,
     )
@@ -157,12 +155,14 @@ def get_delivery_claimer_engine_dep(
     audio_service: AudioService = Depends(get_audio_service),
 ) -> DeliveryClaimerEngine:
     """
-    Get a DeliveryClaimerEngine instance.
+    Get a DeliveryClaimerEngine instance with scaling middleware.
     """
     adapter = WindowActionsAdapter(window_manager)
+    image_source = ScalingImageSource(adapter)
+    window_actions = ScalingWindowActions(adapter, image_source)
     return DeliveryClaimerEngine(
-        image_source=adapter,
-        window_actions=adapter,
+        image_source=image_source,
+        window_actions=window_actions,
         profile=profile,
         delivery_scene_recognizer=delivery_scene_recognizer,
         delivery_job_reward_recognizer=delivery_job_reward_recognizer,
