@@ -26,7 +26,7 @@ _BASE_WIDTH = 1920
 # 物品网格卡片参数（1080p 高度下的固定值）
 _CARD_SIZE = 145
 _SPACING_W = 155.4  # 水平间距（左上角到左上角）
-_SPACING_H = 155  # 垂直间距
+_SPACING_H = 155.1  # 垂直间距
 _FIRST_Y = 130  # 第一个卡片左上角 Y
 _CONTAINER_LEFT = 38  # 网格容器左边界
 _BOTTOM_MARGIN = 120  # 网格容器底部边距（距逻辑高度底边）
