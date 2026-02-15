@@ -15,6 +15,8 @@ The scaling layer sits between the raw window capture (physical) and the scanner
 (logical), transparently converting images and coordinates in both directions.
 """
 
+import math
+
 import cv2
 from cv2.typing import MatLike
 
@@ -37,6 +39,9 @@ def compute_logical_size(
     Returns:
         (logical_width, logical_height, scale_factor)
     """
+    if physical_width <= 0 or physical_height <= 0:
+        raise ValueError("physical_width and physical_height must be positive integers")
+
     ratio = physical_width / physical_height
     if ratio >= REF_RATIO:
         # Wide or standard: scale by height
@@ -141,6 +146,9 @@ class ScalingWindowActions(WindowActions):
         actions: WindowActions,
         scale_factor: float,
     ) -> None:
+        if not math.isfinite(scale_factor) or scale_factor <= 0:
+            raise ValueError("scale_factor must be a finite positive number")
+
         self._actions = actions
         self._scale_factor = scale_factor
 
