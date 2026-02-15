@@ -21,6 +21,9 @@ class EssenceQuality(StrEnum):
     TRASH = "trash"
     """Identified as junk or unwanted item."""
 
+    SKIP = "skip"
+    """Item should be ignored by automatic actions."""
+
 
 @dataclass
 class EssenceData:

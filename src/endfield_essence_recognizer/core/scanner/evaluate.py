@@ -1,10 +1,14 @@
+from endfield_essence_recognizer.core.recognition import RarityLabel
 from endfield_essence_recognizer.core.scanner.models import (
     EssenceData,
     EssenceQuality,
     EvaluationResult,
 )
 from endfield_essence_recognizer.game_data.static_game_data import StaticGameData
-from endfield_essence_recognizer.schemas.user_setting import UserSetting
+from endfield_essence_recognizer.schemas.user_setting import (
+    NonFiveStarBehavior,
+    UserSetting,
+)
 
 
 def evaluate_essence(
@@ -29,6 +33,15 @@ def evaluate_essence(
     Returns:
         EvaluationResult containing the decision, log message, and reasoning.
     """
+    if (
+        data.rarity != RarityLabel.FIVE
+        and setting.non_five_star_behavior == NonFiveStarBehavior.SKIP
+    ):
+        return EvaluationResult(
+            quality=EssenceQuality.SKIP,
+            log_message="这个基质是<dim>非高纯基质</>，已根据设置跳过处理。",
+        )
+
     stats = data.stats
     levels = data.levels
 

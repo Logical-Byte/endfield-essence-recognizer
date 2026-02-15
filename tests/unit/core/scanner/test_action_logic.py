@@ -177,3 +177,13 @@ def test_lock_if_not_deprecated(default_data, default_eval, default_settings):
     default_data.lock_label = LockStatusLabel.LOCKED
     actions = decide_actions(default_data, default_eval, default_settings)
     assert len(actions) == 0
+
+
+def test_decide_actions_skip_quality(default_data, default_eval, default_settings):
+    """
+    Test that SKIP quality returns no actions.
+    """
+    default_eval.quality = EssenceQuality.SKIP
+    actions = decide_actions(default_data, default_eval, default_settings)
+    assert actions == []
+    assert len(actions) == 0
