@@ -1,36 +1,37 @@
 """
 布局定位与属性识别验证测试
 
-读取 tests/screenshot/ 下的截图，根据宽高比选择缩放策略：
+读取输入目录下的截图，根据宽高比选择缩放策略：
 - 宽比例 (>= 16:9)：按高度缩放到 1080
 - 窄比例 (< 16:9)：按宽度缩放到 1920
 
 使用 DynamicResolutionProfile 绘制所有 ROI 和按钮位置，
 并对 STATS ROI 执行属性识别，将结果标注在图像上，
-输出到 tests/screenshot/analysis/ 目录。
+输出到指定目录。
 
-运行: python tests/test_layout_anchoring.py
+运行示例:
+python scripts/test_layout_anchoring.py
+python scripts/test_layout_anchoring.py tests/screenshot tests/screenshot/analysis
+python scripts/test_layout_anchoring.py tests/screenshot out/analysis -g "*.png"
 """
 
+import argparse
 import importlib.resources
-import sys
 from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 import cv2
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
 from endfield_essence_recognizer.core.layout.dynamic import (
-    DynamicResolutionProfile,
     _BOTTOM_MARGIN,
     _CARD_SIZE,
+    DynamicResolutionProfile,
 )
 from endfield_essence_recognizer.core.recognition import (
-    prepare_attribute_recognizer,
-    prepare_attribute_level_recognizer,
     prepare_abandon_status_recognizer,
+    prepare_attribute_level_recognizer,
+    prepare_attribute_recognizer,
     prepare_lock_status_recognizer,
 )
 from endfield_essence_recognizer.core.recognition.tasks.abandon_lock_status import (
@@ -55,25 +56,26 @@ FONT_SIZE = 16
 # ============================================================
 RARITY_COLORS_BGR = {
     1: (155, 155, 155),  # #9B9B9B gray
-    2: (66, 206, 171),   # #ABCE42 green
-    3: (253, 187, 38),   # #26BBFD blue
-    4: (250, 82, 148),   # #9452FA purple
-    5: (3, 187, 255),    # #FFBB03 gold
-    6: (0, 113, 255),    # #FF7100 orange
+    2: (66, 206, 171),  # #ABCE42 green
+    3: (253, 187, 38),  # #26BBFD blue
+    4: (250, 82, 148),  # #9452FA purple
+    5: (3, 187, 255),  # #FFBB03 gold
+    6: (0, 113, 255),  # #FF7100 orange
 }
 
-SAMPLE_STRIP_H = 6        # 采样条高度
-SAMPLE_INSET_BOTTOM = -1   # 距卡片底边内缩（正值=向上）
+SAMPLE_STRIP_H = 6  # 采样条高度
+SAMPLE_INSET_BOTTOM = -1  # 距卡片底边内缩（正值=向上）
 SAMPLE_WIDTH_RATIO = 0.5  # 采样宽度占卡片宽度的比例（居中）
 SATURATION_TOP_RATIO = 0.3  # 取饱和度前 N% 的像素
 
-DRAW_CARD_BORDER = True   # 是否绘制卡片边框
-DRAW_SAMPLE_AREA = True    # 是否绘制采样区域标记
+DRAW_CARD_BORDER = True  # 是否绘制卡片边框
+DRAW_SAMPLE_AREA = True  # 是否绘制采样区域标记
 
 
 # ============================================================
 # 工具函数
 # ============================================================
+
 
 def _get_font(size: int = FONT_SIZE) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
     """尝试加载系统中文字体。"""
@@ -88,7 +90,13 @@ def _get_font(size: int = FONT_SIZE) -> ImageFont.FreeTypeFont | ImageFont.Image
     return ImageFont.load_default()
 
 
-def _put_text(img, text: str, pos: tuple[int, int], color: tuple[int, int, int], font: ImageFont.FreeTypeFont | ImageFont.ImageFont):
+def _put_text(
+    img,
+    text: str,
+    pos: tuple[int, int],
+    color: tuple[int, int, int],
+    font: ImageFont.FreeTypeFont | ImageFont.ImageFont,
+):
     """在 cv2 图像上用 PIL 绘制中文文本。color 为 BGR。"""
     pil_img = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
     draw = ImageDraw.Draw(pil_img)
@@ -113,6 +121,7 @@ def _sample_region(cx: int, cy: int) -> tuple[int, int, int, int]:
 # 缩放
 # ============================================================
 
+
 def scale_image(img):
     """根据宽高比缩放图像，返回 (scaled, new_w, new_h, scale, mode)。"""
     h, w = img.shape[:2]
@@ -132,6 +141,7 @@ def scale_image(img):
 # ============================================================
 # 稀有度检测
 # ============================================================
+
 
 def detect_rarity(img, cx: int, cy: int) -> tuple[int, float]:
     """从卡片底部采样高饱和度像素颜色，返回 (稀有度, 距离)。"""
@@ -160,7 +170,12 @@ def detect_rarity(img, cx: int, cy: int) -> tuple[int, float]:
     best_rarity = 1
     best_dist = float("inf")
     for rarity, color in RARITY_COLORS_BGR.items():
-        dist = np.sqrt(sum((float(a) - float(b)) ** 2 for a, b in zip(avg_color, color)))
+        dist = np.sqrt(
+            sum(
+                (float(a) - float(b)) ** 2
+                for a, b in zip(avg_color, color, strict=False)
+            )
+        )
         if dist < best_dist:
             best_dist = dist
             best_rarity = rarity
@@ -168,7 +183,9 @@ def detect_rarity(img, cx: int, cy: int) -> tuple[int, float]:
     return best_rarity, best_dist
 
 
-def detect_all_rarities(img, profile: DynamicResolutionProfile) -> list[tuple[int, int, int, float]]:
+def detect_all_rarities(
+    img, profile: DynamicResolutionProfile
+) -> list[tuple[int, int, int, float]]:
     """对所有卡片位置检测稀有度，返回 [(cx, cy, rarity, dist), ...]。"""
     results = []
     for cx in profile.essence_icon_x_list:
@@ -182,7 +199,10 @@ def detect_all_rarities(img, profile: DynamicResolutionProfile) -> list[tuple[in
 # 绘制函数
 # ============================================================
 
-def draw_right_panel(scaled, profile, static_data, attr_rec, level_rec, abandon_rec, lock_rec, font):
+
+def draw_right_panel(
+    scaled, profile, static_data, attr_rec, level_rec, abandon_rec, lock_rec, font
+):
     """绘制右侧面板：AREA、STATS ROI、按钮、属性识别结果。"""
     # AREA
     area = profile.AREA
@@ -198,7 +218,7 @@ def draw_right_panel(scaled, profile, static_data, attr_rec, level_rec, abandon_
     for k, (name, roi, color) in enumerate(rois):
         cv2.rectangle(scaled, (roi.x0, roi.y0), (roi.x1, roi.y1), color, LINE)
 
-        roi_crop = scaled[roi.y0:roi.y1, roi.x0:roi.x1]
+        roi_crop = scaled[roi.y0 : roi.y1, roi.x0 : roi.x1]
         attr_label, attr_score = attr_rec.recognize_roi(roi_crop)
         level = level_rec.recognize_level(scaled, k, profile)
 
@@ -225,10 +245,18 @@ def draw_right_panel(scaled, profile, static_data, attr_rec, level_rec, abandon_
     # 按钮 ROI + 状态识别
     lock_roi = profile.LOCK_BUTTON_ROI
     dep_roi = profile.DEPRECATE_BUTTON_ROI
-    cv2.rectangle(scaled, (lock_roi.x0, lock_roi.y0), (lock_roi.x1, lock_roi.y1), (0, 0, 255), LINE)
-    cv2.rectangle(scaled, (dep_roi.x0, dep_roi.y0), (dep_roi.x1, dep_roi.y1), (255, 0, 255), LINE)
+    cv2.rectangle(
+        scaled,
+        (lock_roi.x0, lock_roi.y0),
+        (lock_roi.x1, lock_roi.y1),
+        (0, 0, 255),
+        LINE,
+    )
+    cv2.rectangle(
+        scaled, (dep_roi.x0, dep_roi.y0), (dep_roi.x1, dep_roi.y1), (255, 0, 255), LINE
+    )
 
-    dep_crop = scaled[dep_roi.y0:dep_roi.y1, dep_roi.x0:dep_roi.x1]
+    dep_crop = scaled[dep_roi.y0 : dep_roi.y1, dep_roi.x0 : dep_roi.x1]
     abandon_label, abandon_score = abandon_rec.recognize_roi_fallback(
         dep_crop, fallback_label=AbandonStatusLabel.MAYBE_ABANDONED
     )
@@ -236,7 +264,7 @@ def draw_right_panel(scaled, profile, static_data, attr_rec, level_rec, abandon_
     _put_text(scaled, dep_text, (dep_roi.x0, dep_roi.y1 + 4), (255, 0, 255), font)
     print(f"  弃用: {dep_text}")
 
-    lock_crop = scaled[lock_roi.y0:lock_roi.y1, lock_roi.x0:lock_roi.x1]
+    lock_crop = scaled[lock_roi.y0 : lock_roi.y1, lock_roi.x0 : lock_roi.x1]
     lock_label, lock_score = lock_rec.recognize_roi_fallback(
         lock_crop, fallback_label=LockStatusLabel.MAYBE_LOCKED
     )
@@ -247,27 +275,43 @@ def draw_right_panel(scaled, profile, static_data, attr_rec, level_rec, abandon_
 
 def draw_grid(scaled, profile, rarity_results, font):
     """绘制左侧物品网格：卡片边框、稀有度标注、采样区域。"""
-    for cx, cy, rarity, dist in rarity_results:
+    for cx, cy, rarity, _dist in rarity_results:
         half = _CARD_SIZE // 2
 
         if DRAW_CARD_BORDER:
-            cv2.rectangle(scaled, (cx - half, cy - half), (cx + half, cy + half), (255, 255, 0), LINE)
+            cv2.rectangle(
+                scaled,
+                (cx - half, cy - half),
+                (cx + half, cy + half),
+                (255, 255, 0),
+                LINE,
+            )
             cv2.circle(scaled, (cx, cy), DOT, (0, 0, 255), -1)
 
         rarity_color = RARITY_COLORS_BGR.get(rarity, (255, 255, 255))
 
         if DRAW_SAMPLE_AREA:
             x_left, y_top, x_right, y_bottom = _sample_region(cx, cy)
-            cv2.rectangle(scaled, (x_left, y_top), (x_right, y_bottom), (255, 255, 255), 1)
+            cv2.rectangle(
+                scaled, (x_left, y_top), (x_right, y_bottom), (255, 255, 255), 1
+            )
 
-        _put_text(scaled, f"{rarity}★", (cx - half + 2, cy - half + 2), rarity_color, font)
+        _put_text(
+            scaled, f"{rarity}★", (cx - half + 2, cy - half + 2), rarity_color, font
+        )
 
 
 def draw_bottom_boundary(scaled, new_w, new_h, font):
     """绘制网格底部边界线。"""
     grid_bottom_y = new_h - _BOTTOM_MARGIN
     cv2.line(scaled, (0, grid_bottom_y), (new_w, grid_bottom_y), (0, 200, 200), LINE)
-    _put_text(scaled, f"网格底部 y={grid_bottom_y} (margin={_BOTTOM_MARGIN})", (10, grid_bottom_y + 4), (0, 200, 200), font)
+    _put_text(
+        scaled,
+        f"网格底部 y={grid_bottom_y} (margin={_BOTTOM_MARGIN})",
+        (10, grid_bottom_y + 4),
+        (0, 200, 200),
+        font,
+    )
 
 
 def draw_title(scaled, label, new_w, new_h, profile, font):
@@ -282,6 +326,7 @@ def draw_title(scaled, label, new_w, new_h, profile, font):
 # 初始化与主流程
 # ============================================================
 
+
 def init_recognizers():
     """初始化静态数据和所有识别器。"""
     data_root = importlib.resources.files("endfield_essence_recognizer") / "data/v2"
@@ -295,7 +340,9 @@ def init_recognizers():
     )
 
 
-def annotate_screenshot(img_path, output_dir, static_data, attr_rec, level_rec, abandon_rec, lock_rec, font):
+def annotate_screenshot(
+    img_path, output_dir, static_data, attr_rec, level_rec, abandon_rec, lock_rec, font
+):
     img = cv2.imread(str(img_path))
     if img is None:
         print(f"无法读取: {img_path}")
@@ -313,7 +360,9 @@ def annotate_screenshot(img_path, output_dir, static_data, attr_rec, level_rec, 
     rarity_results = detect_all_rarities(scaled, profile)
 
     # 绘制各部分
-    draw_right_panel(scaled, profile, static_data, attr_rec, level_rec, abandon_rec, lock_rec, font)
+    draw_right_panel(
+        scaled, profile, static_data, attr_rec, level_rec, abandon_rec, lock_rec, font
+    )
     draw_grid(scaled, profile, rarity_results, font)
     draw_bottom_boundary(scaled, new_w, new_h, font)
     draw_title(scaled, label, new_w, new_h, profile, font)
@@ -323,18 +372,45 @@ def annotate_screenshot(img_path, output_dir, static_data, attr_rec, level_rec, 
     print(f"  -> 保存: {out}")
 
 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="布局定位与属性识别可视化验证脚本")
+    parser.add_argument(
+        "input",
+        nargs="?",
+        type=Path,
+        default=Path("tests/screenshot"),
+        help="输入截图目录",
+    )
+    parser.add_argument(
+        "output",
+        nargs="?",
+        type=Path,
+        default=Path("tests/screenshot/analysis"),
+        help="输出目录",
+    )
+    parser.add_argument(
+        "-g",
+        "--glob",
+        default="*.png",
+        help="输入文件匹配模式（默认: *.png）",
+    )
+    return parser.parse_args()
+
+
 def main():
+    args = parse_args()
+
     print("=" * 60)
     print("布局定位与属性识别验证测试")
     print("=" * 60)
 
-    screenshots_dir = Path("tests/screenshot")
-    output_dir = screenshots_dir / "analysis"
-    output_dir.mkdir(exist_ok=True)
+    screenshots_dir = args.input
+    output_dir = args.output
+    output_dir.mkdir(parents=True, exist_ok=True)
 
-    screenshot_files = sorted(screenshots_dir.glob("*.png"))
+    screenshot_files = sorted(screenshots_dir.glob(args.glob))
     if not screenshot_files:
-        print(f"\n在 {screenshots_dir} 中没有找到截图")
+        print(f"\n在 {screenshots_dir} 中没有找到匹配 {args.glob} 的截图")
         return
 
     print(f"\n找到 {len(screenshot_files)} 个截图")
@@ -344,7 +420,16 @@ def main():
     print("识别器加载完成\n")
 
     for img_path in screenshot_files:
-        annotate_screenshot(img_path, output_dir, static_data, attr_rec, level_rec, abandon_rec, lock_rec, font)
+        annotate_screenshot(
+            img_path,
+            output_dir,
+            static_data,
+            attr_rec,
+            level_rec,
+            abandon_rec,
+            lock_rec,
+            font,
+        )
 
     print(f"\n所有标注图像已保存到: {output_dir}")
 

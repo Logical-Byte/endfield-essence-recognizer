@@ -1,16 +1,17 @@
 """
 截图隐私处理工具
 
-遮蔽 tests/screenshot/ 下所有截图左下角的 UID 信息，防止隐私泄漏。
+遮蔽输入目录下所有截图左下角的 UID 信息，防止隐私泄漏。
 处理后的图像直接覆盖原文件。
 
-运行: python scripts/mask_screenshot_uid.py
+运行示例:
+python scripts/mask_screenshot_uid.py
+python scripts/mask_screenshot_uid.py tests/screenshot
+python scripts/mask_screenshot_uid.py tests/screenshot -g "*.png"
 """
 
-import sys
+import argparse
 from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 import cv2
 
@@ -42,12 +43,31 @@ def mask_uid(img_path: Path) -> None:
     print(f"已遮蔽: {img_path} ({w}x{h}) 区域=({x0},{y0})-({x1},{y1})")
 
 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="批量遮蔽截图中的 UID 区域")
+    parser.add_argument(
+        "input",
+        nargs="?",
+        type=Path,
+        default=Path("tests/screenshot"),
+        help="输入截图目录",
+    )
+    parser.add_argument(
+        "-g",
+        "--glob",
+        default="*.png",
+        help="输入文件匹配模式（默认: *.png）",
+    )
+    return parser.parse_args()
+
+
 def main():
-    screenshots_dir = Path("tests/screenshot")
-    files = sorted(screenshots_dir.glob("*.png"))
+    args = parse_args()
+    screenshots_dir = args.input
+    files = sorted(screenshots_dir.glob(args.glob))
 
     if not files:
-        print("没有找到截图")
+        print(f"在 {screenshots_dir} 中没有找到匹配 {args.glob} 的截图")
         return
 
     print(f"找到 {len(files)} 个截图\n")
