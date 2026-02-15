@@ -148,7 +148,6 @@ class WindowActions(Protocol):
         ...
 
 
-
 @runtime_checkable
 class HotkeyHandler(Protocol):
     """

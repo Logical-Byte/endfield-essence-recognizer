@@ -5,7 +5,6 @@ from cv2.typing import MatLike
 
 from endfield_essence_recognizer.core.layout.base import Region
 from endfield_essence_recognizer.core.window.windows_utils import (
-    _get_client_rect,
     click_on_window,
     drag_on_window,
     get_client_size,

@@ -6,11 +6,11 @@
         <v-btn color="primary" @click="startScanning">开始扫描基质</v-btn>
         <v-checkbox
           v-model="autoPageFlip"
-          label="自动翻页"
-          color="primary"
-          hide-details
-          density="compact"
           class="mt-0 pt-0"
+          color="primary"
+          density="compact"
+          hide-details
+          label="自动翻页"
         />
         <v-spacer />
         <v-btn color="error" @click="clearLogs">清空日志</v-btn>
@@ -66,7 +66,7 @@ async function saveAutoPageFlipSetting() {
     if (!getResponse.ok) return
     const currentConfig = await getResponse.json()
     currentConfig.auto_page_flip = autoPageFlip.value
-    
+
     await fetch('/api/config', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

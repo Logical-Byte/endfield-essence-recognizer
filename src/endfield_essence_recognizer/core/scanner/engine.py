@@ -296,7 +296,9 @@ class ScannerEngine:
 
         # 记录当前分辨率和缩放后的检测位置
         resolution = self._profile.RESOLUTION
-        logger.info(f"当前分辨率: {resolution[0]}x{resolution[1]}, 滚动条检测位置: ({scrollbar_pos.x}, {scrollbar_pos.y})")
+        logger.info(
+            f"当前分辨率: {resolution[0]}x{resolution[1]}, 滚动条检测位置: ({scrollbar_pos.x}, {scrollbar_pos.y})"
+        )
 
         # 检查是否启用自动翻页
         auto_page_flip = user_setting.auto_page_flip
@@ -344,7 +346,9 @@ class ScannerEngine:
                     # early continue on uncertain recognition
                     continue
 
-                evaluation = evaluate_essence(data, user_setting, self.ctx.static_game_data)
+                evaluation = evaluate_essence(
+                    data, user_setting, self.ctx.static_game_data
+                )
 
                 # Log the result
                 if (
@@ -388,9 +392,11 @@ class ScannerEngine:
             # 执行拖动翻页操作（向上拖动）
             logger.info("正在拖动翻页到下一页...")
             self._window_actions.drag(
-                drag_start.x, drag_start.y,
-                drag_end.x, drag_end.y,
-                duration=drag_duration
+                drag_start.x,
+                drag_start.y,
+                drag_end.x,
+                drag_end.y,
+                duration=drag_duration,
             )
             # 等待拖动动画完成（拖动1.0s + 保持0.3s + 等待0.2s + 额外等待让UI稳定）
             self._window_actions.wait(1.5)
@@ -421,13 +427,13 @@ class ScannerEngine:
             resolution = self._profile.RESOLUTION
             scale_factor = resolution[1] / 1080  # 基于高度缩放
             radius = max(1, round(2 * scale_factor))  # 至少为 1
-            
+
             from endfield_essence_recognizer.core.layout.base import Region
 
             # 截取检测位置附近的区域
             roi = Region(
                 Point(check_pos.x - radius, check_pos.y - radius),
-                Point(check_pos.x + radius + 1, check_pos.y + radius + 1)
+                Point(check_pos.x + radius + 1, check_pos.y + radius + 1),
             )
             screenshot = self._image_source.screenshot(roi)
 
@@ -439,10 +445,14 @@ class ScannerEngine:
                     b, g, r = int(pixel[0]), int(pixel[1]), int(pixel[2])
                     # 如果 RGB 都高于 100，认为是亮点（滚动条）
                     if r > 100 and g > 100 and b > 100:
-                        logger.info(f"检测到滚动条亮点 at ({check_pos.x - radius + x}, {check_pos.y - radius + y}): RGB({r}, {g}, {b})，搜索半径: {radius}")
+                        logger.info(
+                            f"检测到滚动条亮点 at ({check_pos.x - radius + x}, {check_pos.y - radius + y}): RGB({r}, {g}, {b})，搜索半径: {radius}"
+                        )
                         return True
 
-            logger.debug(f"未检测到滚动条亮点 at ({check_pos.x}, {check_pos.y})，搜索半径: {radius}")
+            logger.debug(
+                f"未检测到滚动条亮点 at ({check_pos.x}, {check_pos.y})，搜索半径: {radius}"
+            )
             return False
 
         except Exception as e:
