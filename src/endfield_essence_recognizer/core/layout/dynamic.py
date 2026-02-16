@@ -15,6 +15,7 @@
 可使用 ``scripts/test_layout_anchoring.py`` 对不同分辨率截图进行可视化验证。
 """
 
+import math
 from collections.abc import Sequence
 
 from endfield_essence_recognizer.utils.log import logger
@@ -73,7 +74,7 @@ class DynamicResolutionProfile(ResolutionProfile):
         # 计算自适应网格
         container_right = self._width - _PANEL_RIGHT_MARGIN
         container_width = container_right - _CONTAINER_LEFT
-        self._grid_cols = int(container_width / _SPACING_W)
+        self._grid_cols = math.floor(container_width / _SPACING_W)
         first_x = round(
             _CONTAINER_LEFT + (container_width - self._grid_cols * _SPACING_W) / 2
         )
