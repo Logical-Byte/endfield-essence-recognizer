@@ -128,13 +128,13 @@ def recognize_essence(
     stats_name = "、".join(stats_name_parts)
 
     rarity_text = {
-        RarityLabel.FIVE: "5星",
-        RarityLabel.FOUR: "4星",
+        RarityLabel.FIVE: "<yellow>无瑕</>",
+        RarityLabel.FOUR: "<magenta>高纯</>",
         RarityLabel.OTHER: "其他",
     }.get(rarity_label, "未知")
 
     logger.opt(colors=True).info(
-        f"已识别当前基质，属性: <magenta>{stats_name}</>, 稀有度: <magenta>{rarity_text}</>, <magenta>{abandon_label.value}</>, <magenta>{locked_label.value}</>"
+        f"已识别当前基质，属性: <magenta>{stats_name}</>, 稀有度: {rarity_text}, <magenta>{abandon_label.value}</>, <magenta>{locked_label.value}</>"
     )
 
     return EssenceData(stats, levels, rarity_label, abandon_label, locked_label)
