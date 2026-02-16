@@ -15,8 +15,10 @@ from endfield_essence_recognizer.core.recognition import (
     LockStatusLabel,
     RarityLabel,
 )
-from endfield_essence_recognizer.core.recognition.recognizer import Recognizer
 from endfield_essence_recognizer.core.recognition.tasks.ui import UISceneLabel
+from endfield_essence_recognizer.core.recognition.template_recognizer import (
+    TemplateRecognizer,
+)
 from endfield_essence_recognizer.core.scanner.context import ScannerContext
 from endfield_essence_recognizer.core.scanner.engine import ScannerEngine
 from endfield_essence_recognizer.schemas.user_setting import UserSetting
@@ -74,31 +76,31 @@ class MockWindowActions:
 @pytest.fixture
 def mock_scanner_context():
     # Mock recognizers
-    ui_scene_recognizer = MagicMock(spec=Recognizer)
+    ui_scene_recognizer = MagicMock(spec=TemplateRecognizer)
     ui_scene_recognizer.recognize_roi_fallback.return_value = (
         UISceneLabel.ESSENCE_UI,
         1.0,
     )
 
-    attr_recognizer = MagicMock(spec=Recognizer)
+    attr_recognizer = MagicMock(spec=TemplateRecognizer)
     attr_recognizer.recognize_roi.return_value = ("atk", 0.9)  # Dummy attribute
 
     attr_level_recognizer = MagicMock(spec=AttributeLevelRecognizer)
     attr_level_recognizer.recognize_level.return_value = 10
 
-    abandon_status_recognizer = MagicMock(spec=Recognizer)
+    abandon_status_recognizer = MagicMock(spec=TemplateRecognizer)
     abandon_status_recognizer.recognize_roi_fallback.return_value = (
         AbandonStatusLabel.NOT_ABANDONED,
         0.9,
     )
 
-    lock_status_recognizer = MagicMock(spec=Recognizer)
+    lock_status_recognizer = MagicMock(spec=TemplateRecognizer)
     lock_status_recognizer.recognize_roi_fallback.return_value = (
         LockStatusLabel.NOT_LOCKED,
         0.9,
     )
 
-    rarity_recognizer = MagicMock(spec=Recognizer)
+    rarity_recognizer = MagicMock(spec=TemplateRecognizer)
     rarity_recognizer.recognize_roi_fallback.return_value = (
         RarityLabel.OTHER,
         0.9,

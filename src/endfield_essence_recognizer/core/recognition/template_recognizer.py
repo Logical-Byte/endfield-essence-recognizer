@@ -1,17 +1,50 @@
 import importlib.resources
 from collections import defaultdict
+from collections.abc import Callable
+from dataclasses import dataclass, field
+from importlib.abc import Traversable
+from pathlib import Path
 
 import cv2
 from cv2.typing import MatLike
 
-from endfield_essence_recognizer.core.recognition.base import RecognitionProfile
 from endfield_essence_recognizer.utils.image import load_image
 from endfield_essence_recognizer.utils.log import logger, str_properties_and_attrs
 
 
-class Recognizer[LabelT]:
+@dataclass(frozen=True)
+class TemplateDescriptor[LabelT]:
+    """描述一个模板资源及其对应的标签。"""
+
+    path: Path | Traversable
+    """Path to the template image file."""
+    label: LabelT
+    """The label associated with this template."""
+
+
+@dataclass
+class RecognitionProfile[LabelT]:
+    """实例化 TemplateRecognizer 所需的配置。"""
+
+    templates: list[TemplateDescriptor[LabelT]]
+    """List of template descriptors to load."""
+    high_threshold: float = 0.75
+    """High similarity threshold for confident matches."""
+    low_threshold: float = 0.50
+    """Low similarity threshold for tentative matches."""
+    preprocess_roi: Callable[[MatLike], MatLike] = field(
+        default_factory=lambda: lambda x: x
+    )
+    """Preprocessing function for ROI images."""
+    preprocess_template: Callable[[MatLike], MatLike] = field(
+        default_factory=lambda: lambda x: x
+    )
+    """Preprocessing function for template images."""
+
+
+class TemplateRecognizer[LabelT]:
     """
-    通用图像识别类，使用模板匹配。
+    基于模板匹配的图像识别类。
 
     LabelT is the type of the labels used for recognition (e.g., a StrEnum). The return
     value of `recognize_roi` aligns with this type.

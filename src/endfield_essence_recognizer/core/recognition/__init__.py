@@ -2,10 +2,6 @@ from functools import lru_cache
 
 from endfield_essence_recognizer.game_data.static_game_data import StaticGameData
 
-from .base import (
-    RecognitionProfile,
-    TemplateDescriptor,
-)
 from .brightness_detector import (
     BrightnessDetector,
     BrightnessDetectorProfile,
@@ -15,7 +11,6 @@ from .hue_recognizer import (
     HueRecognitionProfile,
     HueRecognizer,
 )
-from .recognizer import Recognizer
 from .tasks.abandon_lock_status import (
     AbandonStatusLabel,
     LockStatusLabel,
@@ -45,25 +40,30 @@ from .tasks.ui import (
     UISceneLabel,
     build_ui_scene_profile,
 )
+from .template_recognizer import (
+    RecognitionProfile,
+    TemplateDescriptor,
+    TemplateRecognizer,
+)
 
 # type aliases for recognizers
 
-type AttributeRecognizer = Recognizer[str]
+type AttributeRecognizer = TemplateRecognizer[str]
 """识别属性文本的识别器类型别名，返回字符串标签"""
 
-type AbandonStatusRecognizer = Recognizer[AbandonStatusLabel]
+type AbandonStatusRecognizer = TemplateRecognizer[AbandonStatusLabel]
 """识别弃用状态的识别器类型别名，返回 AbandonStatusLabel 标签"""
 
-type LockStatusRecognizer = Recognizer[LockStatusLabel]
+type LockStatusRecognizer = TemplateRecognizer[LockStatusLabel]
 """识别上锁状态的识别器类型别名，返回 LockStatusLabel 标签"""
 
-type UISceneRecognizer = Recognizer[UISceneLabel]
+type UISceneRecognizer = TemplateRecognizer[UISceneLabel]
 """识别UI场景的识别器类型别名，返回 UISceneLabel 标签"""
 
-type DeliverySceneRecognizer = Recognizer[DeliverySceneLabel]
+type DeliverySceneRecognizer = TemplateRecognizer[DeliverySceneLabel]
 """识别派遣场景的识别器类型别名，返回 DeliverySceneLabel 标签"""
 
-type DeliveryJobRewardRecognizer = Recognizer[DeliveryJobRewardLabel]
+type DeliveryJobRewardRecognizer = TemplateRecognizer[DeliveryJobRewardLabel]
 """识别派遣奖励的识别器类型别名，返回 DeliveryJobRewardLabel 标签"""
 
 type RarityRecognizer = HueRecognizer[RarityLabel]
@@ -74,9 +74,9 @@ type RarityRecognizer = HueRecognizer[RarityLabel]
 
 def prepare_recognizer[LabelT](
     name: str, profile: RecognitionProfile[LabelT]
-) -> Recognizer[LabelT]:
+) -> TemplateRecognizer[LabelT]:
     """构造并返回一个识别器实例，并加载其模板。"""
-    recognizer = Recognizer(name, profile)
+    recognizer = TemplateRecognizer(name, profile)
     recognizer.load_templates()
     return recognizer
 
@@ -149,8 +149,8 @@ __all__ = [
     "RarityLabel",
     "RarityRecognizer",
     "RecognitionProfile",
-    "Recognizer",
     "TemplateDescriptor",
+    "TemplateRecognizer",
     "UISceneLabel",
     "UISceneRecognizer",
     "prepare_abandon_status_recognizer",
