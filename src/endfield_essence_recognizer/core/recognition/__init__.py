@@ -10,6 +10,11 @@ from .brightness_detector import (
     BrightnessDetector,
     BrightnessDetectorProfile,
 )
+from .hue_recognizer import (
+    ColorDescriptor,
+    HueRecognitionProfile,
+    HueRecognizer,
+)
 from .recognizer import Recognizer
 from .tasks.abandon_lock_status import (
     AbandonStatusLabel,
@@ -31,6 +36,10 @@ from .tasks.delivery_job_reward import (
 from .tasks.delivery_ui import (
     DeliverySceneLabel,
     build_delivery_scene_profile,
+)
+from .tasks.essence_rarity import (
+    RarityLabel,
+    build_rarity_profile,
 )
 from .tasks.ui import (
     UISceneLabel,
@@ -56,6 +65,9 @@ type DeliverySceneRecognizer = Recognizer[DeliverySceneLabel]
 
 type DeliveryJobRewardRecognizer = Recognizer[DeliveryJobRewardLabel]
 """识别派遣奖励的识别器类型别名，返回 DeliveryJobRewardLabel 标签"""
+
+type RarityRecognizer = HueRecognizer[RarityLabel]
+"""识别基质稀有度的识别器类型别名 (基于颜色)"""
 
 # Factory functions
 
@@ -112,6 +124,12 @@ def prepare_attribute_level_recognizer() -> AttributeLevelRecognizer:
     )
 
 
+@lru_cache
+def prepare_rarity_recognizer() -> RarityRecognizer:
+    """构造并返回一个稀有度识别器实例。"""
+    return HueRecognizer("RarityRecognizer", build_rarity_profile())
+
+
 __all__ = [
     "AbandonStatusLabel",
     "AbandonStatusRecognizer",
@@ -119,12 +137,17 @@ __all__ = [
     "AttributeRecognizer",
     "BrightnessDetector",
     "BrightnessDetectorProfile",
+    "ColorDescriptor",
     "DeliveryJobRewardLabel",
     "DeliveryJobRewardRecognizer",
     "DeliverySceneLabel",
     "DeliverySceneRecognizer",
+    "HueRecognitionProfile",
+    "HueRecognizer",
     "LockStatusLabel",
     "LockStatusRecognizer",
+    "RarityLabel",
+    "RarityRecognizer",
     "RecognitionProfile",
     "Recognizer",
     "TemplateDescriptor",
@@ -136,6 +159,7 @@ __all__ = [
     "prepare_delivery_job_reward_recognizer",
     "prepare_delivery_scene_recognizer",
     "prepare_lock_status_recognizer",
+    "prepare_rarity_recognizer",
     "prepare_recognizer",
     "prepare_ui_scene_recognizer",
 ]

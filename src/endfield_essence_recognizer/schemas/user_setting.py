@@ -17,6 +17,19 @@ class Action(StrEnum):
     LOCK_IF_NOT_DEPRECATED = "lock_if_not_deprecated"
 
 
+class NonFiveStarBehavior(StrEnum):
+    """Enumeration of behaviors for non-5-star essences.
+
+    5-star 即高纯基质（黄色），非5-star即非高纯基质。
+    """
+
+    PROCESS = "process"
+    """Process non-5-star essences normally according to other rules."""
+
+    SKIP = "skip"
+    """Skip any operations on non-5-star essences."""
+
+
 class EssenceStats(BaseModel):
     attribute: str | None
     secondary: str | None
@@ -33,6 +46,9 @@ class UserSetting(BaseModel):
 
     treasure_action: Action = Action.LOCK
     trash_action: Action = Action.UNLOCK
+
+    non_five_star_behavior: NonFiveStarBehavior = NonFiveStarBehavior.PROCESS
+    """如何处理非高纯基质：正常处理或直接跳过。"""
 
     high_level_treasure_enabled: bool = False
     """是否启用高等级基质属性词条判定为宝藏"""

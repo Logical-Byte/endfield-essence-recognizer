@@ -13,6 +13,7 @@ from endfield_essence_recognizer.core.recognition import (
     AbandonStatusLabel,
     AttributeLevelRecognizer,
     LockStatusLabel,
+    RarityLabel,
 )
 from endfield_essence_recognizer.core.recognition.recognizer import Recognizer
 from endfield_essence_recognizer.core.recognition.tasks.ui import UISceneLabel
@@ -97,6 +98,12 @@ def mock_scanner_context():
         0.9,
     )
 
+    rarity_recognizer = MagicMock(spec=Recognizer)
+    rarity_recognizer.recognize_roi_fallback.return_value = (
+        RarityLabel.OTHER,
+        0.9,
+    )
+
     static_game_data = MagicMock()
     # Mock return value for get_stat to avoid errors when formatting logs
     static_game_data.get_stat.return_value = MagicMock(name="TestStat")
@@ -106,6 +113,7 @@ def mock_scanner_context():
         attr_level_recognizer=attr_level_recognizer,
         abandon_status_recognizer=abandon_status_recognizer,
         lock_status_recognizer=lock_status_recognizer,
+        rarity_recognizer=rarity_recognizer,
         ui_scene_recognizer=ui_scene_recognizer,
         static_game_data=static_game_data,
     )
