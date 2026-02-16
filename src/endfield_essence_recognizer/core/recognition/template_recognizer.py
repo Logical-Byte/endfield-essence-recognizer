@@ -1,8 +1,8 @@
 import importlib.resources
+import importlib.resources.abc as importlib_abc
 from collections import defaultdict
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from importlib.abc import Traversable
 from pathlib import Path
 
 import cv2
@@ -16,7 +16,7 @@ from endfield_essence_recognizer.utils.log import logger, str_properties_and_att
 class TemplateDescriptor[LabelT]:
     """描述一个模板资源及其对应的标签。"""
 
-    path: Path | Traversable
+    path: Path | importlib_abc.Traversable
     """Path to the template image file."""
     label: LabelT
     """The label associated with this template."""
