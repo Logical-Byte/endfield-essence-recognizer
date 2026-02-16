@@ -40,9 +40,7 @@ class TestWindowManagerDrag:
             ) as mock_drag:
                 manager.drag(0, 0, 100, 100, duration=1.0, hold_time=0.3)
 
-                mock_drag.assert_called_once_with(
-                    mock_window, 0, 0, 100, 100, 1.0, 0.3
-                )
+                mock_drag.assert_called_once_with(mock_window, 0, 0, 100, 100, 1.0, 0.3)
 
     def test_drag_window_not_found(self):
         """Test drag raises WindowNotFoundError when window is None."""
