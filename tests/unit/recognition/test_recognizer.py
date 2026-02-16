@@ -5,11 +5,11 @@ import cv2
 import numpy as np
 import pytest
 
-from endfield_essence_recognizer.core.recognition.base import (
+from endfield_essence_recognizer.core.recognition.template_recognizer import (
     RecognitionProfile,
     TemplateDescriptor,
+    TemplateRecognizer,
 )
-from endfield_essence_recognizer.core.recognition.recognizer import Recognizer
 
 
 @pytest.fixture
@@ -27,7 +27,7 @@ def profile(mock_template_path):
 
 @pytest.fixture
 def recognizer(profile):
-    return Recognizer("TestRecognizer", profile)
+    return TemplateRecognizer("TestRecognizer", profile)
 
 
 def test_load_templates(recognizer, mock_template_path):
@@ -38,7 +38,7 @@ def test_load_templates(recognizer, mock_template_path):
     with (
         patch("importlib.resources.as_file") as mock_as_file,
         patch(
-            "endfield_essence_recognizer.core.recognition.recognizer.load_image"
+            "endfield_essence_recognizer.core.recognition.template_recognizer.load_image"
         ) as mock_load_image,
     ):
         # Adjust mock for as_file which returns a context manager
@@ -68,7 +68,7 @@ def test_load_templates_preprocessing(recognizer, mock_template_path):
     with (
         patch("importlib.resources.as_file") as mock_as_file,
         patch(
-            "endfield_essence_recognizer.core.recognition.recognizer.load_image"
+            "endfield_essence_recognizer.core.recognition.template_recognizer.load_image"
         ) as mock_load_image,
     ):
         mock_as_file.return_value.__enter__.return_value = mock_template_path
@@ -85,7 +85,7 @@ def test_load_templates_fail(recognizer, mock_template_path):
     with (
         patch("importlib.resources.as_file") as mock_as_file,
         patch(
-            "endfield_essence_recognizer.core.recognition.recognizer.load_image"
+            "endfield_essence_recognizer.core.recognition.template_recognizer.load_image"
         ) as mock_load_image,
     ):
         mock_as_file.return_value.__enter__.return_value = mock_template_path
