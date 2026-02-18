@@ -55,6 +55,10 @@ class Resolution1080p(ResolutionProfile):
         return Region(Point(1508, 468), Point(1700, 500))
 
     @property
+    def RARITY_ROI(self) -> Region:
+        return Region(Point(1468, 78), Point(1472, 82))
+
+    @property
     def MASK_ESSENCE_REGION_UID(self) -> Region:
         return Region(Point(0, 1040), Point(270, 1080))
 

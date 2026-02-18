@@ -212,6 +212,10 @@ class DynamicResolutionProfile(ResolutionProfile):
         return self._ra_region(_BASE.STATS_2_ROI)
 
     @property
+    def RARITY_ROI(self) -> Region:
+        return self._ra_region(_BASE.RARITY_ROI)
+
+    @property
     def MASK_ESSENCE_REGION_CURRENCY(self) -> Region:
         return self._ra_region(_BASE.MASK_ESSENCE_REGION_CURRENCY)
 

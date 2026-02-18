@@ -104,6 +104,11 @@ class ResolutionProfile(Protocol):
         ...
 
     @property
+    def RARITY_ROI(self) -> Region:
+        """稀有度识别区域。"""
+        ...
+
+    @property
     def MASK_ESSENCE_REGION_UID(self) -> Region:
         """在基质界面截图中需要遮罩的 UID 区域。"""
         ...

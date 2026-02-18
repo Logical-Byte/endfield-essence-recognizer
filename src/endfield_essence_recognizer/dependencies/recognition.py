@@ -7,6 +7,7 @@ from endfield_essence_recognizer.core.recognition import (
     DeliveryJobRewardRecognizer,
     DeliverySceneRecognizer,
     LockStatusRecognizer,
+    RarityRecognizer,
     UISceneRecognizer,
     prepare_abandon_status_recognizer,
     prepare_attribute_level_recognizer,
@@ -14,6 +15,7 @@ from endfield_essence_recognizer.core.recognition import (
     prepare_delivery_job_reward_recognizer,
     prepare_delivery_scene_recognizer,
     prepare_lock_status_recognizer,
+    prepare_rarity_recognizer,
     prepare_ui_scene_recognizer,
 )
 from endfield_essence_recognizer.dependencies.services import get_static_game_data
@@ -76,3 +78,11 @@ def get_delivery_job_reward_recognizer_dep() -> DeliveryJobRewardRecognizer:
     Get the default delivery job reward Recognizer instance.
     """
     return prepare_delivery_job_reward_recognizer()
+
+
+@lru_cache
+def get_rarity_recognizer_dep() -> RarityRecognizer:
+    """
+    Get the default rarity Recognizer instance.
+    """
+    return prepare_rarity_recognizer()

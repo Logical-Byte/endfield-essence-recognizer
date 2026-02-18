@@ -51,6 +51,9 @@ def decide_actions(
     Returns:
         An ordered list of actions to apply to the game client sequentially.
     """
+    if evaluation.quality == EssenceQuality.SKIP:
+        return []
+
     actions: list[ScannerAction] = []
 
     # --- Lock Logic ---

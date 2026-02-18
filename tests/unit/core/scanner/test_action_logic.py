@@ -3,6 +3,7 @@ import pytest
 from endfield_essence_recognizer.core.recognition import (
     AbandonStatusLabel,
     LockStatusLabel,
+    RarityLabel,
 )
 from endfield_essence_recognizer.core.scanner.action_logic import (
     ActionType,
@@ -21,6 +22,7 @@ def default_data():
     return EssenceData(
         stats=[],
         levels=[],
+        rarity=RarityLabel.OTHER,
         abandon_label=AbandonStatusLabel.NOT_ABANDONED,
         lock_label=LockStatusLabel.NOT_LOCKED,
     )
@@ -174,4 +176,14 @@ def test_lock_if_not_deprecated(default_data, default_eval, default_settings):
     default_data.abandon_label = AbandonStatusLabel.NOT_ABANDONED
     default_data.lock_label = LockStatusLabel.LOCKED
     actions = decide_actions(default_data, default_eval, default_settings)
+    assert len(actions) == 0
+
+
+def test_decide_actions_skip_quality(default_data, default_eval, default_settings):
+    """
+    Test that SKIP quality returns no actions.
+    """
+    default_eval.quality = EssenceQuality.SKIP
+    actions = decide_actions(default_data, default_eval, default_settings)
+    assert actions == []
     assert len(actions) == 0

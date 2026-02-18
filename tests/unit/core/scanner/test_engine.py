@@ -13,9 +13,12 @@ from endfield_essence_recognizer.core.recognition import (
     AbandonStatusLabel,
     AttributeLevelRecognizer,
     LockStatusLabel,
+    RarityLabel,
 )
-from endfield_essence_recognizer.core.recognition.recognizer import Recognizer
 from endfield_essence_recognizer.core.recognition.tasks.ui import UISceneLabel
+from endfield_essence_recognizer.core.recognition.template_recognizer import (
+    TemplateRecognizer,
+)
 from endfield_essence_recognizer.core.scanner.context import ScannerContext
 from endfield_essence_recognizer.core.scanner.engine import ScannerEngine
 from endfield_essence_recognizer.schemas.user_setting import UserSetting
@@ -23,14 +26,14 @@ from endfield_essence_recognizer.services.user_setting_manager import UserSettin
 
 
 class MockImageSource:
-    def __init__(self, width=1920, height=1080):
+    def __init__(self, width: int = 1920, height: int = 1080):
         self.width = width
         self.height = height
 
-    def get_client_size(self):
+    def get_client_size(self) -> tuple[int, int]:
         return self.width, self.height
 
-    def screenshot(self, relative_region=None):
+    def screenshot(self, relative_region: Region | None = None) -> np.ndarray:
         # Return a dummy black image
         if relative_region is not None:
             w = relative_region.x1 - relative_region.x0
@@ -47,53 +50,59 @@ class MockWindowActions:
         self.click_calls = []
 
     @property
-    def target_exists(self):
+    def target_exists(self) -> bool:
         return self._target_exists
 
     @property
-    def target_is_active(self):
+    def target_is_active(self) -> bool:
         return self._target_is_active
 
-    def restore(self):
+    def restore(self) -> bool:
         return True
 
-    def activate(self):
+    def activate(self) -> bool:
         return True
 
-    def show(self):
+    def show(self) -> bool:
         return True
 
-    def click(self, x, y):
-        self.click_calls.append((x, y))
+    def click(self, relative_x: int, relative_y: int) -> None:
+        self.click_calls.append((relative_x, relative_y))
 
-    def wait(self, seconds):
+    def wait(self, seconds: float) -> None:
         pass
 
 
 @pytest.fixture
 def mock_scanner_context():
     # Mock recognizers
-    ui_scene_recognizer = MagicMock(spec=Recognizer)
+    ui_scene_recognizer = MagicMock(spec=TemplateRecognizer)
     ui_scene_recognizer.recognize_roi_fallback.return_value = (
         UISceneLabel.ESSENCE_UI,
         1.0,
     )
 
-    attr_recognizer = MagicMock(spec=Recognizer)
+    attr_recognizer = MagicMock(spec=TemplateRecognizer)
     attr_recognizer.recognize_roi.return_value = ("atk", 0.9)  # Dummy attribute
 
     attr_level_recognizer = MagicMock(spec=AttributeLevelRecognizer)
     attr_level_recognizer.recognize_level.return_value = 10
 
-    abandon_status_recognizer = MagicMock(spec=Recognizer)
+    abandon_status_recognizer = MagicMock(spec=TemplateRecognizer)
     abandon_status_recognizer.recognize_roi_fallback.return_value = (
         AbandonStatusLabel.NOT_ABANDONED,
         0.9,
     )
 
-    lock_status_recognizer = MagicMock(spec=Recognizer)
+    lock_status_recognizer = MagicMock(spec=TemplateRecognizer)
     lock_status_recognizer.recognize_roi_fallback.return_value = (
         LockStatusLabel.NOT_LOCKED,
+        0.9,
+    )
+
+    rarity_recognizer = MagicMock(spec=TemplateRecognizer)
+    rarity_recognizer.recognize_roi_fallback.return_value = (
+        RarityLabel.OTHER,
         0.9,
     )
 
@@ -106,6 +115,7 @@ def mock_scanner_context():
         attr_level_recognizer=attr_level_recognizer,
         abandon_status_recognizer=abandon_status_recognizer,
         lock_status_recognizer=lock_status_recognizer,
+        rarity_recognizer=rarity_recognizer,
         ui_scene_recognizer=ui_scene_recognizer,
         static_game_data=static_game_data,
     )

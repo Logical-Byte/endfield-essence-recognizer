@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     import threading
 
     from endfield_essence_recognizer.core.layout.base import ResolutionProfile
-    from endfield_essence_recognizer.core.recognition.recognizer import Recognizer
+    from endfield_essence_recognizer.core.recognition import TemplateRecognizer
     from endfield_essence_recognizer.services.audio_service import AudioService
 
 
@@ -33,8 +33,8 @@ class DeliveryClaimerEngine(AutomationEngine):
         image_source: ImageSource,
         window_actions: WindowActions,
         profile: ResolutionProfile,
-        delivery_scene_recognizer: Recognizer[DeliverySceneLabel],
-        delivery_job_reward_recognizer: Recognizer[DeliveryJobRewardLabel],
+        delivery_scene_recognizer: TemplateRecognizer[DeliverySceneLabel],
+        delivery_job_reward_recognizer: TemplateRecognizer[DeliveryJobRewardLabel],
         audio_service: AudioService,
         time_after_refresh: float = 3.0,
         time_after_recognition: float = 2.5,

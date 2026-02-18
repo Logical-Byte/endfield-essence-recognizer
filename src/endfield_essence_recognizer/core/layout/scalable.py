@@ -112,6 +112,10 @@ class ScalableResolutionProfile(ResolutionProfile):
         return _scale_region(self._ref.STATS_2_ROI, self._sx, self._sy)
 
     @property
+    def RARITY_ROI(self) -> Region:
+        return _scale_region(self._ref.RARITY_ROI, self._sx, self._sy)
+
+    @property
     def MASK_ESSENCE_REGION_UID(self) -> Region:
         return _scale_region(self._ref.MASK_ESSENCE_REGION_UID, self._sx, self._sy)
 

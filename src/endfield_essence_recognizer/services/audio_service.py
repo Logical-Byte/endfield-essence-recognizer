@@ -5,9 +5,9 @@ This is an easy single-file implementation using the `winsound` module.
 """
 
 import importlib.resources
+import importlib.resources.abc as importlib_abc
 import winsound
 from dataclasses import dataclass
-from importlib.abc import Traversable
 from pathlib import Path
 
 from endfield_essence_recognizer.utils.log import logger
@@ -17,7 +17,7 @@ from endfield_essence_recognizer.utils.log import logger
 class SoundResource:
     """Describes a sound resource."""
 
-    path: Path | Traversable
+    path: Path | importlib_abc.Traversable
 
 
 @dataclass(frozen=True)

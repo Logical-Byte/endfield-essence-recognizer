@@ -4,6 +4,7 @@ from enum import StrEnum
 from endfield_essence_recognizer.core.recognition import (
     AbandonStatusLabel,
     LockStatusLabel,
+    RarityLabel,
 )
 from endfield_essence_recognizer.game_data.models.v2 import (
     StatId,
@@ -20,6 +21,9 @@ class EssenceQuality(StrEnum):
     TRASH = "trash"
     """Identified as junk or unwanted item."""
 
+    SKIP = "skip"
+    """Item should be ignored by automatic actions."""
+
 
 @dataclass
 class EssenceData:
@@ -30,6 +34,9 @@ class EssenceData:
 
     levels: list[int | None]
     """List of identified attribute levels/enhancement values."""
+
+    rarity: RarityLabel
+    """The identified rarity of the essence."""
 
     abandon_label: AbandonStatusLabel
     """The identified 'abandon' (deprecate) button state."""

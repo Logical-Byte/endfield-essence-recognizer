@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock
 import pytest
 from loguru import logger
 
-from endfield_essence_recognizer.core.config import ServerConfig
+from endfield_essence_recognizer.core.config import LogLevel, ServerConfig
 from endfield_essence_recognizer.services.log_service import LogService, _collect_batch
 
 
@@ -215,7 +215,7 @@ async def test_collect_batch_timeout_before_second_msg():
 @pytest.mark.asyncio
 async def test_scope_context_manager(log_service: LogService):
     """Test the scope context manager for correct initialization and cleanup of handlers and tasks."""
-    config = ServerConfig(log_level="DEBUG")
+    config = ServerConfig(log_level=LogLevel.DEBUG)
     mock_ws = AsyncMock()
     # Use an event to notify when send_text is called
     sent_event = asyncio.Event()
