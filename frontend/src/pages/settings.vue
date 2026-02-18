@@ -277,6 +277,12 @@
       <v-expansion-panel :value="2">
         <v-expansion-panel-title>操作设置</v-expansion-panel-title>
         <v-expansion-panel-text>
+          <h2>遇到非无瑕基质（即遇到非橙色基质）时，该如何操作？</h2>
+          <v-radio-group v-model="nonFiveStarBehavior" color="primary" density="comfortable" inline>
+            <v-radio label="跳过对它的操作" value="skip" />
+            <v-radio label="继续操作（当作无瑕基质进行操作）" value="process" />
+          </v-radio-group>
+          <v-divider class="my-4" />
           <h2>遇到宝藏基质或者养成材料时，该如何操作？</h2>
           <v-alert border="start" class="mb-4" type="info" variant="tonal">
             “宝藏基质”和“养成材料”仅为分类简称，不是宝藏的基质都视为养成材料。
@@ -351,6 +357,7 @@ const selectedWeaponIds = ref<string[]>([])
 const treasureEssenceStats = ref<EssenceStat[]>([])
 const treasureAction = ref('lock')
 const trashAction = ref('unlock')
+const nonFiveStarBehavior = ref('process')
 const highLevelTreasureEnabled = ref(false)
 const highLevelTreasureAttributeThreshold = ref(3)
 const highLevelTreasureSecondaryThreshold = ref(3)
@@ -440,6 +447,7 @@ const config = computed(() => {
     treasure_essence_stats: treasureEssenceStats.value,
     treasure_action: treasureAction.value,
     trash_action: trashAction.value,
+    non_five_star_behavior: nonFiveStarBehavior.value,
     high_level_treasure_enabled: highLevelTreasureEnabled.value,
     high_level_treasure_attribute_threshold: highLevelTreasureAttributeThreshold.value,
     high_level_treasure_secondary_threshold: highLevelTreasureSecondaryThreshold.value,
@@ -455,6 +463,7 @@ async function getConfig() {
     treasure_essence_stats,
     treasure_action,
     trash_action,
+    non_five_star_behavior,
     high_level_treasure_enabled,
     high_level_treasure_attribute_threshold,
     high_level_treasure_secondary_threshold,
@@ -463,6 +472,7 @@ async function getConfig() {
   treasureEssenceStats.value = treasure_essence_stats
   treasureAction.value = treasure_action
   trashAction.value = trash_action
+  nonFiveStarBehavior.value = non_five_star_behavior || 'process'
   highLevelTreasureEnabled.value = high_level_treasure_enabled
   highLevelTreasureAttributeThreshold.value = high_level_treasure_attribute_threshold
   highLevelTreasureSecondaryThreshold.value = high_level_treasure_secondary_threshold

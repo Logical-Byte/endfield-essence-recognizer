@@ -2,7 +2,7 @@ import importlib.resources
 
 from cv2.typing import MatLike
 
-from endfield_essence_recognizer.core.recognition.base import (
+from endfield_essence_recognizer.core.recognition.template_recognizer import (
     RecognitionProfile,
     TemplateDescriptor,
 )
