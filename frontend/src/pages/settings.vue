@@ -277,6 +277,18 @@
       <v-expansion-panel :value="2">
         <v-expansion-panel-title>操作设置</v-expansion-panel-title>
         <v-expansion-panel-text>
+          <h2>扫描时自动翻页</h2>
+          <v-alert border="start" class="mb-4" type="info" variant="tonal">
+            启用后，扫描完当前页会自动拖动翻页继续扫描，直到滚动条到达底部。
+          </v-alert>
+          <v-switch
+            v-model="autoPageFlip"
+            color="primary"
+            density="comfortable"
+            hide-details
+            label="启用自动翻页扫描"
+          />
+          <v-divider class="my-4" />
           <h2>遇到非无瑕基质（即遇到非橙色基质）时，该如何操作？</h2>
           <v-radio-group v-model="nonFiveStarBehavior" color="primary" density="comfortable" inline>
             <v-radio label="跳过对它的操作" value="skip" />
@@ -358,6 +370,7 @@ const treasureEssenceStats = ref<EssenceStat[]>([])
 const treasureAction = ref('lock')
 const trashAction = ref('unlock')
 const nonFiveStarBehavior = ref('process')
+const autoPageFlip = ref(true)
 const highLevelTreasureEnabled = ref(false)
 const highLevelTreasureAttributeThreshold = ref(3)
 const highLevelTreasureSecondaryThreshold = ref(3)
@@ -442,12 +455,13 @@ function isTypePartiallySelected(groupId: string): boolean {
 
 const config = computed(() => {
   return {
-    version: 2,
+    version: 3,
     trash_weapon_ids: notSelectedWeaponIds.value,
     treasure_essence_stats: treasureEssenceStats.value,
     treasure_action: treasureAction.value,
     trash_action: trashAction.value,
     non_five_star_behavior: nonFiveStarBehavior.value,
+    auto_page_flip: autoPageFlip.value,
     high_level_treasure_enabled: highLevelTreasureEnabled.value,
     high_level_treasure_attribute_threshold: highLevelTreasureAttributeThreshold.value,
     high_level_treasure_secondary_threshold: highLevelTreasureSecondaryThreshold.value,
@@ -464,6 +478,7 @@ async function getConfig() {
     treasure_action,
     trash_action,
     non_five_star_behavior,
+    auto_page_flip,
     high_level_treasure_enabled,
     high_level_treasure_attribute_threshold,
     high_level_treasure_secondary_threshold,
@@ -473,6 +488,7 @@ async function getConfig() {
   treasureAction.value = treasure_action
   trashAction.value = trash_action
   nonFiveStarBehavior.value = non_five_star_behavior || 'process'
+  autoPageFlip.value = auto_page_flip !== undefined ? auto_page_flip : true
   highLevelTreasureEnabled.value = high_level_treasure_enabled
   highLevelTreasureAttributeThreshold.value = high_level_treasure_attribute_threshold
   highLevelTreasureSecondaryThreshold.value = high_level_treasure_secondary_threshold

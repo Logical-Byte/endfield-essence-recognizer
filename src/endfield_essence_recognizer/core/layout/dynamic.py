@@ -232,3 +232,20 @@ class DynamicResolutionProfile(ResolutionProfile):
     @property
     def DELIVERY_JOB_REFRESH_BUTTON_POINT(self) -> Point:
         return self._ra_point(_BASE.DELIVERY_JOB_REFRESH_BUTTON_POINT)
+
+    # 拖拽翻页配置 - Y坐标根据高度比例缩放
+
+    @property
+    def DRAG_START_POS(self) -> Point:
+        base = _BASE.DRAG_START_POS
+        return Point(base.x, round(base.y * self._height / 1080))
+
+    @property
+    def DRAG_END_POS(self) -> Point:
+        base = _BASE.DRAG_END_POS
+        return Point(base.x, round(base.y * self._height / 1080))
+
+    @property
+    def SCROLLBAR_CHECK_POS(self) -> Point:
+        base = _BASE.SCROLLBAR_CHECK_POS
+        return Point(base.x, round(base.y * self._height / 1080))
