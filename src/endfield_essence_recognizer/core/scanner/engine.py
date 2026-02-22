@@ -438,12 +438,17 @@ class DraggableScannerEngine(ScannerEngine):
                     logger.info("检测到滚动条已到达底部，再扫描一页后停止。")
                     is_last_page = True
 
-            # 如果已经扫描完最后一页，停止扫描
+            # 如果已经扫描完最后一页,停止扫描
             if is_last_page:
-                logger.info("已扫描最后一页，基质扫描完成。")
+                logger.info("已扫描最后一页,基质扫描完成。")
                 break
-
-            # 执行拖动翻页操作（向上拖动）
+            
+            # 检查停止事件,如果已停止则不执行翻页操作
+            if stop_event.is_set():
+                logger.info("基质扫描被中断,停止翻页操作。")
+                break
+            
+            # 执行拖动翻页操作(向上拖动)
             logger.info("正在拖动翻页到下一页...")
             self._window_actions.drag(
                 drag_start.x,
