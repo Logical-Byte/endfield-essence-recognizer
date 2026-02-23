@@ -153,6 +153,11 @@ class ScalingWindowActions(WindowActions):
         self._scale_factor = scale_factor
 
     @property
+    def scale_factor(self) -> float:
+        """缩放因子：逻辑尺寸与物理尺寸的比值 (logical / physical)。"""
+        return self._scale_factor
+
+    @property
     def target_exists(self) -> bool:
         return self._actions.target_exists
 
