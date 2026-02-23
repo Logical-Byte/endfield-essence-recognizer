@@ -153,6 +153,11 @@ class ScalingWindowActions(WindowActions):
         self._scale_factor = scale_factor
 
     @property
+    def scale_factor(self) -> float:
+        """缩放因子：逻辑尺寸与物理尺寸的比值 (logical / physical)。"""
+        return self._scale_factor
+
+    @property
     def target_exists(self) -> bool:
         return self._actions.target_exists
 
@@ -176,25 +181,6 @@ class ScalingWindowActions(WindowActions):
         physical_x = round(relative_x / self._scale_factor)
         physical_y = round(relative_y / self._scale_factor)
         self._actions.click(physical_x, physical_y)
-
-    def drag(
-        self,
-        start_x: int,
-        start_y: int,
-        end_x: int,
-        end_y: int,
-        duration: float = 0.5,
-    ) -> None:
-        """
-        Perform a drag operation at logical coordinates, mapped back to physical coordinates.
-        """
-        physical_start_x = round(start_x / self._scale_factor)
-        physical_start_y = round(start_y / self._scale_factor)
-        physical_end_x = round(end_x / self._scale_factor)
-        physical_end_y = round(end_y / self._scale_factor)
-        self._actions.drag(
-            physical_start_x, physical_start_y, physical_end_x, physical_end_y, duration
-        )
 
     def wait(self, seconds: float) -> None:
         self._actions.wait(seconds)
