@@ -3,7 +3,9 @@
     <div>
       <h1 v-if="false">日志</h1>
       <div class="d-flex flex-row flex-wrap ga-3">
-        <v-btn color="primary" @click="startScanning">开始扫描基质</v-btn>
+        <v-btn :color="isScanning ? 'warning' : 'primary'" @click="toggleScanning">
+          {{ isScanning ? '停止扫描基质' : '开始扫描基质' }}
+        </v-btn>
         <v-spacer />
         <v-btn color="error" @click="clearLogs">清空日志</v-btn>
         <v-btn :color="autoScroll ? 'success' : 'warning'" @click="toggleAutoScroll">
@@ -29,14 +31,16 @@
 <script lang="ts" setup>
 import { nextTick, onMounted, ref, watch } from 'vue'
 import { clearLogs, logs } from '@/composables/useLogs'
+import { useScanningStatus } from '@/composables/useScanningStatus'
 
 const autoScroll = ref(true)
+const { isScanning } = useScanningStatus()
 
 function toggleAutoScroll() {
   autoScroll.value = !autoScroll.value
 }
 
-function startScanning() {
+function toggleScanning() {
   fetch('/api/start_scanning', { method: 'POST' })
 }
 

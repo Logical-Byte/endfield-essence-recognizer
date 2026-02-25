@@ -75,3 +75,22 @@ async def toggle_scanning(
                 raise ValueError(f"Unsupported task type: {request.task_type}")
 
     scanner_service.toggle_scan(scanner_factory=get_engine)
+
+
+@router.get("/weapon_essence_counts")
+async def get_weapon_essence_counts(
+    scanner_service: ScannerService = Depends(get_scanner_service),
+) -> dict[str, int]:
+    """
+    获取最后一次扫描的武器基质数量统计
+
+    -> dict[武器ID, 数量]
+    """
+    return scanner_service.get_weapon_essence_counts()
+
+
+@router.get("/scanning_status")
+async def get_scanning_status(
+    scanner_service: ScannerService = Depends(get_scanner_service),
+) -> dict[str, bool]:
+    return {"is_running": scanner_service.is_running()}

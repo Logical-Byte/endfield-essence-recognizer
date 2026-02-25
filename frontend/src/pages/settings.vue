@@ -62,7 +62,15 @@
                       : selectedWeaponIds.push(weaponId)
                   "
                 >
-                  <item-icon :item-id="weaponId" show-item-name />
+                  <v-badge
+                    v-if="weaponEssenceCounts[weaponId]"
+                    color="primary"
+                    :content="weaponEssenceCounts[weaponId]"
+                    location="top end"
+                  >
+                    <item-icon :item-id="weaponId" show-item-name />
+                  </v-badge>
+                  <item-icon v-else :item-id="weaponId" show-item-name />
                 </div>
                 <v-checkbox-btn
                   v-model="selectedWeaponIds"
@@ -277,6 +285,24 @@
       <v-expansion-panel :value="2">
         <v-expansion-panel-title>操作设置</v-expansion-panel-title>
         <v-expansion-panel-text>
+          <h2>界面设置</h2>
+          <v-row class="my-4">
+            <v-col cols="12" md="6">
+              <v-switch
+                v-model="statusPollingEnabled"
+                color="primary"
+                density="comfortable"
+                hide-details
+                label="启用轮询状态更新"
+                @update:model-value="onStatusPollingToggle"
+              />
+              <v-alert border="start" class="mt-2" type="info" variant="tonal">
+                启用后，前端会轮询更新扫描状态和基质数量。禁用可减少网络请求以避免日志膨胀。
+                <!-- [TODO] uvicorn 日志改等级? 之后默认启用 -->
+              </v-alert>
+            </v-col>
+          </v-row>
+          <v-divider class="my-4" />
           <h2>遇到非无瑕基质（即遇到非橙色基质）时，该如何操作？</h2>
           <v-radio-group v-model="nonFiveStarBehavior" color="primary" density="comfortable" inline>
             <v-radio label="跳过对它的操作" value="skip" />
@@ -325,11 +351,14 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useTheme } from 'vuetify'
 import ItemIcon from '@/components/ItemIcon.vue'
+import { setScanningStatusPolling, useScanningStatus } from '@/composables/useScanningStatus'
 import { useStaticData } from '@/utils/gameData/staticData'
 import { getGemTagName, getStatsForWeapon } from '@/utils/gameData/weapon'
 
 const theme = useTheme()
 const { weaponTypes, weaponsMap, rarityColors, essencesMap } = useStaticData()
+const { isScanning, pollingEnabled } = useScanningStatus()
+const statusPollingEnabled = ref(pollingEnabled)
 
 const allAttributeStats = computed(() =>
   Array.from(essencesMap.value.values())
@@ -362,6 +391,7 @@ const highLevelTreasureEnabled = ref(false)
 const highLevelTreasureAttributeThreshold = ref(3)
 const highLevelTreasureSecondaryThreshold = ref(3)
 const highLevelTreasureSkillThreshold = ref(3)
+const weaponEssenceCounts = ref<Record<string, number>>({})
 
 const notSelectedWeaponIds = computed(() => {
   return Array.from(weaponsMap.value.keys()).filter(
@@ -492,8 +522,55 @@ async function postConfig() {
   })
 }
 
+async function fetchWeaponEssenceCounts() {
+  try {
+    const response = await fetch(`/api/weapon_essence_counts`)
+    const counts = await response.json()
+    weaponEssenceCounts.value = counts
+  } catch (error) {
+    console.error('Failed to fetch weapon essence counts:', error)
+  }
+}
+
+function onStatusPollingToggle(enabled: boolean | null) {
+  if (enabled === null) return
+  setScanningStatusPolling(enabled)
+  if (enabled) {
+    startPolling()
+  }
+}
+
+async function startPolling() {
+  // 获取一次
+  await fetchWeaponEssenceCounts()
+
+  if (!statusPollingEnabled.value) {
+    // 未启用轮询
+    return
+  }
+
+  const poll = async () => {
+    if (!statusPollingEnabled.value) {
+      // 轮询被禁用，停止
+      return
+    }
+
+    if (isScanning.value) {
+      // 扫描中 快速轮询并更新
+      await fetchWeaponEssenceCounts()
+      setTimeout(poll, 1000)
+    } else {
+      // 待机 只检查状态不更新数据
+      setTimeout(poll, 5000)
+    }
+  }
+
+  poll()
+}
+
 onMounted(async () => {
   await getConfig()
+  await startPolling()
   watch(config, postConfig, { deep: true })
 })
 </script>
