@@ -135,6 +135,8 @@ def evaluate_essence(
             quality=EssenceQuality.TREASURE,
             log_message=f"这个基质是<green><bold><underline>宝藏</></></>，它完美契合武器{weapons_description_str}{high_level_info}。",
             matched_weapons=non_trash_weapon_ids,
+            # 赋值相同但是意义不同
+            matched_non_trash_weapons=non_trash_weapon_ids,
             is_high_level=is_high_level_treasure,
         )
     else:

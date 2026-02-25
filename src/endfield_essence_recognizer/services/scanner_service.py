@@ -35,6 +35,8 @@ class ScannerService:
         self._stop_event = threading.Event()  # Event to signal the thread to stop
         self._lock = threading.RLock()  # Reentrant lock for nested locking
         self._audio_service = audio_service
+        self._current_scanner: AutomationEngine | None = None
+        self._last_weapon_essence_counts: dict[str, int] = {}
 
     def start_scan(self, scanner_factory: Callable[[], AutomationEngine]) -> None:
         """
@@ -58,6 +60,7 @@ class ScannerService:
             logger.debug("正在启动扫描服务...")
             self._stop_event.clear()
             scanner = scanner_factory()
+            self._current_scanner = scanner
 
             self._thread = threading.Thread(
                 target=scanner.execute,
@@ -90,6 +93,19 @@ class ScannerService:
                 logger.debug("Scanner thread joined.")
                 self._thread = None
 
+            # 保存最后一次扫描的统计数据
+            if self._current_scanner is not None:
+                from endfield_essence_recognizer.core.scanner.engine import (
+                    ScannerEngine,
+                )
+
+                if isinstance(self._current_scanner, ScannerEngine):
+                    self._last_weapon_essence_counts = (
+                        self._current_scanner.get_weapon_essence_counts()
+                    )
+
+            self._current_scanner = None
+
             if self._audio_service:
                 self._audio_service.play_disable()
 
@@ -102,6 +118,36 @@ class ScannerService:
         """
         with self._lock:
             return self._thread is not None and self._thread.is_alive()
+
+    def get_current_scanner(self) -> AutomationEngine | None:
+        """
+        Get the current scanner instance.
+
+        Returns:
+            The current scanner instance, or None if no scanner is running.
+        """
+        with self._lock:
+            return self._current_scanner
+
+    def get_weapon_essence_counts(self) -> dict[str, int]:
+        """
+        Get the weapon essence counts from the last scan.
+
+        Returns:
+            A dictionary mapping weapon IDs to essence counts.
+        """
+        with self._lock:
+            # 如果当前有正在运行的 ScannerEngine，返回实时数据
+            if self._current_scanner is not None:
+                from endfield_essence_recognizer.core.scanner.engine import (
+                    ScannerEngine,
+                )
+
+                if isinstance(self._current_scanner, ScannerEngine):
+                    return self._current_scanner.get_weapon_essence_counts()
+
+            # 否则返回最后一次扫描的数据
+            return self._last_weapon_essence_counts.copy()
 
     def toggle_scan(self, scanner_factory: Callable[[], AutomationEngine]) -> None:
         """
