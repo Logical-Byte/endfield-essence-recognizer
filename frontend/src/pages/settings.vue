@@ -24,13 +24,15 @@
           </div>
           <v-divider class="my-4" />
           <template v-for="weaponType in weaponTypes" :key="weaponType.id">
-            <h3>
+            <h3
+              class="group-title"
+              @click="typeSelectAll(weaponType.id, !isTypeAllSelected(weaponType.id))"
+            >
               <v-checkbox
                 density="compact"
                 hide-details
                 :indeterminate="isTypePartiallySelected(weaponType.id)"
                 :model-value="isTypeAllSelected(weaponType.id)"
-                @click="typeSelectAll(weaponType.id, !isTypeAllSelected(weaponType.id))"
               >
                 <template #prepend>
                   <img
@@ -303,10 +305,10 @@
             </v-col>
           </v-row>
           <v-divider class="my-4" />
-          <h2>遇到非无瑕基质（即遇到非橙色基质）时，该如何操作？</h2>
+          <h2>遇到非无瑕基质时，该如何操作？</h2>
           <v-radio-group v-model="nonFiveStarBehavior" color="primary" density="comfortable" inline>
-            <v-radio label="跳过对它的操作" value="skip" />
-            <v-radio label="继续操作（当作无瑕基质进行操作）" value="process" />
+            <v-radio label="停止识别" value="skip" />
+            <v-radio label="继续识别" value="process" />
           </v-radio-group>
           <v-divider class="my-4" />
           <h2>遇到宝藏基质或者养成材料时，该如何操作？</h2>
@@ -577,6 +579,10 @@ onMounted(async () => {
 
 <style scoped lang="scss">
 $weapon-icon-size: clamp(3rem, 16vw, 6rem);
+
+.group-title {
+  width: fit-content;
+}
 
 .group-icon {
   width: 2rem;
