@@ -135,6 +135,7 @@ def evaluate_essence(
             quality=EssenceQuality.TREASURE,
             log_message=f"这个基质是<green><bold><underline>宝藏</></></>，它完美契合武器{weapons_description_str}{high_level_info}。",
             matched_weapons=non_trash_weapon_ids,
+            matched_weapons_all_blocked=False,
             is_high_level=is_high_level_treasure,
         )
     else:
@@ -151,6 +152,7 @@ def evaluate_essence(
                 quality=EssenceQuality.TREASURE,
                 log_message=f"这个基质是<green><bold><underline>宝藏</></></>，因为它有高等级属性词条{high_level_info}。<yellow>即使它匹配的所有武器{weapons_description_str}均已被用户手动拦截。</>",
                 matched_weapons=matched_weapon_ids,
+                matched_weapons_all_blocked=True,
                 is_high_level=True,
             )
         else:
@@ -158,5 +160,6 @@ def evaluate_essence(
                 quality=EssenceQuality.TRASH,
                 log_message=f"这个基质虽然匹配武器{weapons_description_str}，但匹配的所有武器均已被用户手动拦截，因此这个基质是<red><bold><underline>养成材料</></></>。",
                 matched_weapons=matched_weapon_ids,
+                matched_weapons_all_blocked=True,
                 is_high_level=False,
             )

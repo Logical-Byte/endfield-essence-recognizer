@@ -58,5 +58,8 @@ class EvaluationResult:
     matched_weapons: set[WeaponId] = field(default_factory=set)
     """Set of weapon IDs that this essence is suitable for."""
 
+    matched_weapons_all_blocked: bool = False
+    """True if all weapons in matched_weapons are blocked by the user (trash_weapon_ids)."""
+
     is_high_level: bool = False
     """Whether any attribute on the essence exceeded a high-level threshold."""

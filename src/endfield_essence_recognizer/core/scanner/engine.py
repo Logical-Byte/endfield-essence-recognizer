@@ -22,6 +22,7 @@ from endfield_essence_recognizer.core.scanner.models import (
     EssenceQuality,
 )
 from endfield_essence_recognizer.core.window.adapter import InMemoryImageSource
+from endfield_essence_recognizer.game_data.models.v2 import WeaponId
 from endfield_essence_recognizer.schemas.user_setting import UserSetting
 from endfield_essence_recognizer.services.user_setting_manager import UserSettingManager
 from endfield_essence_recognizer.utils.log import logger
@@ -240,6 +241,10 @@ class ScannerEngine:
         self._user_setting_manager: UserSettingManager = user_setting_manager
         self._profile: ResolutionProfile = profile
 
+        # 以下两个字段是 ScannerEngine 维护的运行时状态
+        self._weapon_essence_counts: dict[WeaponId, int] = {}
+        self._total_essence_count: int = 0
+
         from endfield_essence_recognizer.utils.log import str_properties_and_attrs
 
         logger.opt(lazy=True).debug(
@@ -254,6 +259,15 @@ class ScannerEngine:
         logger.debug("ScannerEngine started execution.")
         self._execute_grid_scan(stop_event)
         logger.debug("ScannerEngine finished execution.")
+
+    def get_weapon_essence_counts(self) -> dict[WeaponId, int]:
+        """
+        Get the weapon essence counts from the last scan.
+
+        Returns:
+            A dictionary mapping weapon IDs to essence counts.
+        """
+        return self._weapon_essence_counts.copy()
 
     def _execute_grid_scan(self, stop_event: threading.Event) -> None:
         """
@@ -281,6 +295,10 @@ class ScannerEngine:
 
         # 获取当前用户设置的快照，用于接下来的判断
         user_setting = self._user_setting_manager.get_user_setting()
+
+        # 重置武器基质数量统计
+        self._weapon_essence_counts = {}
+        self._total_essence_count = 0
 
         icon_x_list = self._profile.essence_icon_x_list
         icon_y_list = self._profile.essence_icon_y_list
@@ -320,6 +338,20 @@ class ScannerEngine:
 
             evaluation = evaluate_essence(data, user_setting, self.ctx.static_game_data)
 
+            # 统计基质总数（跳过 SKIP 的基质）
+            if evaluation.quality != EssenceQuality.SKIP:
+                self._total_essence_count += 1
+
+            # 为匹配的非垃圾武器的基质数量自增
+            if (
+                evaluation.matched_weapons
+                and not evaluation.matched_weapons_all_blocked
+            ):
+                for weapon_id in evaluation.matched_weapons:
+                    self._weapon_essence_counts[weapon_id] = (
+                        self._weapon_essence_counts.get(weapon_id, 0) + 1
+                    )
+
             # Log the result
             if (
                 evaluation.quality == EssenceQuality.TRASH
@@ -346,4 +378,36 @@ class ScannerEngine:
 
         else:
             # 扫描完成
-            logger.info("基质扫描完成。")
+            logger.info("基质扫描完成")
+
+        # 输出武器基质数量统计
+        logger.info(f"共扫描了 {self._total_essence_count} 个基质。")
+        if self._weapon_essence_counts:
+            # 按 稀有度降序 武器ID 排序
+            def sort_key(item: tuple[WeaponId, int]) -> tuple[int, WeaponId]:
+                weapon_id, _ = item
+                weapon = self.ctx.static_game_data.get_weapon(weapon_id)
+                # 负数使稀有度按降序排序
+                rarity = -weapon.rarity if weapon else 0
+                return (rarity, weapon_id)
+
+            sorted_counts = sorted(self._weapon_essence_counts.items(), key=sort_key)
+
+            logger.info("武器基质数量统计：")
+            for weapon_id, count in sorted_counts:
+                weapon = self.ctx.static_game_data.get_weapon(weapon_id)
+                if weapon:
+                    weapon_type = self.ctx.static_game_data.get_weapon_type(
+                        weapon.weapon_type
+                    )
+                    type_name = weapon_type.name if weapon_type else "未知类型"
+                    logger.opt(colors=True).info(
+                        f"  <bold>{weapon.name}（{weapon.rarity}★ {type_name}）</>: {count} 个基质"
+                    )
+                else:
+                    logger.opt(colors=True).info(
+                        f"  <bold>{weapon_id}</>: {count} 个基质"
+                    )
+        elif self._total_essence_count > 0:
+            # 扫描了基质但没有匹配到任何武器
+            logger.info("没有匹配到任何非垃圾武器。")

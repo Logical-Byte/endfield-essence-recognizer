@@ -18,10 +18,8 @@ class StaticDataService:
 
     def __init__(self, data: StaticGameData):
         self.language = "CN"
-        self.item_icon_base_url = "https://cos.yituliu.cn/endfield/unpack-images/items/"
-        self.group_icon_base_url = (
-            "https://cos.yituliu.cn/endfield/sprites_selective/wiki/groupicon/"
-        )
+        self.item_icon_base_url = "https://cos.yituliu.cn/endfield/endfielddata/assets/beyond/dynamicassets/gameplay/ui/sprites/itemicon/"
+        self.group_icon_base_url = "https://cos.yituliu.cn/endfield/endfielddata/assets/beyond/dynamicassets/gameplay/ui/sprites/wiki/groupicon/"
         self.data = data
 
     def _get_item_icon_url(self, icon_id: str | None) -> str:

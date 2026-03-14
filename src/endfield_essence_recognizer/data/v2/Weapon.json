@@ -409,6 +409,16 @@
     "weapon_id": "wpn_pistol_0006",
     "weapon_type": "PISTOL"
   },
+  "wpn_pistol_0007": {
+    "icon_id": "wpn_pistol_0007",
+    "name": "望乡",
+    "rarity": 6,
+    "stat1_id": "gat_passive_attr_agi",
+    "stat2_id": "gat_passive_attr_icedam",
+    "stat3_id": "gst_passive_tactic",
+    "weapon_id": "wpn_pistol_0007",
+    "weapon_type": "PISTOL"
+  },
   "wpn_pistol_0008": {
     "icon_id": "wpn_pistol_0008",
     "name": "楔子",
@@ -437,6 +447,16 @@
     "stat2_id": "gat_passive_attr_crirate",
     "stat3_id": "gst_passive_crit",
     "weapon_id": "wpn_pistol_0010",
+    "weapon_type": "PISTOL"
+  },
+  "wpn_pistol_0011": {
+    "icon_id": "wpn_pistol_0011",
+    "name": "落草",
+    "rarity": 6,
+    "stat1_id": "gat_passive_attr_agi",
+    "stat2_id": "gat_passive_attr_atk",
+    "stat3_id": "gst_passive_burst",
+    "weapon_id": "wpn_pistol_0011",
     "weapon_type": "PISTOL"
   },
   "wpn_pistol_0012": {
@@ -491,7 +511,7 @@
   },
   "wpn_sword_0008": {
     "icon_id": "wpn_sword_0008",
-    "name": "应急手段",
+    "name": "显锋",
     "rarity": 4,
     "stat1_id": "gat_passive_attr_agi",
     "stat2_id": "gat_passive_attr_phydam",
@@ -577,6 +597,16 @@
     "stat2_id": "gat_passive_attr_atk",
     "stat3_id": "gst_passive_tacafter",
     "weapon_id": "wpn_sword_0016",
+    "weapon_type": "SWORD"
+  },
+  "wpn_sword_0017": {
+    "icon_id": "wpn_sword_0017",
+    "name": "光荣记忆",
+    "rarity": 6,
+    "stat1_id": "gat_passive_attr_agi",
+    "stat2_id": "gat_passive_attr_crirate",
+    "stat3_id": "gst_passive_ult",
+    "weapon_id": "wpn_sword_0017",
     "weapon_type": "SWORD"
   },
   "wpn_sword_0018": {

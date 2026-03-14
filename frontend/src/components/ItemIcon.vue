@@ -15,12 +15,10 @@
 
 <script lang="ts" setup>
 import { computed, useTemplateRef, watch } from 'vue'
-import { useLanguage } from '@/composables/useLanguage'
 import { updateText } from '@/utils/autoFontSizing'
 import { getItemIconUrl, getItemName, getItemTierColor } from '@/utils/gameData/item'
 import { useStaticData } from '@/utils/gameData/staticData'
 
-const { currentLanguage } = useLanguage()
 const { isLoaded } = useStaticData()
 
 interface Props {
@@ -44,7 +42,7 @@ const itemName = computed(() => {
   }
 })
 
-watch([props, itemNameRef, isLoaded, currentLanguage], () => {
+watch([props, itemNameRef, isLoaded], () => {
   if (itemNameRef.value) {
     updateText(itemNameRef.value, (itemNameContainerRef.value?.clientWidth || 96) * 0.95, 10, 16)
   }
