@@ -427,9 +427,6 @@ class DraggableScannerEngine(ScannerEngine):
     - 支持翻页前后去重（避免重复扫描）
     """
 
-    DEFAULT_DRAG_DURATION: float = 1.0
-    """默认拖动持续时间（秒），减缓速度让游戏UI能跟上"""
-
     def _execute_grid_scan(self, stop_event: threading.Event) -> None:
         """
         执行带拖拽翻页的网格扫描。

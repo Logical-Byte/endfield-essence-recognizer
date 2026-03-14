@@ -262,21 +262,3 @@ def progressive_drag_on_window(
     finally:
         time.sleep(0.5)  # 防止移动后UI惯性滑动
         pyautogui.mouseUp()
-
-
-def get_screen_coordinates(
-    window: pygetwindow.Window, relative_x: int, relative_y: int
-) -> tuple[int, int]:
-    """
-    将窗口客户区坐标转换为屏幕坐标。
-
-    Args:
-        window: pygetwindow 窗口对象
-        relative_x: 客户区 X 坐标
-        relative_y: 客户区 Y 坐标
-
-    Returns:
-        (screen_x, screen_y) 屏幕坐标
-    """
-    (left, top), (_right, _bottom) = _get_client_rect(window)
-    return left + relative_x, top + relative_y
