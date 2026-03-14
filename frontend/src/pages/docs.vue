@@ -30,13 +30,20 @@
         反馈交流①群：486622964
       </v-btn>
       <v-btn
-        color="primary"
         href="https://qm.qq.com/cgi-bin/qm/qr?k=qAmvmHCc3HuESiJhZVe6Ytgj7foOxXx9"
         prepend-icon="mdi-qqchat"
         rel="noopener noreferrer"
         target="_blank"
       >
         反馈交流②群：1082880855
+      </v-btn>
+      <v-btn
+        href="https://qm.qq.com/cgi-bin/qm/qr?k=-GykJWhnZEN5F2aZ1nrVd3xs9RGkMBI2"
+        prepend-icon="mdi-qqchat"
+        rel="noopener noreferrer"
+        target="_blank"
+      >
+        反馈交流③群：1042417974
       </v-btn>
     </div>
 
@@ -221,7 +228,7 @@
         target="_blank"
         ><strong>在 GitHub 上提 Issue</strong></a
       >，或者加入反馈交流群：<v-chip
-        class="mr-1"
+        class="mx-1"
         href="https://qm.qq.com/cgi-bin/qm/qr?k=1xqRp7JwQHwGswa-8_SMFuAsRYYRnF8J"
         prepend-icon="mdi-qqchat"
         rel="noopener noreferrer"
@@ -230,13 +237,22 @@
         ①群：486622964
       </v-chip>
       <v-chip
-        color="primary"
+        class="mx-1"
         href="https://qm.qq.com/cgi-bin/qm/qr?k=qAmvmHCc3HuESiJhZVe6Ytgj7foOxXx9"
         prepend-icon="mdi-qqchat"
         rel="noopener noreferrer"
         target="_blank"
       >
         ②群：1082880855
+      </v-chip>
+      <v-chip
+        class="mx-1"
+        href="https://qm.qq.com/cgi-bin/qm/qr?k=-GykJWhnZEN5F2aZ1nrVd3xs9RGkMBI2"
+        prepend-icon="mdi-qqchat"
+        rel="noopener noreferrer"
+        target="_blank"
+      >
+        ③群：1042417974
       </v-chip>
     </p>
 

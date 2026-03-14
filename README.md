@@ -5,6 +5,7 @@
 [![Vuetify](https://img.shields.io/badge/Vuetify-3.x-lightblue.svg?logo=vuetify)](https://vuetifyjs.com/)
 [![①群](https://img.shields.io/badge/①群-486622964-orange.svg?logo=qq)](https://qm.qq.com/cgi-bin/qm/qr?k=1xqRp7JwQHwGswa-8_SMFuAsRYYRnF8J)
 [![②群](https://img.shields.io/badge/②群-1082880855-orange.svg?logo=qq)](https://qm.qq.com/cgi-bin/qm/qr?k=qAmvmHCc3HuESiJhZVe6Ytgj7foOxXx9)
+[![③群](https://img.shields.io/badge/③群-1042417974-orange.svg?logo=qq)](https://qm.qq.com/cgi-bin/qm/qr?k=-GykJWhnZEN5F2aZ1nrVd3xs9RGkMBI2)
 [![官网](https://img.shields.io/badge/官网-终末地一图流-yellow.svg)](https://ef.yituliu.cn/resources/essence-recognizer)
 
 不知道哪些基质该留哪些该扔？想要当狗粮又担心万一这个基质有用？快来逝逝终末地基质妙妙小工具罢！
@@ -14,6 +15,7 @@
 反馈交流群
 - ①群：[486622964](https://qm.qq.com/cgi-bin/qm/qr?k=1xqRp7JwQHwGswa-8_SMFuAsRYYRnF8J)
 - ②群：[1082880855](https://qm.qq.com/cgi-bin/qm/qr?k=qAmvmHCc3HuESiJhZVe6Ytgj7foOxXx9)
+- ③群：[1042417974](https://qm.qq.com/cgi-bin/qm/qr?k=-GykJWhnZEN5F2aZ1nrVd3xs9RGkMBI2)
 
 ![终末地基质小助手展示](https://cos.yituliu.cn/endfield/endfield-essence-recognizer/assets/终末地基质小助手展示_0.webp)
 ![终末地基质小助手展示](https://cos.yituliu.cn/endfield/endfield-essence-recognizer/assets/终末地基质小助手展示_1.webp)
@@ -81,6 +83,7 @@
 如果在使用过程中遇到任何问题，或是想提出建议，欢迎 **[在 GitHub 上提 Issue](https://github.com/Logical-Byte/endfield-essence-recognizer)**，或者加入反馈交流群：
 - ①群：[486622964](https://qm.qq.com/cgi-bin/qm/qr?k=1xqRp7JwQHwGswa-8_SMFuAsRYYRnF8J)
 - ②群：[1082880855](https://qm.qq.com/cgi-bin/qm/qr?k=qAmvmHCc3HuESiJhZVe6Ytgj7foOxXx9)
+- ③群：[1042417974](https://qm.qq.com/cgi-bin/qm/qr?k=-GykJWhnZEN5F2aZ1nrVd3xs9RGkMBI2)
 
 ## 说明
 
