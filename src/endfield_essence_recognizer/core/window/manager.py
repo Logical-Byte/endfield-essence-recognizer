@@ -7,7 +7,6 @@ from cv2.typing import MatLike
 from endfield_essence_recognizer.core.layout.base import Region
 from endfield_essence_recognizer.core.window.windows_utils import (
     click_on_window,
-    drag_on_window,
     get_client_size,
     get_support_window,
     progressive_drag_on_window,
@@ -113,44 +112,6 @@ class WindowManager:
         if window is None:
             raise WindowNotFoundError(self._supported_titles)
         click_on_window(window, relative_x, relative_y)
-
-    def drag(
-        self,
-        start_x: int,
-        start_y: int,
-        end_x: int,
-        end_y: int,
-        duration: float = 1.0,
-    ) -> tuple[int, bool]:
-        """
-        Perform a progressive drag operation from start to end coordinates.
-
-        This method performs an incremental drag with the mouse button held down,
-        allowing for scrollbar detection during the drag process.
-
-        Args:
-            start_x: Starting X coordinate relative to the client area.
-            start_y: Starting Y coordinate relative to the client area.
-            end_x: Ending X coordinate relative to the client area.
-            end_y: Ending Y coordinate relative to the client area.
-            duration: Total duration of the drag operation in seconds.
-
-        Returns:
-            A tuple of (actual_drag_distance, is_last_page) where:
-            - actual_drag_distance: The actual distance dragged in pixels
-            - is_last_page: Always False for basic WindowManager (no scrollbar detection)
-        """
-        window = self._get_window()
-        if window is None:
-            raise WindowNotFoundError(self._supported_titles)
-
-        # Calculate drag distance
-        dx = end_x - start_x
-        dy = end_y - start_y
-        distance = int((dx**2 + dy**2) ** 0.5)
-
-        drag_on_window(window, start_x, start_y, end_x, end_y, duration)
-        return distance, False
 
     def progressive_drag(
         self,

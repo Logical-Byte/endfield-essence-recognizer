@@ -137,3 +137,18 @@ class ResolutionProfile(Protocol):
     def DELIVERY_JOB_REFRESH_BUTTON_POINT(self) -> Point:
         """运送委托列表刷新按钮坐标。"""
         ...
+
+    @property
+    def DRAG_START_POS(self) -> Point:
+        """拖动翻页的起始位置。"""
+        ...
+
+    @property
+    def DRAG_END_POS(self) -> Point:
+        """拖动翻页的终止位置。"""
+        ...
+
+    @property
+    def SCROLLBAR_CHECK_POS(self) -> Point:
+        """滚动条检测位置。"""
+        ...

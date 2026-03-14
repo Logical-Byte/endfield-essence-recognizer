@@ -177,39 +177,6 @@ def click_on_window(
     pyautogui.click(screen_x, screen_y)
 
 
-def drag_on_window(
-    window: pygetwindow.Window,
-    relative_start_x: int,
-    relative_start_y: int,
-    relative_end_x: int,
-    relative_end_y: int,
-    duration: float = 1.0,
-) -> None:
-    """
-    在指定窗口的客户区执行拖动操作。
-
-    Args:
-        window: pygetwindow 窗口对象
-        relative_start_x: 拖动起始 X 坐标（相对于客户区）
-        relative_start_y: 拖动起始 Y 坐标（相对于客户区）
-        relative_end_x: 拖动终止 X 坐标（相对于客户区）
-        relative_end_y: 拖动终止 Y 坐标（相对于客户区）
-        duration: 拖动持续时间（秒）
-    """
-    (left, top), (_right, _bottom) = _get_client_rect(window)
-    screen_start_x = left + relative_start_x
-    screen_start_y = top + relative_start_y
-    screen_end_x = left + relative_end_x
-    screen_end_y = top + relative_end_y
-
-    pyautogui.moveTo(screen_start_x, screen_start_y)
-    pyautogui.drag(
-        screen_end_x - screen_start_x,
-        screen_end_y - screen_start_y,
-        duration=duration,
-    )
-
-
 def progressive_drag_on_window(
     window: pygetwindow.Window,
     relative_start_x: int,
@@ -296,6 +263,7 @@ def progressive_drag_on_window(
         return int(actual_distance), stopped_early
 
     finally:
+        time.sleep(0.5) #防止移动后UI惯性滑动
         pyautogui.mouseUp()
 
 

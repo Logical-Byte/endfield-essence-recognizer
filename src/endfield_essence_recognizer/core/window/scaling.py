@@ -154,11 +154,6 @@ class ScalingWindowActions(WindowActions):
         self._scale_factor = scale_factor
 
     @property
-    def scale_factor(self) -> float:
-        """缩放因子：逻辑尺寸与物理尺寸的比值 (logical / physical)。"""
-        return self._scale_factor
-
-    @property
     def target_exists(self) -> bool:
         return self._actions.target_exists
 
@@ -198,51 +193,6 @@ class ScalingWindowActions(WindowActions):
             (physical_x, physical_y) tuple in physical space.
         """
         return round(logical_x / self._scale_factor), round(logical_y / self._scale_factor)
-
-    def drag(
-        self,
-        start_x: int,
-        start_y: int,
-        end_x: int,
-        end_y: int,
-        duration: float = 1.0,
-    ) -> tuple[int, bool]:
-        """
-        Perform a progressive drag operation with coordinate scaling.
-
-        Logical coordinates are converted to physical coordinates before
-        delegating to the underlying WindowActions.
-
-        Args:
-            start_x: Starting X coordinate in logical space.
-            start_y: Starting Y coordinate in logical space.
-            end_x: Ending X coordinate in logical space.
-            end_y: Ending Y coordinate in logical space.
-            duration: Total duration of the drag operation in seconds.
-
-        Returns:
-            A tuple of (actual_drag_distance, is_last_page) from the underlying actions.
-        """
-        # Convert logical coordinates to physical coordinates
-        physical_start_x, physical_start_y = self._to_physical(start_x, start_y)
-        physical_end_x, physical_end_y = self._to_physical(end_x, end_y)
-
-        # Calculate logical drag distance for return value
-        logical_dx = end_x - start_x
-        logical_dy = end_y - start_y
-        logical_distance = int((logical_dx**2 + logical_dy**2) ** 0.5)
-
-        # Delegate to underlying actions
-        if hasattr(self._actions, 'drag'):
-            return self._actions.drag(
-                physical_start_x, physical_start_y,
-                physical_end_x, physical_end_y,
-                duration
-            )
-        else:
-            # Fallback: just return the calculated distance
-            logger.warning("Underlying WindowActions does not implement drag method")
-            return logical_distance, False
 
     def progressive_drag(
         self,

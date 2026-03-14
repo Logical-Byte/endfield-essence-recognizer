@@ -45,17 +45,6 @@ class WindowActionsAdapter(WindowActions, ImageSource):
     def wait(self, seconds: float) -> None:
         self._sleeper(seconds)
 
-    def drag(
-        self,
-        start_x: int,
-        start_y: int,
-        end_x: int,
-        end_y: int,
-        duration: float = 1.0,
-    ) -> tuple[int, bool]:
-        """Delegate drag to WindowManager."""
-        return self._window_manager.drag(start_x, start_y, end_x, end_y, duration)
-
     def progressive_drag(
         self,
         start_x: int,

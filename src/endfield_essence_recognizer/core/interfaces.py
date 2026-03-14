@@ -114,34 +114,6 @@ class WindowActions(Protocol):
         """
         ...
 
-    def drag(
-        self,
-        start_x: int,
-        start_y: int,
-        end_x: int,
-        end_y: int,
-        duration: float = 1.0,
-    ) -> tuple[int, bool]:
-        """
-        Perform a progressive drag operation from start to end coordinates.
-
-        The drag is performed incrementally with scrollbar detection to determine
-        if the last page has been reached.
-
-        Args:
-            start_x: Starting X coordinate relative to the client area.
-            start_y: Starting Y coordinate relative to the client area.
-            end_x: Ending X coordinate relative to the client area.
-            end_y: Ending Y coordinate relative to the client area.
-            duration: Total duration of the drag operation in seconds.
-
-        Returns:
-            A tuple of (actual_drag_distance, is_last_page) where:
-            - actual_drag_distance: The actual distance dragged in pixels
-            - is_last_page: True if scrollbar reached the bottom during drag
-        """
-        ...
-
     def progressive_drag(
         self,
         start_x: int,

@@ -468,16 +468,11 @@ class DraggableScannerEngine(ScannerEngine):
         icon_y_list = self._profile.essence_icon_y_list
 
         # 获取拖动配置
-        drag_start = getattr(self._profile, "DRAG_START_POS", None)
-        drag_end = getattr(self._profile, "DRAG_END_POS", None)
-
-        if drag_start is None or drag_end is None:
-            logger.warning("当前分辨率配置不支持拖拽翻页，将只扫描当前页。")
-            super()._execute_grid_scan(stop_event)
-            return
+        drag_start = self._profile.DRAG_START_POS
+        drag_end = self._profile.DRAG_END_POS
 
         # 获取滚动条检测配置
-        scrollbar_pos = getattr(self._profile, "SCROLLBAR_CHECK_POS", None)
+        scrollbar_pos = self._profile.SCROLLBAR_CHECK_POS
 
         page_count = 0
         is_last_page = False
