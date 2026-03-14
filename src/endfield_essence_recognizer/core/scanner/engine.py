@@ -491,10 +491,6 @@ class DraggableScannerEngine(ScannerEngine):
         )
         total_rows = len(icon_y_list)
 
-        # 获取缩放因子，将逻辑最大距离转换为物理最大距离
-        scale_factor = self._get_scale_factor()
-        physical_max_drag_distance = max_drag_distance / scale_factor
-
         while not stop_event.is_set() and page_count < max_pages:
             page_count += 1
             logger.info(f"开始扫描第 {page_count} 页基质...")
@@ -503,11 +499,11 @@ class DraggableScannerEngine(ScannerEngine):
             if is_last_page and page_count > 1:
                 # 最后一页：根据渐进滚动比例计算需要跳过的行数
                 skip_rows = self._calculate_skip_rows(
-                    progressive_drag_distance, physical_max_drag_distance, total_rows
+                    progressive_drag_distance, max_drag_distance, total_rows
                 )
                 start_row = min(skip_rows, total_rows - 1)
                 logger.info(
-                    f"最后一页：渐进滚动了 {progressive_drag_distance}px/最大 {physical_max_drag_distance:.0f}px，跳过前 {start_row} 行"
+                    f"最后一页：滚动距离 {progressive_drag_distance}px（完整页 {max_drag_distance:.0f}px），跳过前 {start_row} 行已扫描基质"
                 )
             else:
                 start_row = 0
@@ -677,9 +673,7 @@ class DraggableScannerEngine(ScannerEngine):
         max_drag: int = 800,
     ) -> tuple[int, bool]:
         """
-        渐进式拖动，鼠标按住不放，每拖动一步检测一次滚动条是否到底。
-
-        实现方式参考 drag_on_window：使用 moveTo 移动鼠标，保持 mouseDown 状态。
+        渐进式拖动，使用 WindowActions 接口执行拖动并检测滚动条。
 
         Args:
             drag_start: 拖动起始位置
@@ -692,147 +686,39 @@ class DraggableScannerEngine(ScannerEngine):
         Returns:
             (actual_drag_distance, is_last_page) 实际拖动距离和是否是最后一页
         """
-        import time
-
-        import pyautogui
-
-        # 获取缩放因子并计算物理坐标
-        scale_factor = self._get_scale_factor()
-        physical_start = self._to_physical(drag_start, scale_factor)
-        physical_end = self._to_physical(drag_end, scale_factor)
-
-        # 计算物理拖动参数
-        total_dx = physical_end.x - physical_start.x
-        total_dy = physical_end.y - physical_start.y
-        total_distance = (total_dx**2 + total_dy**2) ** 0.5
-
-        # 限制最大拖动距离
-        if max_drag > 0 and total_distance > max_drag / scale_factor:
-            scale = (max_drag / scale_factor) / total_distance
-            total_dx *= scale
-            total_dy *= scale
-            total_distance = max_drag / scale_factor
-
-        # 计算步数和每步拖动量
-        physical_step = step / scale_factor
-        steps = max(1, int(total_distance / physical_step))
-        step_dx, step_dy = total_dx / steps, total_dy / steps
-        step_distance = (step_dx**2 + step_dy**2) ** 0.5
-
-        logger.info(
-            f"渐进拖动: 物理距离 {total_distance:.0f}px, 缩放因子 {scale_factor:.4f}, "
-            f"分 {steps} 步, 每步偏移 ({step_dx:.0f}, {step_dy:.0f})"
-        )
-
-        # 获取起点屏幕坐标
-        screen_start_x, screen_start_y = self._get_drag_start_position(drag_start)
-
-        # 移动到起点并按住鼠标
-        pyautogui.moveTo(screen_start_x, screen_start_y)
-        pyautogui.mouseDown()
-        logger.info(
-            f"鼠标按住不放，从 ({screen_start_x}, {screen_start_y}) 开始渐进拖动"
-        )
-        time.sleep(0.2)
-
-        actual_drag_distance = 0
-        try:
-            for i in range(steps):
-                if stop_event.is_set():
-                    logger.info("渐进拖动被中断")
-                    break
-
-                # 计算并移动到当前步位置
-                progress = (i + 1) / steps
-                current_x = screen_start_x + int(total_dx * progress)
-                current_y = screen_start_y + int(total_dy * progress)
-                pyautogui.moveTo(current_x, current_y)
-
-                actual_drag_distance += step_distance
-                logger.debug(
-                    f"步 {i + 1}/{steps}: 移动到 ({current_x}, {current_y}), 累计 {actual_drag_distance:.0f}px"
-                )
-
-                time.sleep(0.05)
-
-                # 检测滚动条是否到底
-                if scrollbar_pos and self._check_scrollbar_at_bottom(scrollbar_pos):
-                    logger.info(
-                        f"步 {i + 1}/{steps}: 检测到滚动条到底，已拖动 {actual_drag_distance:.0f}px"
-                    )
-                    return int(actual_drag_distance), True
-
-            # 检测最终状态
-            is_last_page = bool(
-                scrollbar_pos and self._check_scrollbar_at_bottom(scrollbar_pos)
-            )
-            if is_last_page:
+        # 定义滚动条检测回调
+        def on_step(step_index: int, screen_x: int, screen_y: int) -> bool:
+            """每步回调：检测滚动条是否到底"""
+            if stop_event.is_set():
+                return True
+            if scrollbar_pos and self._check_scrollbar_at_bottom(scrollbar_pos):
                 logger.info(
-                    f"全部拖动完成后检测到滚动条到底，总计拖动 {actual_drag_distance:.0f}px"
+                    f"步 {step_index + 1}: 检测到滚动条到底"
                 )
+                return True
+            return False
 
-            return int(actual_drag_distance), is_last_page
-
-        finally:
-            pyautogui.mouseUp()
-            logger.info(
-                f"鼠标释放，渐进拖动结束，实际拖动距离: {actual_drag_distance:.0f}px"
-            )
-
-    def _get_drag_start_position(self, drag_start: Point) -> tuple[int, int]:
-        """
-        获取拖动起始位置的屏幕坐标。
-
-        Args:
-            drag_start: 逻辑坐标
-
-        Returns:
-            (screen_x, screen_y) 屏幕坐标
-        """
-        import pyautogui
-
-        from endfield_essence_recognizer.core.window.windows_utils import (
-            _get_client_rect,
+        # 使用 WindowActions 执行渐进式拖动
+        actual_distance, stopped_early = self._window_actions.progressive_drag(
+            drag_start.x, drag_start.y,
+            drag_end.x, drag_end.y,
+            step=step,
+            max_drag=max_drag,
+            on_step=on_step,
         )
 
-        window = self._get_window()
-        if window is None:
-            logger.warning("无法获取窗口对象，使用当前鼠标位置")
-            return pyautogui.position()
+        # 如果提前停止，说明检测到滚动条到底
+        is_last_page = stopped_early
 
-        # 将逻辑坐标转换为物理坐标
-        physical = self._to_physical(drag_start, self._get_scale_factor())
+        if is_last_page:
+            logger.info(f"检测到滚动条到底，已拖动 {actual_distance}px")
+        else:
+            # 拖动完成后再次检测滚动条
+            if scrollbar_pos and self._check_scrollbar_at_bottom(scrollbar_pos):
+                is_last_page = True
+                logger.info(f"拖动完成后检测到滚动条到底，总计拖动 {actual_distance}px")
 
-        # 计算屏幕坐标
-        (left, top), _ = _get_client_rect(window)
-        return left + physical.x, top + physical.y
-
-    def _get_scale_factor(self) -> float:
-        """获取缩放因子，默认为1.0。"""
-        factor = getattr(self._window_actions, "scale_factor", None)
-        return factor if factor is not None and factor > 0 else 1.0
-
-    def _get_window(self):
-        """获取窗口对象（支持嵌套包装器）。"""
-        from endfield_essence_recognizer.core.window.manager import WindowManager
-
-        actions = self._window_actions
-        for _ in range(5):
-            if hasattr(actions, "_window_manager"):
-                wm = actions._window_manager
-                if isinstance(wm, WindowManager):
-                    return wm._get_window()
-            if hasattr(actions, "_actions"):
-                actions = actions._actions
-            else:
-                break
-        return None
-
-    def _to_physical(self, point: Point, scale_factor: float) -> Point:
-        """将逻辑坐标转换为物理坐标。"""
-        if scale_factor == 1.0:
-            return point
-        return Point(round(point.x / scale_factor), round(point.y / scale_factor))
+        return actual_distance, is_last_page
 
     def _calculate_skip_rows(
         self,
