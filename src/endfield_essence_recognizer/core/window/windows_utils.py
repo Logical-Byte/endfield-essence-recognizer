@@ -2,8 +2,7 @@
 Windows OS-specific window utilities.
 """
 
-from collections.abc import Callable
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 
 import numpy as np
 import pyautogui
@@ -230,8 +229,6 @@ def progressive_drag_on_window(
 
     # 计算步数和每步偏移
     steps = max(1, total_distance // step)
-    step_dx = total_dx / steps
-    step_dy = total_dy / steps
     step_distance = total_distance / steps
 
     # 移动到起点并按住鼠标
@@ -263,7 +260,7 @@ def progressive_drag_on_window(
         return int(actual_distance), stopped_early
 
     finally:
-        time.sleep(0.5) #防止移动后UI惯性滑动
+        time.sleep(0.5)  # 防止移动后UI惯性滑动
         pyautogui.mouseUp()
 
 
@@ -283,4 +280,3 @@ def get_screen_coordinates(
     """
     (left, top), (_right, _bottom) = _get_client_rect(window)
     return left + relative_x, top + relative_y
-

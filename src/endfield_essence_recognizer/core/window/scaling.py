@@ -192,7 +192,9 @@ class ScalingWindowActions(WindowActions):
         Returns:
             (physical_x, physical_y) tuple in physical space.
         """
-        return round(logical_x / self._scale_factor), round(logical_y / self._scale_factor)
+        return round(logical_x / self._scale_factor), round(
+            logical_y / self._scale_factor
+        )
 
     def progressive_drag(
         self,
@@ -240,20 +242,24 @@ class ScalingWindowActions(WindowActions):
         logical_distance = int((logical_dx**2 + logical_dy**2) ** 0.5)
 
         # Delegate to underlying actions
-        if hasattr(self._actions, 'progressive_drag'):
+        if hasattr(self._actions, "progressive_drag"):
             actual_distance, stopped_early = self._actions.progressive_drag(
-                physical_start_x, physical_start_y,
-                physical_end_x, physical_end_y,
+                physical_start_x,
+                physical_start_y,
+                physical_end_x,
+                physical_end_y,
                 physical_step,
                 physical_max_drag,
-                on_step
+                on_step,
             )
             # Convert physical distance back to logical distance
             logical_actual = round(actual_distance * self._scale_factor)
             return logical_actual, stopped_early
         else:
             # Fallback: just return the calculated distance
-            logger.warning("Underlying WindowActions does not implement progressive_drag method")
+            logger.warning(
+                "Underlying WindowActions does not implement progressive_drag method"
+            )
             return logical_distance, False
 
 

@@ -1,5 +1,4 @@
-from collections.abc import Callable
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 
 import pygetwindow
 from cv2.typing import MatLike

@@ -681,22 +681,23 @@ class DraggableScannerEngine(ScannerEngine):
         Returns:
             (actual_drag_distance, is_last_page) 实际拖动距离和是否是最后一页
         """
+
         # 定义滚动条检测回调
         def on_step(step_index: int, screen_x: int, screen_y: int) -> bool:
             """每步回调：检测滚动条是否到底"""
             if stop_event.is_set():
                 return True
             if scrollbar_pos and self._check_scrollbar_at_bottom(scrollbar_pos):
-                logger.info(
-                    f"步 {step_index + 1}: 检测到滚动条到底"
-                )
+                logger.info(f"步 {step_index + 1}: 检测到滚动条到底")
                 return True
             return False
 
         # 使用 WindowActions 执行渐进式拖动
         actual_distance, stopped_early = self._window_actions.progressive_drag(
-            drag_start.x, drag_start.y,
-            drag_end.x, drag_end.y,
+            drag_start.x,
+            drag_start.y,
+            drag_end.x,
+            drag_end.y,
             step=step,
             max_drag=max_drag,
             on_step=on_step,
