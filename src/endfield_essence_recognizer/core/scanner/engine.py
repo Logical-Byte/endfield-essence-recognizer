@@ -374,7 +374,9 @@ class ScannerEngine:
                     self._window_actions.click(pos.x, pos.y)
 
                 self._window_actions.wait(0.3)
-                logger.success(action.log_message)
+                logger.opt(colors=True).success(
+                    f"<LIGHT-YELLOW><bold>{action.log_message}</></>"
+                )
 
         else:
             # 扫描完成
@@ -401,8 +403,11 @@ class ScannerEngine:
                         weapon.weapon_type
                     )
                     type_name = weapon_type.name if weapon_type else "未知类型"
+                    rarity_color = self.ctx.static_game_data.get_rarity_color(
+                        weapon.rarity
+                    )
                     logger.opt(colors=True).info(
-                        f"  <bold>{weapon.name}（{weapon.rarity}★ {type_name}）</>: {count} 个基质"
+                        f"  <fg {rarity_color}><bold>{weapon.name}（{weapon.rarity}★ {type_name}）</></>: {count} 个基质"
                     )
                 else:
                     logger.opt(colors=True).info(

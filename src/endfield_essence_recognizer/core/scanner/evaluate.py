@@ -120,7 +120,8 @@ def evaluate_essence(
         weapon_type = static_game_data.get_weapon_type(weapon.weapon_type)
         type_name = weapon_type.name if weapon_type else "未知类型"
 
-        return f"<bold>{weapon.name}（{weapon.rarity}★ {type_name}）</>"
+        rarity_color = static_game_data.get_rarity_color(weapon.rarity)
+        return f"<fg {rarity_color}><bold>{weapon.name}（{weapon.rarity}★ {type_name}）</></>"
 
     if non_trash_weapon_ids:
         # 只要有一个匹配武器未被拦截，就是宝藏
