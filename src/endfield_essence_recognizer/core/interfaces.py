@@ -1,4 +1,5 @@
 import threading
+from collections.abc import Callable
 from typing import Protocol, runtime_checkable
 
 from cv2.typing import MatLike
@@ -110,6 +111,39 @@ class WindowActions(Protocol):
 
         Args:
             seconds: The number of seconds to wait.
+        """
+        ...
+
+    def progressive_drag(
+        self,
+        start_x: int,
+        start_y: int,
+        end_x: int,
+        end_y: int,
+        step: int = 50,
+        max_drag: int = 0,
+        on_step: Callable[[int, int, int], bool] | None = None,
+    ) -> tuple[int, bool]:
+        """
+        Perform a progressive drag with step-by-step movement and optional callback.
+
+        The mouse button is held down while moving incrementally, allowing for
+        intermediate checks between steps (e.g., scrollbar detection).
+
+        Args:
+            start_x: Starting X coordinate relative to the client area.
+            start_y: Starting Y coordinate relative to the client area.
+            end_x: Ending X coordinate relative to the client area.
+            end_y: Ending Y coordinate relative to the client area.
+            step: Pixel distance per step.
+            max_drag: Maximum drag distance (0 for unlimited).
+            on_step: Optional callback called after each step with (step_index, x, y).
+                     Return True to stop the drag early.
+
+        Returns:
+            A tuple of (actual_drag_distance, stopped_early) where:
+            - actual_drag_distance: The actual distance dragged in pixels
+            - stopped_early: True if the drag was stopped early by callback
         """
         ...
 

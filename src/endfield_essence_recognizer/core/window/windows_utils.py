@@ -2,7 +2,7 @@
 Windows OS-specific window utilities.
 """
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 
 import numpy as np
 import pyautogui
@@ -174,3 +174,91 @@ def click_on_window(
     screen_x = left + relative_x
     screen_y = top + relative_y
     pyautogui.click(screen_x, screen_y)
+
+
+def progressive_drag_on_window(
+    window: pygetwindow.Window,
+    relative_start_x: int,
+    relative_start_y: int,
+    relative_end_x: int,
+    relative_end_y: int,
+    step: int = 50,
+    max_drag: int = 0,
+    on_step: Callable[[int, int, int], bool] | None = None,
+) -> tuple[int, bool]:
+    """
+    在指定窗口执行渐进式拖动，支持每步回调检测。
+
+    鼠标按住不放，逐步移动，可在每步后进行滚动条检测。
+
+    Args:
+        window: pygetwindow 窗口对象
+        relative_start_x: 拖动起始 X 坐标（相对于客户区）
+        relative_start_y: 拖动起始 Y 坐标（相对于客户区）
+        relative_end_x: 拖动终止 X 坐标（相对于客户区）
+        relative_end_y: 拖动终止 Y 坐标（相对于客户区）
+        step: 每次拖动的像素数
+        max_drag: 最大拖动距离（0 表示不限制）
+        on_step: 每步回调函数，参数为 (step_index, screen_x, screen_y)，
+                  返回 True 表示提前停止拖动
+
+    Returns:
+        (total_distance, stopped_early) 总拖动距离和是否提前停止
+    """
+    import time
+
+    (left, top), (_right, _bottom) = _get_client_rect(window)
+
+    # 计算屏幕坐标
+    screen_start_x = left + relative_start_x
+    screen_start_y = top + relative_start_y
+    screen_end_x = left + relative_end_x
+    screen_end_y = top + relative_end_y
+
+    # 计算总拖动距离和方向
+    total_dx = screen_end_x - screen_start_x
+    total_dy = screen_end_y - screen_start_y
+    total_distance = int((total_dx**2 + total_dy**2) ** 0.5)
+
+    # 限制最大拖动距离
+    if max_drag > 0 and total_distance > max_drag:
+        scale = max_drag / total_distance
+        total_dx = int(total_dx * scale)
+        total_dy = int(total_dy * scale)
+        total_distance = max_drag
+
+    # 计算步数和每步偏移
+    steps = max(1, total_distance // step)
+    step_distance = total_distance / steps
+
+    # 移动到起点并按住鼠标
+    pyautogui.moveTo(screen_start_x, screen_start_y)
+    pyautogui.mouseDown()
+    time.sleep(0.2)
+
+    actual_distance = 0
+    stopped_early = False
+
+    try:
+        for i in range(steps):
+            # 计算当前步位置
+            progress = (i + 1) / steps
+            current_x = int(screen_start_x + total_dx * progress)
+            current_y = int(screen_start_y + total_dy * progress)
+
+            pyautogui.moveTo(current_x, current_y)
+            actual_distance += step_distance
+
+            time.sleep(0.05)
+
+            # 调用回调检测
+            if on_step is not None:
+                if on_step(i, current_x, current_y):
+                    stopped_early = True
+                    break
+
+        return int(actual_distance), stopped_early
+
+    finally:
+        time.sleep(0.5)  # 防止移动后UI惯性滑动
+        pyautogui.mouseUp()

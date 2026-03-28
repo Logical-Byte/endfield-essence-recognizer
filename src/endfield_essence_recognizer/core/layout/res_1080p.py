@@ -83,3 +83,18 @@ class Resolution1080p(ResolutionProfile):
     @property
     def DELIVERY_JOB_REFRESH_BUTTON_POINT(self) -> Point:
         return Point(1745, 1003)
+
+    @property
+    def DRAG_START_POS(self) -> Point:
+        """拖动起始位置：基质图标区域底部"""
+        return Point(750, 870)
+
+    @property
+    def DRAG_END_POS(self) -> Point:
+        """拖动结束位置：向上滑动到顶部"""
+        return Point(750, 50)
+
+    @property
+    def SCROLLBAR_CHECK_POS(self) -> Point:
+        """滚动条检测位置，用于判断是否到达底部"""
+        return Point(1453, 950)

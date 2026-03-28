@@ -45,6 +45,21 @@ class WindowActionsAdapter(WindowActions, ImageSource):
     def wait(self, seconds: float) -> None:
         self._sleeper(seconds)
 
+    def progressive_drag(
+        self,
+        start_x: int,
+        start_y: int,
+        end_x: int,
+        end_y: int,
+        step: int = 50,
+        max_drag: int = 0,
+        on_step: Callable[[int, int, int], bool] | None = None,
+    ) -> tuple[int, bool]:
+        """Delegate progressive_drag to WindowManager."""
+        return self._window_manager.progressive_drag(
+            start_x, start_y, end_x, end_y, step, max_drag, on_step
+        )
+
     def screenshot(self, relative_region: Region | None = None) -> MatLike:
         return self._window_manager.screenshot(relative_region)
 

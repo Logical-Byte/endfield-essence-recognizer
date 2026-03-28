@@ -1,4 +1,4 @@
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 
 import pygetwindow
 from cv2.typing import MatLike
@@ -8,6 +8,7 @@ from endfield_essence_recognizer.core.window.windows_utils import (
     click_on_window,
     get_client_size,
     get_support_window,
+    progressive_drag_on_window,
     screenshot_window,
 )
 from endfield_essence_recognizer.exceptions import WindowNotFoundError
@@ -110,3 +111,42 @@ class WindowManager:
         if window is None:
             raise WindowNotFoundError(self._supported_titles)
         click_on_window(window, relative_x, relative_y)
+
+    def progressive_drag(
+        self,
+        start_x: int,
+        start_y: int,
+        end_x: int,
+        end_y: int,
+        step: int = 50,
+        max_drag: int = 0,
+        on_step: Callable[[int, int, int], bool] | None = None,
+    ) -> tuple[int, bool]:
+        """
+        Perform a progressive drag with step-by-step movement and optional callback.
+
+        The mouse button is held down while moving incrementally, allowing for
+        intermediate checks between steps (e.g., scrollbar detection).
+
+        Args:
+            start_x: Starting X coordinate relative to the client area.
+            start_y: Starting Y coordinate relative to the client area.
+            end_x: Ending X coordinate relative to the client area.
+            end_y: Ending Y coordinate relative to the client area.
+            step: Pixel distance per step.
+            max_drag: Maximum drag distance (0 for unlimited).
+            on_step: Optional callback called after each step with (step_index, x, y).
+                     Return True to stop the drag early.
+
+        Returns:
+            A tuple of (actual_drag_distance, stopped_early) where:
+            - actual_drag_distance: The actual distance dragged in pixels
+            - stopped_early: True if the drag was stopped early by callback
+        """
+        window = self._get_window()
+        if window is None:
+            raise WindowNotFoundError(self._supported_titles)
+
+        return progressive_drag_on_window(
+            window, start_x, start_y, end_x, end_y, step, max_drag, on_step
+        )

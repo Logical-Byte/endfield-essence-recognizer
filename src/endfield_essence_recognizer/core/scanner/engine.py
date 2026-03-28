@@ -2,7 +2,11 @@ import itertools
 import threading
 
 from endfield_essence_recognizer.core.interfaces import ImageSource, WindowActions
-from endfield_essence_recognizer.core.layout.base import ResolutionProfile
+from endfield_essence_recognizer.core.layout.base import (
+    Point,
+    Region,
+    ResolutionProfile,
+)
 from endfield_essence_recognizer.core.recognition import (
     AbandonStatusLabel,
     LockStatusLabel,
@@ -416,3 +420,330 @@ class ScannerEngine:
         elif self._total_essence_count > 0:
             # 扫描了基质但没有匹配到任何武器
             logger.info("没有匹配到任何非垃圾武器。")
+
+
+class DraggableScannerEngine(ScannerEngine):
+    """
+    支持拖拽翻页的基质扫描器引擎。
+
+    继承自 ScannerEngine，添加了自动翻页功能：
+    - 通过拖拽操作实现翻页
+    - 检测滚动条位置判断是否到达底部
+    - 支持翻页前后去重（避免重复扫描）
+    """
+
+    def _execute_grid_scan(self, stop_event: threading.Event) -> None:
+        """
+        执行带拖拽翻页的网格扫描。
+        """
+        if not self._window_actions.target_exists:
+            logger.info("未找到终末地窗口，停止基质扫描。")
+            return
+
+        if self._window_actions.restore():
+            self._window_actions.wait(0.5)
+
+        if self._window_actions.activate():
+            self._window_actions.wait(0.5)
+
+        if self._window_actions.show():
+            self._window_actions.wait(0.5)
+
+        logger.debug("Made the window visible and active.")
+
+        check_scene_result = check_scene(self._image_source, self.ctx, self._profile)
+        if not check_scene_result:
+            return
+
+        # 获取当前用户设置的快照
+        user_setting = self._user_setting_manager.get_user_setting()
+
+        # 检查是否启用自动翻页
+        auto_page_flip = user_setting.auto_page_flip
+        if not auto_page_flip:
+            logger.info("自动翻页已关闭，将只扫描当前页。")
+            # 调用父类的单页扫描逻辑
+            super()._execute_grid_scan(stop_event)
+            return
+
+        icon_x_list = self._profile.essence_icon_x_list
+        icon_y_list = self._profile.essence_icon_y_list
+
+        # 获取拖动配置
+        drag_start = self._profile.DRAG_START_POS
+        drag_end = self._profile.DRAG_END_POS
+
+        # 获取滚动条检测配置
+        scrollbar_pos = self._profile.SCROLLBAR_CHECK_POS
+
+        page_count = 0
+        is_last_page = False
+        max_pages = 100  # 最大页数限制，防止无限循环
+
+        # 初始化渐进拖动相关变量
+        progressive_drag_distance = 0
+        max_drag_distance = (
+            int((drag_end.x - drag_start.x) ** 2 + (drag_end.y - drag_start.y) ** 2)
+            ** 0.5
+        )
+        total_rows = len(icon_y_list)
+
+        while not stop_event.is_set() and page_count < max_pages:
+            page_count += 1
+            logger.info(f"开始扫描第 {page_count} 页基质...")
+
+            # 确定当前页需要扫描的行范围
+            if is_last_page and page_count > 1:
+                # 最后一页：根据渐进滚动比例计算需要跳过的行数
+                skip_rows = self._calculate_skip_rows(
+                    progressive_drag_distance, max_drag_distance, total_rows
+                )
+                start_row = min(skip_rows, total_rows - 1)
+                logger.info(
+                    f"最后一页：滚动距离 {progressive_drag_distance}px（完整页 {max_drag_distance:.0f}px），跳过前 {start_row} 行已扫描基质"
+                )
+            else:
+                start_row = 0
+
+            # 扫描当前页（从指定行开始）
+            self._scan_current_page(
+                stop_event,
+                user_setting,
+                icon_x_list,
+                icon_y_list,
+                start_row_index=start_row,
+            )
+
+            # 如果已经扫描完最后一页，停止扫描
+            if is_last_page:
+                logger.info("已扫描完最后一页，基质扫描完成。")
+                break
+
+            # 检查停止事件
+            if stop_event.is_set():
+                logger.info("基质扫描被中断，停止翻页操作。")
+                break
+
+            # 执行渐进式拖动翻页
+            logger.info("开始渐进式拖动翻页...")
+            progressive_drag_distance, is_last_page = self._progressive_drag(
+                drag_start,
+                drag_end,
+                scrollbar_pos,
+                stop_event,
+                step=50,  # 每次拖动50像素
+                max_drag=max_drag_distance,
+            )
+
+            if is_last_page:
+                logger.info(
+                    f"检测到滚动条到底，已渐进滚动 {progressive_drag_distance}px，下一页将是最后一页。"
+                )
+
+        if page_count >= max_pages:
+            logger.info(f"已达到最大页数限制 ({max_pages})，扫描停止。")
+        logger.info("基质扫描完成。")
+
+    def _scan_current_page(
+        self,
+        stop_event: threading.Event,
+        user_setting: UserSetting,
+        icon_x_list: list[int],
+        icon_y_list: list[int],
+        start_row_index: int = 0,
+    ) -> None:
+        """
+        扫描当前页的所有基质。
+
+        Args:
+            start_row_index: 开始扫描的行索引（0表示从第一行开始）
+        """
+        # 从指定行开始扫描
+        rows_to_scan = list(enumerate(icon_y_list))[start_row_index:]
+
+        for i, relative_y in rows_to_scan:
+            for j, relative_x in enumerate(icon_x_list):
+                if not self._window_actions.target_is_active:
+                    logger.info("终末地窗口不在前台，停止基质扫描。")
+                    return
+
+                if stop_event.is_set():
+                    logger.info("基质扫描被中断。")
+                    return
+
+                logger.info(f"正在扫描第 {i + 1} 行第 {j + 1} 列的基质...")
+
+                # 点击基质图标位置
+                self._window_actions.click(relative_x, relative_y)
+                self._window_actions.wait(0.3)
+
+                # 识别基质信息
+                data = recognize_essence(
+                    self._image_source,
+                    self.ctx,
+                    self._profile,
+                )
+
+                if (
+                    data.abandon_label == AbandonStatusLabel.MAYBE_ABANDONED
+                    or data.lock_label == LockStatusLabel.MAYBE_LOCKED
+                ):
+                    continue
+
+                evaluation = evaluate_essence(
+                    data, user_setting, self.ctx.static_game_data
+                )
+
+                if (
+                    evaluation.quality == EssenceQuality.TRASH
+                    and evaluation.matched_weapons
+                ):
+                    logger.opt(colors=True).warning(evaluation.log_message)
+                else:
+                    logger.opt(colors=True).success(evaluation.log_message)
+
+                actions = decide_actions(data, evaluation, user_setting)
+
+                for action in actions:
+                    if action.type == ActionType.CLICK_LOCK:
+                        pos = self._profile.LOCK_BUTTON_POS
+                        self._window_actions.click(pos.x, pos.y)
+                    elif action.type == ActionType.CLICK_ABANDON:
+                        pos = self._profile.DEPRECATE_BUTTON_POS
+                        self._window_actions.click(pos.x, pos.y)
+
+                    self._window_actions.wait(0.3)
+                    logger.success(action.log_message)
+
+    def _check_scrollbar_at_bottom(self, check_pos: Point) -> bool:
+        """
+        检测滚动条是否已到达底部。
+
+        在像素区域内检测是否有亮点（RGB 都高于 100），
+        如果检测到亮点则认为是滚动条，表明已到达底部。
+
+        Args:
+            check_pos: 检测位置（像素坐标）
+
+        Returns:
+            True 如果检测到滚动条（已到达底部），False 否则
+        """
+        try:
+            # 根据分辨率计算搜索半径（1080p 为 2，其他分辨率按比例缩放）
+            resolution = self._profile.RESOLUTION
+            scale_factor = resolution[1] / 1080
+            radius = max(1, round(2 * scale_factor))
+
+            # 截取检测位置附近的区域
+            roi = Region(
+                Point(check_pos.x - radius, check_pos.y - radius),
+                Point(check_pos.x + radius + 1, check_pos.y + radius + 1),
+            )
+            screenshot = self._image_source.screenshot(roi)
+
+            # 在区域内查找是否有亮点（RGB 都高于 100）
+            height, width = screenshot.shape[:2]
+            for y in range(height):
+                for x in range(width):
+                    pixel = screenshot[y, x]
+                    b, g, r = int(pixel[0]), int(pixel[1]), int(pixel[2])
+                    if r > 100 and g > 100 and b > 100:
+                        logger.info(
+                            f"检测到滚动条亮点 at ({check_pos.x - radius + x}, {check_pos.y - radius + y}): RGB({r}, {g}, {b})"
+                        )
+                        return True
+
+            logger.debug(f"未检测到滚动条亮点 at ({check_pos.x}, {check_pos.y})")
+            return False
+
+        except Exception as e:
+            logger.warning(f"滚动条检测失败: {e}")
+            return False
+
+    def _progressive_drag(
+        self,
+        drag_start: Point,
+        drag_end: Point,
+        scrollbar_pos: Point | None,
+        stop_event: threading.Event,
+        step: int = 50,
+        max_drag: int = 800,
+    ) -> tuple[int, bool]:
+        """
+        渐进式拖动，使用 WindowActions 接口执行拖动并检测滚动条。
+
+        Args:
+            drag_start: 拖动起始位置
+            drag_end: 拖动终止位置（目标位置）
+            scrollbar_pos: 滚动条检测位置
+            stop_event: 停止事件
+            step: 每次拖动的像素数
+            max_drag: 最大拖动距离
+
+        Returns:
+            (actual_drag_distance, is_last_page) 实际拖动距离和是否是最后一页
+        """
+
+        # 定义滚动条检测回调
+        def on_step(step_index: int, screen_x: int, screen_y: int) -> bool:
+            """每步回调：检测滚动条是否到底"""
+            if stop_event.is_set():
+                return True
+            if scrollbar_pos and self._check_scrollbar_at_bottom(scrollbar_pos):
+                logger.info(f"步 {step_index + 1}: 检测到滚动条到底")
+                return True
+            return False
+
+        # 使用 WindowActions 执行渐进式拖动
+        actual_distance, stopped_early = self._window_actions.progressive_drag(
+            drag_start.x,
+            drag_start.y,
+            drag_end.x,
+            drag_end.y,
+            step=step,
+            max_drag=max_drag,
+            on_step=on_step,
+        )
+
+        # 如果提前停止，说明检测到滚动条到底
+        is_last_page = stopped_early
+
+        if is_last_page:
+            logger.info(f"检测到滚动条到底，已拖动 {actual_distance}px")
+        else:
+            # 拖动完成后再次检测滚动条
+            if scrollbar_pos and self._check_scrollbar_at_bottom(scrollbar_pos):
+                is_last_page = True
+                logger.info(f"拖动完成后检测到滚动条到底，总计拖动 {actual_distance}px")
+
+        return actual_distance, is_last_page
+
+    def _calculate_skip_rows(
+        self,
+        actual_drag: int,
+        max_drag: int,
+        total_rows: int,
+    ) -> int:
+        """
+        根据渐进滚动比例计算需要跳过的行数。
+
+        Args:
+            actual_drag: 实际滚动距离
+            max_drag: 最大滚动距离（完整一页的距离）
+            total_rows: 总行数
+
+        Returns:
+            需要跳过的行数
+        """
+        if max_drag <= 0 or actual_drag <= 0:
+            return 0
+
+        # 计算比例并四舍五入为跳过行数
+        ratio = actual_drag / max_drag
+        skip_rows = total_rows - round(ratio * total_rows)
+
+        logger.info(
+            f"计算跳过行数: 比例={ratio:.2f}, 实际滚动={actual_drag}px, 最大={max_drag}px, 跳过={skip_rows}行"
+        )
+
+        return skip_rows

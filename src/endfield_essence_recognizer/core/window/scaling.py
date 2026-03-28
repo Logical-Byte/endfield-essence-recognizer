@@ -16,6 +16,7 @@ The scaling layer sits between the raw window capture (physical) and the scanner
 """
 
 import math
+from collections.abc import Callable
 
 import cv2
 from cv2.typing import MatLike
@@ -179,6 +180,87 @@ class ScalingWindowActions(WindowActions):
 
     def wait(self, seconds: float) -> None:
         self._actions.wait(seconds)
+
+    def _to_physical(self, logical_x: int, logical_y: int) -> tuple[int, int]:
+        """
+        Convert logical coordinates to physical coordinates.
+
+        Args:
+            logical_x: X coordinate in logical space.
+            logical_y: Y coordinate in logical space.
+
+        Returns:
+            (physical_x, physical_y) tuple in physical space.
+        """
+        return round(logical_x / self._scale_factor), round(
+            logical_y / self._scale_factor
+        )
+
+    def progressive_drag(
+        self,
+        start_x: int,
+        start_y: int,
+        end_x: int,
+        end_y: int,
+        step: int = 50,
+        max_drag: int = 0,
+        on_step: Callable[[int, int, int], bool] | None = None,
+    ) -> tuple[int, bool]:
+        """
+        Perform a progressive drag with step-by-step movement and coordinate scaling.
+
+        Logical coordinates are converted to physical coordinates before delegating
+        to the underlying WindowActions. The step size is also scaled accordingly.
+
+        Args:
+            start_x: Starting X coordinate in logical space.
+            start_y: Starting Y coordinate in logical space.
+            end_x: Ending X coordinate in logical space.
+            end_y: Ending Y coordinate in logical space.
+            step: Pixel distance per step (in logical space).
+            max_drag: Maximum drag distance in logical space (0 for unlimited).
+            on_step: Optional callback called after each step with (step_index, x, y).
+                     Return True to stop the drag early.
+
+        Returns:
+            A tuple of (actual_drag_distance, stopped_early) where:
+            - actual_drag_distance: The actual distance dragged in logical pixels
+            - stopped_early: True if the drag was stopped early by callback
+        """
+        # Convert logical coordinates to physical coordinates
+        physical_start_x, physical_start_y = self._to_physical(start_x, start_y)
+        physical_end_x, physical_end_y = self._to_physical(end_x, end_y)
+
+        # Scale step and max_drag to physical space
+        # Both are in logical space and need to be converted to physical space
+        physical_step = round(step / self._scale_factor) if step > 0 else 1
+        physical_max_drag = round(max_drag / self._scale_factor) if max_drag > 0 else 0
+
+        # Calculate logical drag distance for return value
+        logical_dx = end_x - start_x
+        logical_dy = end_y - start_y
+        logical_distance = int((logical_dx**2 + logical_dy**2) ** 0.5)
+
+        # Delegate to underlying actions
+        if hasattr(self._actions, "progressive_drag"):
+            actual_distance, stopped_early = self._actions.progressive_drag(
+                physical_start_x,
+                physical_start_y,
+                physical_end_x,
+                physical_end_y,
+                physical_step,
+                physical_max_drag,
+                on_step,
+            )
+            # Convert physical distance back to logical distance
+            logical_actual = round(actual_distance * self._scale_factor)
+            return logical_actual, stopped_early
+        else:
+            # Fallback: just return the calculated distance
+            logger.warning(
+                "Underlying WindowActions does not implement progressive_drag method"
+            )
+            return logical_distance, False
 
 
 def create_scaling_wrappers(

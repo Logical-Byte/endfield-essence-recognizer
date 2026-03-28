@@ -59,6 +59,9 @@ class UserSetting(BaseModel):
     high_level_treasure_skill_threshold: int = Field(default=3, ge=1, le=3)
     """高等级技能属性词条的等级阈值（+1~+3）"""
 
+    auto_page_flip: bool = True
+    """扫描时是否自动翻页"""
+
     def update_from_model(self, other: UserSetting) -> None:
         for field in self.__class__.model_fields:
             setattr(self, field, getattr(other, field))

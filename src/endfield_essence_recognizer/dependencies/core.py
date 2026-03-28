@@ -21,6 +21,7 @@ from endfield_essence_recognizer.core.scanner.context import (
     ScannerContext,
 )
 from endfield_essence_recognizer.core.scanner.engine import (
+    DraggableScannerEngine,
     OneTimeRecognitionEngine,
     ScannerEngine,
 )
@@ -113,9 +114,24 @@ def get_scanner_engine_dep(
 ) -> ScannerEngine:
     """
     Get a ScannerEngine instance with scaling middleware.
+
+    If auto_page_flip is enabled in user settings, returns a DraggableScannerEngine
+    that supports automatic page flipping via drag operations.
     """
     adapter = WindowActionsAdapter(window_manager)
     image_source, window_actions = create_scaling_wrappers(adapter, adapter)
+
+    # Check if auto page flip is enabled
+    user_setting = user_setting_manager.get_user_setting()
+    if user_setting.auto_page_flip:
+        return DraggableScannerEngine(
+            ctx=ctx,
+            image_source=image_source,
+            window_actions=window_actions,
+            user_setting_manager=user_setting_manager,
+            profile=profile,
+        )
+
     return ScannerEngine(
         ctx=ctx,
         image_source=image_source,
