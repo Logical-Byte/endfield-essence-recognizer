@@ -613,7 +613,9 @@ class DraggableScannerEngine(ScannerEngine):
                         self._window_actions.click(pos.x, pos.y)
 
                     self._window_actions.wait(0.3)
-                    logger.success(action.log_message)
+                    logger.opt(colors=True).success(
+                        f"<LIGHT-YELLOW><bold>{action.log_message}</></>"
+                    )
 
     def _check_scrollbar_at_bottom(self, check_pos: Point) -> bool:
         """
