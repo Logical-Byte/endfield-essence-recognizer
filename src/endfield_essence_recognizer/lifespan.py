@@ -55,8 +55,13 @@ def init_mount_frontend_build(app: FastAPI, server_config: ServerConfig):
     mimetypes.add_type("application/javascript", ".mjs")
     mimetypes.add_type("text/css", ".css")
     mimetypes.add_type("application/json", ".json")
+    mimetypes.add_type("application/json", ".map")
     mimetypes.add_type("image/svg+xml", ".svg")
+    mimetypes.add_type("application/xml", ".xml")
     mimetypes.add_type("application/wasm", ".wasm")
+    mimetypes.add_type("font/woff2", ".woff2")
+    mimetypes.add_type("font/woff", ".woff")
+    mimetypes.add_type("font/ttf", ".ttf")
 
     if not server_config.dist_dir:
         dist_dir = (
