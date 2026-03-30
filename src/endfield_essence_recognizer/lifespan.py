@@ -68,72 +68,7 @@ def init_mount_frontend_build(app: FastAPI, server_config: ServerConfig):
     if dist_dir.exists():
         app.mount("/", StaticFiles(directory=dist_dir, html=True), name="dist")
     else:
-        logger.error(f"未找到前端构建文件夹: {dist_dir}")
-        logger.error("请先执行前端构建: cd frontend && npm install && npm run build")
-        # 提供一个简单的错误页面
-        from fastapi.responses import HTMLResponse
-
-        @app.get("/")
-        async def fallback_error_page():
-            return HTMLResponse(
-                content="""
-                <!DOCTYPE html>
-                <html lang="zh-CN">
-                <head>
-                    <meta charset="UTF-8">
-                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                    <title>前端构建文件缺失</title>
-                    <style>
-                        body {
-                            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                            display: flex;
-                            justify-content: center;
-                            align-items: center;
-                            min-height: 100vh;
-                            margin: 0;
-                            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                        }
-                        .container {
-                            background: white;
-                            padding: 2rem;
-                            border-radius: 8px;
-                            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-                            max-width: 600px;
-                        }
-                        h1 { color: #e53e3e; margin-top: 0; }
-                        code {
-                            background: #f7fafc;
-                            padding: 0.2rem 0.4rem;
-                            border-radius: 4px;
-                            font-family: 'Courier New', monospace;
-                        }
-                        .command {
-                            background: #2d3748;
-                            color: #68d391;
-                            padding: 1rem;
-                            border-radius: 4px;
-                            margin: 1rem 0;
-                            font-family: 'Courier New', monospace;
-                        }
-                    </style>
-                </head>
-                <body>
-                    <div class="container">
-                        <h1>⚠️ 前端构建文件缺失</h1>
-                        <p>前端构建文件夹不存在，请先执行前端构建：</p>
-                        <div class="command">
-                            cd frontend<br>
-                            npm install<br>
-                            npm run build
-                        </div>
-                        <p>构建完成后，重新启动应用即可。</p>
-                        <p><strong>构建文件夹路径：</strong> <code>""" + str(dist_dir) + """</code></p>
-                    </div>
-                </body>
-                </html>
-                """,
-                status_code=503,
-            )
+        logger.error("未找到前端构建文件夹，请先执行前端构建！")
 
 
 @asynccontextmanager

@@ -1,26 +1,5 @@
 <template>
   <v-app>
-    <!-- 加载状态 -->
-    <v-overlay v-model="isLoading" class="align-center justify-center" persistent>
-      <v-progress-circular color="primary" indeterminate size="64" />
-      <div class="text-h6 mt-4">正在加载...</div>
-    </v-overlay>
-
-    <!-- 错误提示 -->
-    <v-dialog v-model="showError" max-width="500" persistent>
-      <v-card>
-        <v-card-title class="text-h5 text-error">加载失败</v-card-title>
-        <v-card-text>
-          <p>{{ errorMessage }}</p>
-          <p class="text-caption mt-2">请确保后端服务正在运行。</p>
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn color="primary" @click="retryInit">重试</v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
-
     <v-navigation-drawer v-model="drawer">
       <v-card class="pa-4" rounded="0" to="/" variant="flat">
         <logo class="d-block mb-4 w-50 h-auto mx-auto" />
@@ -73,9 +52,6 @@ const router = useRouter()
 const theme = useTheme()
 
 const drawer = ref<boolean | null>(null)
-const isLoading = ref(true)
-const showError = ref(false)
-const errorMessage = ref('')
 
 // 初始化日志 WebSocket 连接
 useLogs()
@@ -85,34 +61,11 @@ const { checkForUpdates } = useUpdateChecker()
 
 const { fetchStaticData } = useStaticData()
 
-async function initApp() {
-  try {
-    isLoading.value = true
-    showError.value = false
-
-    // 初始化游戏数据
-    await fetchStaticData()
-
-    // 初始检查更新（不阻塞）
-    checkForUpdates(false).catch(err => {
-      console.warn('检查更新失败，但不影响应用使用:', err)
-    })
-
-    isLoading.value = false
-  } catch (error) {
-    console.error('应用初始化失败:', error)
-    errorMessage.value = error instanceof Error ? error.message : '未知错误'
-    showError.value = true
-    isLoading.value = false
-  }
-}
-
-function retryInit() {
-  initApp()
-}
-
 onMounted(() => {
-  initApp()
+  // 初始化游戏数据
+  fetchStaticData()
+  // 初始检查更新
+  checkForUpdates(false)
 })
 </script>
 
