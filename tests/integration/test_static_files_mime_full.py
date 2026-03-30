@@ -1,19 +1,18 @@
 """测试静态文件的 MIME 类型映射（Windows 白屏问题修复验证）"""
 
-import tempfile
 from pathlib import Path
 
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from endfield_essence_recognizer.lifespan import init_mount_frontend_build
 from endfield_essence_recognizer.core.config import ServerConfig
-
+from endfield_essence_recognizer.lifespan import init_mount_frontend_build
 
 # ============================================================
 # Fixture
 # ============================================================
+
 
 @pytest.fixture
 def temp_dist_dir(tmp_path: Path):
@@ -99,28 +98,34 @@ def app_client(temp_dist_dir: Path):
 
 MIME_CASES: list[tuple[str, str]] = [
     # --- 脚本 ---
-    ("/assets/index-abc123.js",       "application/javascript"),
-    ("/assets/chunk-xyz.mjs",         "javascript"),        # .mjs 可能返回 application/javascript 或 text/javascript
+    ("/assets/index-abc123.js", "application/javascript"),
+    (
+        "/assets/chunk-xyz.mjs",
+        "javascript",
+    ),  # .mjs 可能返回 application/javascript 或 text/javascript
     # --- 样式 ---
-    ("/assets/index-def456.css",      "text/css"),
+    ("/assets/index-def456.css", "text/css"),
     # --- 标记 / 数据 ---
-    ("/index.html",                   "text/html"),
-    ("/assets/logo.svg",              "image/svg+xml"),
-    ("/assets/data.json",             "application/json"),
-    ("/assets/config.xml",            "application/xml"),
-    ("/assets/robots.txt",            "text/plain"),
-    ("/assets/manifest.webmanifest",  "application/manifest+json"),  # 部分环境可能回落到 application/json
+    ("/index.html", "text/html"),
+    ("/assets/logo.svg", "image/svg+xml"),
+    ("/assets/data.json", "application/json"),
+    ("/assets/config.xml", "application/xml"),
+    ("/assets/robots.txt", "text/plain"),
+    (
+        "/assets/manifest.webmanifest",
+        "application/manifest+json",
+    ),  # 部分环境可能回落到 application/json
     # --- 图片 ---
-    ("/assets/icon.png",              "image/png"),
-    ("/assets/photo.jpg",             "image/jpeg"),
-    ("/assets/animation.gif",         "image/gif"),
-    ("/favicon.ico",                  "image/x-icon"),       # 也可能是 image/vnd.microsoft.icon
+    ("/assets/icon.png", "image/png"),
+    ("/assets/photo.jpg", "image/jpeg"),
+    ("/assets/animation.gif", "image/gif"),
+    ("/favicon.ico", "image/x-icon"),  # 也可能是 image/vnd.microsoft.icon
     # --- 字体 ---
     ("/assets/fonts/inter-regular.woff2", "font/woff2"),
-    ("/assets/fonts/inter-regular.woff",  "font/woff"),
-    ("/assets/fonts/inter-regular.ttf",   "font/ttf"),       # 也可能是 application/font-sfnt
+    ("/assets/fonts/inter-regular.woff", "font/woff"),
+    ("/assets/fonts/inter-regular.ttf", "font/ttf"),  # 也可能是 application/font-sfnt
     # --- Source Map ---
-    ("/assets/index-abc123.js.map",   "application/json"),
+    ("/assets/index-abc123.js.map", "application/json"),
 ]
 
 
@@ -132,16 +137,15 @@ MIME_CASES: list[tuple[str, str]] = [
 class TestMimeTypes:
     """验证各类前端资源返回正确的 Content-Type."""
 
-    @pytest.mark.parametrize("path,expected_mime", MIME_CASES, ids=[p for p, _ in MIME_CASES])
+    @pytest.mark.parametrize(
+        "path,expected_mime", MIME_CASES, ids=[p for p, _ in MIME_CASES]
+    )
     def test_mime_type(self, app_client: TestClient, path: str, expected_mime: str):
         resp = app_client.get(path)
-        assert resp.status_code == 200, (
-            f"{path} 返回 {resp.status_code}，期望 200"
-        )
+        assert resp.status_code == 200, f"{path} 返回 {resp.status_code}，期望 200"
         content_type = resp.headers["content-type"]
         assert expected_mime in content_type, (
-            f"{path} 的 Content-Type 为 {content_type!r}，"
-            f"期望包含 {expected_mime!r}"
+            f"{path} 的 Content-Type 为 {content_type!r}，期望包含 {expected_mime!r}"
         )
 
 

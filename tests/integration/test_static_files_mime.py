@@ -5,11 +5,10 @@ from pathlib import Path
 
 import pytest
 from fastapi import FastAPI
-from fastapi.staticfiles import StaticFiles
 from fastapi.testclient import TestClient
 
-from endfield_essence_recognizer.lifespan import init_mount_frontend_build
 from endfield_essence_recognizer.core.config import ServerConfig
+from endfield_essence_recognizer.lifespan import init_mount_frontend_build
 
 
 @pytest.fixture
