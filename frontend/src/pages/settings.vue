@@ -369,6 +369,31 @@
       <v-expansion-panel :value="2">
         <v-expansion-panel-title>扫描行为设置</v-expansion-panel-title>
         <v-expansion-panel-text>
+          <h2>两遍扫描（防误点击）</h2>
+          <v-alert border="start" class="mb-4" type="info" variant="tonal">
+            第一遍仅识别并决策、不点击；第二遍重新识别后再执行锁定/弃用，可避免游戏 UI
+            抖动导致的不可逆误操作。
+          </v-alert>
+          <v-switch
+            v-model="twoPassScan"
+            color="primary"
+            density="comfortable"
+            :disabled="scanMode === 'future_proof'"
+            hide-details
+            label="启用两遍扫描"
+          />
+          <v-alert
+            v-if="scanMode === 'future_proof'"
+            border="start"
+            class="mt-2"
+            type="warning"
+            variant="tonal"
+          >
+            战未来模式已强制启用两遍扫描，不可关闭。
+          </v-alert>
+
+          <v-divider class="my-4" />
+
           <h2>遇到非无瑕基质（即遇到非橙色基质）时，该如何操作？</h2>
           <v-radio-group v-model="nonFiveStarBehavior" color="primary" density="comfortable" inline>
             <v-radio label="跳过对它的操作" value="skip" />
@@ -532,6 +557,7 @@
           <h2>同类型宝藏基质达到指定数量后，该如何处理？</h2>
           <v-alert border="start" class="mb-4" type="info" variant="tonal">
             启用后，扫描中同一组基础属性、附加属性、技能属性的宝藏基质达到上限后，后续同类型基质会视为养成材料并执行养成材料操作。
+            选择「战未来」时，会改为为全部 840 种（能力值 × 属性 × 系列技能）组合各寻找一枚最优基质，并报告未匹配组合与刷取建议。
           </v-alert>
           <v-row align="center">
             <v-col cols="12" md="6">
@@ -540,6 +566,7 @@
                 color="primary"
                 density="comfortable"
                 hide-details
+                :disabled="strategyMode === 'future_proof'"
                 label="启用同类型宝藏基质数量上限"
               />
             </v-col>
@@ -547,7 +574,7 @@
               <v-text-field
                 v-model.number="sameTypeTreasureLimit"
                 density="comfortable"
-                :disabled="!sameTypeTreasureLimitEnabled"
+                :disabled="!sameTypeTreasureLimitEnabled || strategyMode === 'future_proof'"
                 hide-details
                 label="每类最多保留数量"
                 :min="1"
@@ -557,70 +584,163 @@
             </v-col>
           </v-row>
 
-          <!-- 新增：分组模式 -->
+          <!-- 同类型划分方式：新增战未来选项 -->
           <v-row align="center" class="mt-2">
             <v-col cols="12">
               <v-radio-group
-                v-model="sameTypeGroupMode"
+                v-model="strategyMode"
                 color="primary"
                 density="comfortable"
-                :disabled="!sameTypeTreasureLimitEnabled"
                 inline
                 label="同类型划分方式"
               >
                 <v-radio label="按基质划分（词条名称完全一致即为同类型）" value="by_stat" />
                 <v-radio label="按武器划分（每把武器独立计数）" value="by_weapon" />
+                <v-radio label="战未来（全武器+全组合穷举最优解）" value="future_proof" />
               </v-radio-group>
-            </v-col>
-          </v-row>
-
-          <!-- 新增：非降级原则过滤（仅按武器划分时可用） -->
-          <v-row align="center" class="mt-2">
-            <v-col cols="12">
-              <v-switch
-                v-model="sameTypeNonDowngradeFilter"
-                color="primary"
-                density="comfortable"
-                :disabled="!sameTypeTreasureLimitEnabled || sameTypeGroupMode !== 'by_weapon'"
-                hide-details
-                label="非降级原则过滤（按武器划分时，过滤无法升级武器已有基质的矩阵）"
-              />
-              <v-alert border="start" class="mt-2" type="info" variant="tonal">
-                启用后，仅在[按武器划分]模式下生效，每个词条都 ≥ 旧等级才会被保留。无法升级任何匹配武器的将视为养成材料。此选项在"留大弃小"规则前生效。
-              </v-alert>
-            </v-col>
-          </v-row>
-
-          <!-- 新增：留大弃小 -->
-          <v-row align="center" class="mt-2">
-            <v-col cols="12">
-              <v-switch
-                v-model="sameTypeKeepBest"
-                color="primary"
-                density="comfortable"
-                :disabled="!sameTypeTreasureLimitEnabled"
-                hide-details
-                label="留大弃小（同类型中保留等级更高的基质）"
-              />
-              <v-alert border="start" class="mt-2" type="info" variant="tonal">
-                启用后，遇到同类型基质时会与已保留的基质比较等级。如果新基质的词条等级更高，则替换旧的；否则视为养成材料。扫描开始前会读取账号中已有的基质等级作为基准。
-              </v-alert>
-              <v-radio-group
-                v-model="sameTypeKeepBestMode"
+              <v-alert
+                v-if="strategyMode === 'future_proof'"
+                border="start"
                 class="mt-2"
+                type="info"
+                variant="tonal"
+              >
+                战未来模式会强制启用两遍扫描，为全武器和 5×12×14 = 840 种组合各保留一枚最优基质，并在扫描结束后输出未匹配组合与刷取地点建议——快乐丶在明天。
+              </v-alert>
+            </v-col>
+          </v-row>
+
+          <v-expand-transition>
+            <div v-if="strategyMode !== 'future_proof'">
+              <!-- 非降级原则过滤（仅按武器划分时可用） -->
+              <v-row align="center" class="mt-2">
+                <v-col cols="12">
+                  <v-switch
+                    v-model="sameTypeNonDowngradeFilter"
+                    color="primary"
+                    density="comfortable"
+                    :disabled="!sameTypeTreasureLimitEnabled || strategyMode !== 'by_weapon'"
+                    hide-details
+                    label="非降级原则过滤（按武器划分时，过滤无法升级武器已有基质的矩阵）"
+                  />
+                  <v-alert border="start" class="mt-2" type="info" variant="tonal">
+                    启用后，仅在[按武器划分]模式下生效，每个词条都 ≥ 旧等级才会被保留。无法升级任何匹配武器的将视为养成材料。此选项在"留大弃小"规则前生效。
+                  </v-alert>
+                </v-col>
+              </v-row>
+
+              <!-- 留大弃小 -->
+              <v-row align="center" class="mt-2">
+                <v-col cols="12">
+                  <v-switch
+                    v-model="sameTypeKeepBest"
+                    color="primary"
+                    density="comfortable"
+                    :disabled="!sameTypeTreasureLimitEnabled"
+                    hide-details
+                    label="留大弃小（同类型中保留等级更高的基质）"
+                  />
+                  <v-alert border="start" class="mt-2" type="info" variant="tonal">
+                    启用后，遇到同类型基质时会与已保留的基质比较等级。如果新基质的词条等级更高，则替换旧的；否则视为养成材料。扫描开始前会读取账号中已有的基质等级作为基准。
+                  </v-alert>
+                  <v-radio-group
+                    v-model="sameTypeKeepBestMode"
+                    class="mt-2"
+                    color="primary"
+                    density="compact"
+                    :disabled="!sameTypeTreasureLimitEnabled || !sameTypeKeepBest"
+                    hide-details
+                    label="等级比较方式"
+                  >
+                    <v-radio label="依次比对（A → B → C）" value="sequential" />
+                    <v-radio label="和值比对（A + B + C）" value="sum" />
+                    <v-radio label="冷却脂消耗（按升级累计需要消耗的冷却脂排序）" value="grease" />
+                    <v-radio label="权重和值（A×1 / B×1 / C×2，技能权重更高）" value="weighted_sum" />
+                  </v-radio-group>
+                </v-col>
+              </v-row>
+            </div>
+          </v-expand-transition>
+
+          <v-expand-transition>
+            <div v-if="strategyMode === 'future_proof'">
+              <v-divider class="my-4" />
+              <h2>战未来配置</h2>
+
+              <h3>词条等级要求（不满足的基质不参与匹配）</h3>
+              <v-row align="center" class="my-2">
+                <v-col cols="12">
+                  <v-slider
+                    v-model="futureProofMinAttributeLevel"
+                    color="primary"
+                    label="能力值等级"
+                    :max="6"
+                    :min="1"
+                    show-ticks="always"
+                    :step="1"
+                    thumb-label
+                    tick-size="4"
+                    :ticks="{ 1: '+1', 2: '+2', 3: '+3', 4: '+4', 5: '+5', 6: '+6' }"
+                  >
+                    <template #thumb-label="{ modelValue }">+{{ modelValue }}</template>
+                  </v-slider>
+                  <v-slider
+                    v-model="futureProofMinSecondaryLevel"
+                    color="primary"
+                    label="属性等级"
+                    :max="6"
+                    :min="1"
+                    show-ticks="always"
+                    :step="1"
+                    thumb-label
+                    tick-size="4"
+                    :ticks="{ 1: '+1', 2: '+2', 3: '+3', 4: '+4', 5: '+5', 6: '+6' }"
+                  >
+                    <template #thumb-label="{ modelValue }">+{{ modelValue }}</template>
+                  </v-slider>
+                  <v-slider
+                    v-model="futureProofMinSkillLevel"
+                    color="primary"
+                    label="系列技能等级"
+                    :max="3"
+                    :min="1"
+                    show-ticks="always"
+                    :step="1"
+                    thumb-label
+                    tick-size="4"
+                    :ticks="{ 1: '+1', 2: '+2', 3: '+3' }"
+                  >
+                    <template #thumb-label="{ modelValue }">+{{ modelValue }}</template>
+                  </v-slider>
+                </v-col>
+              </v-row>
+
+              <h3 class="mt-4">最优比较方式</h3>
+              <v-radio-group
+                v-model="futureProofKeepBestMode"
                 color="primary"
                 density="compact"
-                :disabled="!sameTypeTreasureLimitEnabled || !sameTypeKeepBest"
                 hide-details
-                label="等级比较方式"
               >
-                <v-radio label="依次比对（A → B → C）" value="sequential" />
-                <v-radio label="和值比对（A + B + C）" value="sum" />
-                <v-radio label="冷却脂消耗（按升级累计需要消耗的冷却脂排序）" value="grease" />
-                <v-radio label="概率和值（按升级难度加权）" value="weighted_sum" />
+                <v-radio label="依次比对（能力值 → 属性 → 技能）" value="sequential" />
+                <v-radio label="和值比对（三项等级相加）" value="sum" />
+                <v-radio label="冷却脂消耗（按升级累计消耗排序）" value="grease" />
+                <v-radio label="权重和值（A×1 / B×1 / C×2，技能权重更高）" value="weighted_sum" />
               </v-radio-group>
-            </v-col>
-          </v-row>
+
+              <v-switch
+                v-model="futureProofKeepOnlyOptimal"
+                class="mt-2"
+                color="primary"
+                density="comfortable"
+                hide-details
+                label="仅保留最优（每个组合只锁定最优一枚，其余弃用）"
+              />
+              <v-alert border="start" class="mt-2" type="info" variant="tonal">
+                关闭后，会保留每个组合下所有满足等级要求的基质，仅弃用完全不匹配的。
+              </v-alert>
+            </div>
+          </v-expand-transition>
 
           <v-divider class="my-4" />
 
@@ -826,6 +946,7 @@
           </v-row>
         </v-expansion-panel-text>
       </v-expansion-panel>
+
     </v-expansion-panels>
     <v-card class="mt-4" variant="outlined">
       <v-card-text class="text-center text-caption text-medium-emphasis">
@@ -916,6 +1037,14 @@ const updateProxyPort = ref('7890')
 const updateMirrorChyanResId = ref('')
 const updateMirrorChyanCdk = ref('')
 const updateMirrorChyanUserAgent = ref('EER_APP')
+// ---- 扫描模式与“战未来” ----
+const scanMode = ref<'treasure' | 'future_proof'>('treasure')
+const twoPassScan = ref(true)
+const futureProofMinAttributeLevel = ref(6)
+const futureProofMinSecondaryLevel = ref(6)
+const futureProofMinSkillLevel = ref(3)
+const futureProofKeepBestMode = ref<'sequential' | 'sum' | 'grease' | 'weighted_sum'>('sum')
+const futureProofKeepOnlyOptimal = ref(true)
 const weaponEssenceCounts = ref<Record<string, number>>({})
 
 const notSelectedWeaponIds = computed(() => {
@@ -932,6 +1061,26 @@ const selectedMirrorName = computed(() => {
 const selectedFlowName = computed(() => {
   const flow = flowOptions.value.find((m) => m.value === updateFlow.value)
   return flow ? flow.title : 'GitHub Release'
+})
+
+/**
+ * 把「同类型划分方式」radio 与 scan_mode 桥接起来。
+ * 选择「战未来」时，相当于启用 scan_mode='future_proof' 并强制两遍扫描。
+ */
+const strategyMode = computed<'by_stat' | 'by_weapon' | 'future_proof'>({
+  get() {
+    if (scanMode.value === 'future_proof') return 'future_proof'
+    return sameTypeGroupMode.value
+  },
+  set(val) {
+    if (val === 'future_proof') {
+      scanMode.value = 'future_proof'
+      twoPassScan.value = true
+    } else {
+      scanMode.value = 'treasure'
+      sameTypeGroupMode.value = val
+    }
+  },
 })
 
 function getWeaponStatsDescription(weaponId: string): string {
@@ -1008,7 +1157,7 @@ function isTypePartiallySelected(groupId: string): boolean {
 const config = computed(() => {
   const proxyUrl = updateProxyEnabled.value ? `http://127.0.0.1:${updateProxyPort.value}` : ''
   return {
-    version: 7,
+    version: 8,
     trash_weapon_ids: notSelectedWeaponIds.value,
     treasure_essence_stats: treasureEssenceStats.value,
     treasure_essence_match_mode: 'all' as const,
@@ -1055,6 +1204,22 @@ const config = computed(() => {
     update_mirrorchyan_res_id: updateMirrorChyanResId.value,
     update_mirrorchyan_cdk: updateMirrorChyanCdk.value,
     update_mirrorchyan_user_agent: updateMirrorChyanUserAgent.value || 'EER_APP',
+    scan_mode: scanMode.value,
+    two_pass_scan: twoPassScan.value,
+    future_proof_min_attribute_level: Math.min(
+      6,
+      Math.max(1, Number(futureProofMinAttributeLevel.value) || 6),
+    ),
+    future_proof_min_secondary_level: Math.min(
+      6,
+      Math.max(1, Number(futureProofMinSecondaryLevel.value) || 6),
+    ),
+    future_proof_min_skill_level: Math.min(
+      3,
+      Math.max(1, Number(futureProofMinSkillLevel.value) || 3),
+    ),
+    future_proof_keep_best_mode: futureProofKeepBestMode.value,
+    future_proof_keep_only_optimal: futureProofKeepOnlyOptimal.value,
   }
 })
 
@@ -1102,6 +1267,13 @@ async function getConfig() {
     update_mirrorchyan_res_id,
     update_mirrorchyan_cdk,
     update_mirrorchyan_user_agent,
+    scan_mode,
+    two_pass_scan,
+    future_proof_min_attribute_level,
+    future_proof_min_secondary_level,
+    future_proof_min_skill_level,
+    future_proof_keep_best_mode,
+    future_proof_keep_only_optimal,
   } = result
   configVersion.value = version
   treasureEssenceStats.value = treasure_essence_stats
@@ -1142,6 +1314,13 @@ async function getConfig() {
   updateMirrorChyanResId.value = update_mirrorchyan_res_id || ''
   updateMirrorChyanCdk.value = update_mirrorchyan_cdk || ''
   updateMirrorChyanUserAgent.value = update_mirrorchyan_user_agent || 'EER_APP'
+  scanMode.value = scan_mode || 'treasure'
+  twoPassScan.value = scan_mode === 'future_proof' ? true : two_pass_scan !== false
+  futureProofMinAttributeLevel.value = future_proof_min_attribute_level || 6
+  futureProofMinSecondaryLevel.value = future_proof_min_secondary_level || 6
+  futureProofMinSkillLevel.value = future_proof_min_skill_level || 3
+  futureProofKeepBestMode.value = future_proof_keep_best_mode || 'sum'
+  futureProofKeepOnlyOptimal.value = future_proof_keep_only_optimal !== false
 
   // 解析代理配置
   if (update_proxy) {

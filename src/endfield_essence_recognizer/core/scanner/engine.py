@@ -19,6 +19,7 @@ from endfield_essence_recognizer.core.recognition import (
 from endfield_essence_recognizer.core.recognition.tasks.ui import UISceneLabel
 from endfield_essence_recognizer.core.scanner.action_logic import (
     ActionType,
+    ScannerAction,
     decide_actions,
 )
 from endfield_essence_recognizer.core.scanner.context import (
@@ -27,6 +28,18 @@ from endfield_essence_recognizer.core.scanner.context import (
 from endfield_essence_recognizer.core.scanner.evaluate import (
     _level_cmp,
     evaluate_essence,
+    get_cascade_updated_weapon_ids,
+    get_updated_weapon_ids,
+    reset_scan_claims,
+)
+from endfield_essence_recognizer.core.scanner.future_proof import (
+    FutureProofCandidate,
+    classify_combinations,
+    get_essence_triplet_by_type,
+    is_future_proof_candidate,
+    optimize_future_proof,
+    report_missing_combinations,
+    summarize_future_proof_plan,
 )
 from endfield_essence_recognizer.core.scanner.models import (
     EssenceData,
@@ -34,7 +47,10 @@ from endfield_essence_recognizer.core.scanner.models import (
 )
 from endfield_essence_recognizer.core.window.adapter import InMemoryImageSource
 from endfield_essence_recognizer.game_data.models.v2 import StatType, WeaponId
-from endfield_essence_recognizer.schemas.user_setting import UserSetting
+from endfield_essence_recognizer.schemas.user_setting import (
+    ScanMode,
+    UserSetting,
+)
 from endfield_essence_recognizer.services.user_setting_manager import UserSettingManager
 from endfield_essence_recognizer.utils.log import logger
 
@@ -571,11 +587,1040 @@ class ScannerEngine:
                 self._weapon_essence_counts.get(weapon_id, 0) + 1
             )
 
+    # ------------------------------------------------------------------
+    # 两遍扫描（战未来模式强制启用）
+    # ------------------------------------------------------------------
+    def _display_stat(self, stat_id: str | None) -> str:
+        if not stat_id:
+            return "?"
+        stat = self.ctx.static_game_data.get_stat(stat_id)
+        return stat.name if stat else stat_id
+
+    def _fmt_fp(self, fp: FutureProofCandidate) -> str:
+        names = "/".join(
+            self._display_stat(x) for x in (fp.attr_id, fp.sec_id, fp.skill_id)
+        )
+        return f"{names} +{fp.levels[0]}/+{fp.levels[1]}/+{fp.levels[2]}"
+
+    def _sync_evaluation(self, user_setting: UserSetting) -> None:
+        """把 evaluate_essence 的分配结果同步到引擎的武器计数/等级。"""
+        for weapon_id in get_updated_weapon_ids():
+            levels = user_setting._same_type_best_levels.get(weapon_id)
+            if levels is not None:
+                self._weapon_essence_levels[weapon_id] = levels
+            count = user_setting._same_type_treasure_counts.get(weapon_id, 0)
+            if count > 0:
+                self._weapon_essence_counts[weapon_id] = count
+        for weapon_id in get_cascade_updated_weapon_ids():
+            levels = user_setting._same_type_best_levels.get(weapon_id)
+            if levels is not None:
+                self._weapon_essence_levels[weapon_id] = levels
+
+    def _future_proof_actions(
+        self, data: EssenceData, keep: bool
+    ) -> list[ScannerAction]:
+        """构造战未来模式下单枚基质的锁定/弃用动作（尊重当前状态，避免重复操作）。"""
+        from endfield_essence_recognizer.core.recognition import (
+            AbandonStatusLabel,
+            LockStatusLabel,
+        )
+
+        actions: list[ScannerAction] = []
+        if keep:
+            if data.lock_label == LockStatusLabel.NOT_LOCKED:
+                actions.append(
+                    ScannerAction(
+                        ActionType.CLICK_LOCK,
+                        "战未来：该组合的最优基质，已自动锁定！(*/ω＼*)",
+                    )
+                )
+        else:
+            if data.abandon_label == AbandonStatusLabel.NOT_ABANDONED:
+                actions.append(
+                    ScannerAction(
+                        ActionType.CLICK_ABANDON,
+                        "战未来：该组合已有更优解或不符合要求，已自动弃用！(￣︶￣)>",
+                    )
+                )
+        return actions
+
+    def _same_essence(self, a: EssenceData, b: EssenceData) -> bool:
+        """第二遍识别的安全校验：两遍识别到的基质须一致，避免 UI 抖动导致误点击。"""
+        if a.rarity != b.rarity:
+            return False
+        ta, ts, tk, _ = get_essence_triplet_by_type(a)
+        tb, tss, tkk, _ = get_essence_triplet_by_type(b)
+        return (ta, ts, tk) == (tb, tss, tkk)
+
+    def _run_future_proof_report(self, user_setting: UserSetting) -> None:
+        """扫描结束后输出“战未来”缺失组合报告（含刷取地点建议）。"""
+        if user_setting.scan_mode != ScanMode.FUTURE_PROOF:
+            return
+        candidates = getattr(self, "_future_proof_candidates", None)
+        if not candidates:
+            return
+        energy = self.ctx.static_game_data.get_energy_alluviums()
+        report = classify_combinations(candidates, self.ctx.static_game_data)
+        report_missing_combinations(report, energy, self.ctx.static_game_data)
+
+    def _record_owned_weapons_from_fp(self) -> None:
+        """战未来模式：把扫描识别到的全部基质（含非无暇）按词条映射回武器，
+        记录到 ``_weapon_essence_levels`` / ``_weapon_essence_counts``，使扫描完成后
+        同步进 ``treasure_matrix``（即“已获得”状态）。
+
+        仅做识别期的数据归集，不改变战未来“锁定/弃用”方案的既有行为；
+        与标准扫描模式录入武器的语义保持一致（每枚被识别的基质都对应某把武器的词条）。
+        """
+        from endfield_essence_recognizer.core.scanner.future_proof import (
+            get_essence_triplet_by_type,
+        )
+
+        essences = getattr(self, "_fp_owned_essences", None)
+        if not essences:
+            return
+
+        recorded = 0
+        for data in essences:
+            attr_id, sec_id, skill_id, levels = get_essence_triplet_by_type(data)
+            # 三槽词条必须齐全才能唯一映射到武器，否则跳过（无法归属）
+            if not (attr_id and sec_id and skill_id):
+                continue
+            new_levels = (levels[0] or 0, levels[1] or 0, levels[2] or 0)
+            if new_levels == (0, 0, 0):
+                continue
+
+            weapon_ids = self.ctx.static_game_data.find_weapons_by_stats(
+                attr_id, sec_id, skill_id
+            )
+            for wid in weapon_ids:
+                existing = self._weapon_essence_levels.get(wid)
+                if existing is None:
+                    self._weapon_essence_levels[wid] = new_levels
+                else:
+                    # 非降级原则：逐维度取最大值，避免扫描覆盖掉更高的已保存等级
+                    self._weapon_essence_levels[wid] = (
+                        max(existing[0], new_levels[0]),
+                        max(existing[1], new_levels[1]),
+                        max(existing[2], new_levels[2]),
+                    )
+                self._weapon_essence_counts[wid] = (
+                    self._weapon_essence_counts.get(wid, 0) + 1
+                )
+                recorded += 1
+
+        if recorded:
+            logger.info(
+                "战未来：已将识别到的 {} 枚基质映射为已拥有武器（共 {} 把武器待同步）",
+                len(essences),
+                len(self._weapon_essence_levels),
+            )
+
+    def _scan_page_future_proof(
+        self,
+        stop_event: threading.Event,
+        user_setting: UserSetting,
+        icon_x_list: list[int],
+        icon_y_list: list[int],
+        start_row_index: int = 0,
+    ) -> None:
+        """战未来三阶段扫描一页：
+
+        第 1 遍：仅识别 + 记录，不做任何操作（仅做记录）。
+        第 2 遍（汇总/方案）：基于第 1 遍记录，先按武器划分、再按组合划分，
+            各取一枚最优基质，取并集作为“锁定”方案，并输出方案汇总日志；不做操作。
+        第 3 遍（执行）：重新识别每枚基质，按方案执行锁定/弃用。
+
+        第 3 遍倒序执行，避免“弃用导致网格上移”影响尚未处理的（更靠上的）位置。
+        """
+        from endfield_essence_recognizer.core.recognition import (
+            AbandonStatusLabel,
+            LockStatusLabel,
+        )
+
+        rows_to_scan = list(enumerate(icon_y_list))[start_row_index:]
+        n_cols = len(icon_x_list)
+
+        def _recognize_page() -> tuple[
+            list[dict | None], list[FutureProofCandidate], dict[int, EssenceData]
+        ]:
+            """识别当前页全部基质，返回 (记录列表, 候选列表, grid_pos→数据)。"""
+            recs: list[dict | None] = []
+            fps: list[FutureProofCandidate] = []
+            by_grid: dict[int, EssenceData] = {}
+            for i, relative_y in rows_to_scan:
+                for j, relative_x in enumerate(icon_x_list):
+                    grid_pos = i * n_cols + j
+                    if not self._window_actions.target_is_active:
+                        logger.info("终末地窗口不在前台，停止基质扫描。")
+                        return recs, fps, by_grid
+                    if stop_event.is_set():
+                        logger.info("基质扫描被中断。")
+                        return recs, fps, by_grid
+
+                    logger.info(f"正在扫描第 {i + 1} 行第 {j + 1} 列的基质...")
+                    self._window_actions.click(relative_x, relative_y)
+                    self._window_actions.wait(0.3)
+
+                    data = recognize_essence(
+                        self._image_source, self.ctx, self._profile
+                    )
+                    if (
+                        data.abandon_label == AbandonStatusLabel.MAYBE_ABANDONED
+                        or data.lock_label == LockStatusLabel.MAYBE_LOCKED
+                    ):
+                        recs.append(None)
+                        continue
+
+                    # 采集：任意稀有度的被识别基质都计入“已拥有武器”归集
+                    self._fp_owned_essences.append(data)
+
+                    fp = is_future_proof_candidate(
+                        data, user_setting, self.ctx.static_game_data
+                    )
+
+                    # 战未来仅处理无暇（5★/橙色）基质；非无暇直接跳过，不参与任何分配。
+                    if data.rarity != RarityLabel.FIVE:
+                        logger.opt(colors=True).info(
+                            f"非无暇基质：{self._fmt_fp(fp)}（不参与战未来分配，跳过）"
+                        )
+                        recs.append(None)
+                        continue
+
+                    fp.index = grid_pos
+                    fp.grid_pos = grid_pos
+                    fps.append(fp)
+                    by_grid[grid_pos] = data
+                    if fp.is_candidate:
+                        logger.opt(colors=True).success(
+                            f"战未来候选：{self._fmt_fp(fp)}（等级达标，待分配）"
+                        )
+                    else:
+                        logger.opt(colors=True).info(
+                            f"战未来不符：{self._fmt_fp(fp)}（等级或词条不满足要求）"
+                        )
+                    recs.append(
+                        {
+                            "x": relative_x,
+                            "y": relative_y,
+                            "data": data,
+                            "grid_pos": grid_pos,
+                            "keep": False,
+                        }
+                    )
+            return recs, fps, by_grid
+
+        # ---- 第 1 遍：仅识别 + 记录（不做任何操作） ----
+        self._fp_owned_essences = []  # 采集全部被识别的基质，用于记录已拥有武器
+        records, fp_candidates, pass1_by_grid = _recognize_page()
+        self._total_essence_count = sum(1 for r in records if r is not None)
+        self._future_proof_candidates = fp_candidates
+
+        # ---- 第 2 遍（汇总/方案）：根据第 1 遍记录做出分配方案 ----
+        # 收集候选匹配到的所有武器 ID，并按宝藏基质优先级排序
+        matched_weapon_ids: set[str] = set()
+        for c in fp_candidates:
+            if c.is_candidate and c.attr_id and c.sec_id and c.skill_id:
+                matched_weapon_ids.update(
+                    self.ctx.static_game_data.find_weapons_by_stats(
+                        c.attr_id, c.sec_id, c.skill_id
+                    )
+                )
+        weapon_priority_order = self._sort_weapons_by_priority(matched_weapon_ids)
+        chosen = optimize_future_proof(
+            fp_candidates,
+            user_setting,
+            self.ctx.static_game_data,
+            weapon_priority_order=weapon_priority_order,
+        )
+        keep_by_grid: dict[int, bool] = {}
+        for rec in records:
+            if rec is None:
+                continue
+            gp = rec["grid_pos"]
+            rec["keep"] = gp in chosen
+            keep_by_grid[gp] = gp in chosen
+        summarize_future_proof_plan(
+            fp_candidates, chosen, user_setting, self.ctx.static_game_data
+        )
+
+        # ---- 第 3 遍（执行）：重新识别并按方案锁定/弃用 ----
+        # 倒序执行，避免“弃用导致网格上移”影响尚未处理的（更靠上的）位置。
+        for rec in reversed(records):
+            if rec is None:
+                continue
+            gp = rec["grid_pos"]
+            if not self._window_actions.target_is_active:
+                logger.info("终末地窗口不在前台，停止基质扫描。")
+                return
+            if stop_event.is_set():
+                logger.info("基质扫描被中断。")
+                return
+
+            self._window_actions.click(rec["x"], rec["y"])
+            self._window_actions.wait(0.3)
+            data3 = recognize_essence(self._image_source, self.ctx, self._profile)
+            if (
+                data3.abandon_label == AbandonStatusLabel.MAYBE_ABANDONED
+                or data3.lock_label == LockStatusLabel.MAYBE_LOCKED
+            ):
+                continue
+
+            # 安全校验：与第 1 遍识别到的基质须一致，避免 UI 抖动导致误点击
+            pass1_data = pass1_by_grid.get(gp)
+            if pass1_data is not None and not self._same_essence(pass1_data, data3):
+                logger.warning(
+                    "第 3 遍识别到的基质与第 1 遍不一致，跳过本次操作以避免误点击。"
+                )
+                continue
+
+            keep = keep_by_grid.get(gp, False)
+            actions = self._future_proof_actions(data3, keep)
+            for action in actions:
+                if action.type == ActionType.CLICK_LOCK:
+                    pos = self._profile.LOCK_BUTTON_POS
+                    self._window_actions.click(pos.x, pos.y)
+                elif action.type == ActionType.CLICK_ABANDON:
+                    pos = self._profile.DEPRECATE_BUTTON_POS
+                    self._window_actions.click(pos.x, pos.y)
+                self._window_actions.wait(0.3)
+                logger.opt(colors=True).success(
+                    f"<LIGHT-YELLOW><bold>{action.log_message}</></>"
+                )
+
+        # 战未来：扫描完成后，把识别到的基质归集为“已获得武器”并同步到宝藏基质
+        self._record_owned_weapons_from_fp()
+
+    # ------------------------------------------------------------------
+    # 战未来：全局两遍扫描
+    #   第 1 遍（记录）：从顶部开始，逐页（滑动翻页）识别并记录全部基质，
+    #       不做任何锁定/弃用操作；翻到最后一页后停止。
+    #   汇总方案：基于全部已记录候选做“武器优先占用、组合用剩余”的全局最优分配。
+    #   第 2 遍（执行）：翻回顶部，再逐页（滑动翻页）识别每个基质，按方案执行
+    #       锁定/弃用；为防弃用导致网格上移，每页自底向上执行。
+    #   滑动翻页、滚动条检测、去重与过滚修正等既有机制完全复用，未作改动。
+    # ------------------------------------------------------------------
+
+    def _fp_global_index(
+        self, page_number: int, row: int, col: int, n_cols: int
+    ) -> int:
+        """跨页稳定主键：页号 * 10000 + 行 * 列数 + 列。"""
+        return page_number * 10000 + row * n_cols + col
+
+    def _execute_future_proof_scan(
+        self, stop_event: threading.Event, user_setting: UserSetting
+    ) -> None:
+        """战未来全局两遍扫描编排（仅在 DraggableScannerEngine 中分流到此）。"""
+
+        reset_scan_claims()
+
+        if not self._window_actions.target_exists:
+            logger.info("未找到终末地窗口，停止基质扫描。")
+            return
+        if self._window_actions.restore():
+            self._window_actions.wait(0.5)
+        if self._window_actions.activate():
+            self._window_actions.wait(0.5)
+        if self._window_actions.show():
+            self._window_actions.wait(0.5)
+
+        if not check_scene(self._image_source, self.ctx, self._profile):
+            return
+
+        icon_x_list = self._profile.essence_icon_x_list
+        icon_y_list = self._profile.essence_icon_y_list
+        n_cols = len(icon_x_list)
+
+        # 全局记录容器
+        self._future_proof_candidates = []
+        self._fp_owned_essences = []  # 采集全部被识别的基质，用于记录已拥有武器
+        self._fp_records_by_index: dict[int, dict] = {}
+        self._fp_keep_by_index: dict[int, bool] = {}
+        self._scanned_essence_hashes = set()
+        self._total_essence_count = 0
+
+        # ===== 第 1 遍：翻遍所有页，仅记录（不做任何操作）=====
+        def _on_record(start_row: int, page_number: int) -> None:
+            self._fp_record_page(
+                stop_event,
+                user_setting,
+                icon_x_list,
+                icon_y_list,
+                start_row,
+                page_number,
+                n_cols,
+            )
+
+        def _scan_single_record(row_index: int) -> bool:
+            return self._fp_record_single_row(
+                row_index,
+                stop_event,
+                user_setting,
+                icon_x_list,
+                icon_y_list,
+                n_cols,
+            )
+
+        logger.opt(colors=True).info(
+            "<bold><yellow>【战未来】第 1 遍：翻遍所有页记录基质（不做操作）…</yellow></bold>"
+        )
+        total_pages = self._fp_page_loop(
+            stop_event,
+            user_setting,
+            icon_x_list,
+            icon_y_list,
+            _scan_single_record,
+            _on_record,
+        )
+        logger.opt(colors=True).info(
+            f"<bold><yellow>【战未来】记录完成：共 {total_pages} 页，"
+            f"识别到 {len(self._future_proof_candidates)} 个候选基质。</yellow></bold>"
+        )
+
+        # ===== 汇总方案（全局最优分配）=====
+        # 收集候选匹配到的所有武器 ID，并按宝藏基质优先级排序（高优先级先抢占）
+        matched_weapon_ids: set[str] = set()
+        for c in self._future_proof_candidates:
+            if c.is_candidate and c.attr_id and c.sec_id and c.skill_id:
+                matched_weapon_ids.update(
+                    self.ctx.static_game_data.find_weapons_by_stats(
+                        c.attr_id, c.sec_id, c.skill_id
+                    )
+                )
+        weapon_priority_order = self._sort_weapons_by_priority(matched_weapon_ids)
+        chosen = optimize_future_proof(
+            self._future_proof_candidates,
+            user_setting,
+            self.ctx.static_game_data,
+            weapon_priority_order=weapon_priority_order,
+        )
+        for gi, rec in self._fp_records_by_index.items():
+            rec["keep"] = gi in chosen
+            self._fp_keep_by_index[gi] = gi in chosen
+        summarize_future_proof_plan(
+            self._future_proof_candidates,
+            chosen,
+            user_setting,
+            self.ctx.static_game_data,
+        )
+
+        # ===== 翻回顶部 =====
+        self._fp_scroll_to_top(total_pages, stop_event)
+
+        # ===== 第 2 遍：翻回顶部，按方案执行 =====
+        self._scanned_essence_hashes = set()  # 重新统计，用于过滚检测
+
+        def _on_execute(start_row: int, page_number: int) -> None:
+            self._fp_execute_page(
+                stop_event,
+                user_setting,
+                icon_x_list,
+                icon_y_list,
+                start_row,
+                page_number,
+                n_cols,
+            )
+
+        def _scan_single_execute(row_index: int) -> bool:
+            return self._fp_execute_single_row(
+                row_index,
+                stop_event,
+                user_setting,
+                icon_x_list,
+                icon_y_list,
+                n_cols,
+            )
+
+        logger.opt(colors=True).info(
+            "<bold><yellow>【战未来】第 2 遍：翻回顶部，按方案锁定/弃用…</yellow></bold>"
+        )
+        self._fp_page_loop(
+            stop_event,
+            user_setting,
+            icon_x_list,
+            icon_y_list,
+            _scan_single_execute,
+            _on_execute,
+        )
+
+        logger.info("基质扫描完成")
+        self._log_scan_statistics()
+        # 战未来：扫描完成后，把识别到的基质归集为“已获得武器”并同步到宝藏基质
+        self._record_owned_weapons_from_fp()
+        self._run_future_proof_report(user_setting)
+
+    def _fp_page_loop(
+        self,
+        stop_event: threading.Event,
+        user_setting: UserSetting,
+        icon_x_list: list[int],
+        icon_y_list: list[int],
+        scan_single_row_fn,
+        on_page,
+    ) -> int:
+        """通用多页翻页迭代：逐页调用 on_page(start_row, page_number)。
+
+        完全复用既有翻页/去重/过滚修正逻辑（未改动），仅把“扫描一页”的行为
+        通过回调函数（记录 or 执行）注入，从而支持战未来全局两遍扫描。
+        返回实际扫描的页数。
+        """
+        drag_start = self._profile.DRAG_START_POS
+        drag_end = self._profile.DRAG_END_POS
+        scrollbar_pos = self._profile.SCROLLBAR_CHECK_POS
+        total_rows = len(icon_y_list)
+        max_drag_distance = (
+            int((drag_end.x - drag_start.x) ** 2 + (drag_end.y - drag_start.y) ** 2)
+            ** 0.5
+        )
+
+        page_count = 0
+        is_last_page = False
+        progressive_drag_distance = 0
+        while not stop_event.is_set() and page_count < 100:
+            page_count += 1
+            if is_last_page and page_count > 1:
+                skip_rows = self._calculate_skip_rows(
+                    progressive_drag_distance, max_drag_distance, total_rows
+                )
+                start_row = min(skip_rows, total_rows - 1)
+                on_page(start_row, page_count)
+            elif page_count > 1:
+                # 非首页先识别首行用于过滚去重检测（不操作），随后整页处理
+                all_dup = scan_single_row_fn(0)
+                if all_dup and user_setting.fix_page_flip_overscroll:
+                    row_height = icon_y_list[1] - icon_y_list[0]
+                    adjust_distance = round(row_height * 3 / 4)
+                    self._correct_overscroll(drag_start, adjust_distance)
+                    scan_single_row_fn(0)
+                on_page(0, page_count)
+            else:
+                on_page(0, page_count)
+
+            if is_last_page:
+                logger.info("已扫描完最后一页。")
+                break
+            if stop_event.is_set():
+                logger.info("基质扫描被中断，停止翻页操作。")
+                break
+
+            row_height = icon_y_list[1] - icon_y_list[0] if len(icon_y_list) > 1 else 0
+            progressive_drag_distance, is_last_page = self._progressive_drag(
+                drag_start,
+                drag_end,
+                scrollbar_pos,
+                stop_event,
+                step=50,
+                max_drag=max_drag_distance,
+                row_height=row_height,
+            )
+            if not is_last_page:
+                if user_setting.fix_grid_row_offset_after_page_flip:
+                    self._align_grid_rows_after_drag(
+                        drag_start, icon_x_list, icon_y_list
+                    )
+                elif scrollbar_pos and self._check_scrollbar_at_bottom(scrollbar_pos):
+                    is_last_page = True
+
+        return page_count
+
+    def _fp_record_page(
+        self,
+        stop_event: threading.Event,
+        user_setting: UserSetting,
+        icon_x_list: list[int],
+        icon_y_list: list[int],
+        start_row_index: int,
+        page_number: int,
+        n_cols: int,
+    ) -> None:
+        """记录阶段：识别并记录当前页从 start_row_index 起的全部基质（仅识别，不操作）。"""
+        from endfield_essence_recognizer.core.recognition import (
+            AbandonStatusLabel,
+            LockStatusLabel,
+        )
+
+        rows_to_scan = list(enumerate(icon_y_list))[start_row_index:]
+        for i, relative_y in rows_to_scan:
+            for j, relative_x in enumerate(icon_x_list):
+                if not self._window_actions.target_is_active:
+                    logger.info("终末地窗口不在前台，停止基质扫描。")
+                    return
+                if stop_event.is_set():
+                    logger.info("基质扫描被中断。")
+                    return
+
+                logger.info(
+                    f"[战未来·记录] 第 {page_number} 页 第 {i + 1} 行第 {j + 1} 列…"
+                )
+                self._window_actions.click(relative_x, relative_y)
+                self._window_actions.wait(0.3)
+
+                data = recognize_essence(self._image_source, self.ctx, self._profile)
+                if (
+                    data.abandon_label == AbandonStatusLabel.MAYBE_ABANDONED
+                    or data.lock_label == LockStatusLabel.MAYBE_LOCKED
+                ):
+                    continue
+
+                # 采集：任意稀有度的被识别基质都计入“已拥有武器”归集
+                self._fp_owned_essences.append(data)
+
+                fp = is_future_proof_candidate(
+                    data, user_setting, self.ctx.static_game_data
+                )
+
+                # 战未来仅处理无暇（5★/橙色）基质；非无暇直接跳过，不参与任何分配。
+                self._scanned_essence_hashes.add(self._get_essence_hash(data))
+                self._total_essence_count += 1
+                if data.rarity != RarityLabel.FIVE:
+                    logger.opt(colors=True).info(
+                        f"非无暇基质：{self._fmt_fp(fp)}（不参与战未来分配，跳过）"
+                    )
+                    continue
+
+                gi = self._fp_global_index(page_number, i, j, n_cols)
+                fp.index = gi
+                fp.grid_pos = gi
+                self._future_proof_candidates.append(fp)
+                self._fp_records_by_index[gi] = {
+                    "data": data,
+                    "x": relative_x,
+                    "y": relative_y,
+                    "page": page_number,
+                    "row": i,
+                    "col": j,
+                    "keep": False,
+                }
+                if fp.is_candidate:
+                    logger.opt(colors=True).success(
+                        f"战未来候选：{self._fmt_fp(fp)}（等级达标，待分配）"
+                    )
+                else:
+                    logger.opt(colors=True).info(
+                        f"战未来不符：{self._fmt_fp(fp)}（等级或词条不满足要求）"
+                    )
+
+    def _fp_record_single_row(
+        self,
+        row_index: int,
+        stop_event: threading.Event,
+        user_setting: UserSetting,
+        icon_x_list: list[int],
+        icon_y_list: list[int],
+        n_cols: int,
+    ) -> bool:
+        """记录阶段：识别单行（仅用于过滚去重检测），返回是否全部重复。不追加候选。"""
+        from endfield_essence_recognizer.core.recognition import (
+            AbandonStatusLabel,
+            LockStatusLabel,
+        )
+
+        y = icon_y_list[row_index]
+        found_any = False
+        all_duplicates = True
+        for _, relative_x in enumerate(icon_x_list):
+            if not self._window_actions.target_is_active:
+                logger.info("终末地窗口不在前台，停止基质扫描。")
+                return False
+            if stop_event.is_set():
+                logger.info("基质扫描被中断。")
+                return False
+
+            self._window_actions.click(relative_x, y)
+            self._window_actions.wait(0.3)
+
+            data = recognize_essence(self._image_source, self.ctx, self._profile)
+            if (
+                data.abandon_label == AbandonStatusLabel.MAYBE_ABANDONED
+                or data.lock_label == LockStatusLabel.MAYBE_LOCKED
+            ):
+                continue
+
+            found_any = True
+            fingerprint = self._get_essence_hash(data)
+            is_dup = fingerprint in self._scanned_essence_hashes
+            self._scanned_essence_hashes.add(fingerprint)
+            if not is_dup:
+                all_duplicates = False
+
+        return found_any and all_duplicates
+
+    def _fp_execute_page(
+        self,
+        stop_event: threading.Event,
+        user_setting: UserSetting,
+        icon_x_list: list[int],
+        icon_y_list: list[int],
+        start_row_index: int,
+        page_number: int,
+        n_cols: int,
+    ) -> None:
+        """执行阶段：自底向上重新识别并执行当前页方案（防弃用导致网格上移）。"""
+        from endfield_essence_recognizer.core.recognition import (
+            AbandonStatusLabel,
+            LockStatusLabel,
+        )
+
+        rows_to_scan = list(enumerate(icon_y_list))[start_row_index:]
+        # 自底向上处理，避免“弃用导致网格上移”影响尚未处理的（更靠上的）位置
+        for i, relative_y in reversed(rows_to_scan):
+            for j, relative_x in enumerate(icon_x_list):
+                if not self._window_actions.target_is_active:
+                    logger.info("终末地窗口不在前台，停止基质扫描。")
+                    return
+                if stop_event.is_set():
+                    logger.info("基质扫描被中断。")
+                    return
+
+                gi = self._fp_global_index(page_number, i, j, n_cols)
+                logger.info(
+                    f"[战未来·执行] 第 {page_number} 页 第 {i + 1} 行第 {j + 1} 列…"
+                )
+                self._window_actions.click(relative_x, relative_y)
+                self._window_actions.wait(0.3)
+
+                data = recognize_essence(self._image_source, self.ctx, self._profile)
+                if (
+                    data.abandon_label == AbandonStatusLabel.MAYBE_ABANDONED
+                    or data.lock_label == LockStatusLabel.MAYBE_LOCKED
+                ):
+                    continue
+
+                self._scanned_essence_hashes.add(self._get_essence_hash(data))
+                rec = self._fp_records_by_index.get(gi)
+                if rec is None:
+                    logger.warning(
+                        f"第 {page_number} 页 ({i + 1},{j + 1}) 在执行阶段未找到记录，跳过以避免误操作。"
+                    )
+                    continue
+
+                # 安全校验：与记录阶段识别到的基质须一致，避免 UI 抖动导致误点击
+                if not self._same_essence(rec["data"], data):
+                    logger.warning(
+                        "执行阶段识别到的基质与记录阶段不一致，跳过本次操作以避免误点击。"
+                    )
+                    continue
+
+                keep = self._fp_keep_by_index.get(gi, False)
+                actions = self._future_proof_actions(data, keep)
+                for action in actions:
+                    if action.type == ActionType.CLICK_LOCK:
+                        pos = self._profile.LOCK_BUTTON_POS
+                        self._window_actions.click(pos.x, pos.y)
+                    elif action.type == ActionType.CLICK_ABANDON:
+                        pos = self._profile.DEPRECATE_BUTTON_POS
+                        self._window_actions.click(pos.x, pos.y)
+                    self._window_actions.wait(0.3)
+                    logger.opt(colors=True).success(
+                        f"<LIGHT-YELLOW><bold>{action.log_message}</></>"
+                    )
+
+    def _fp_execute_single_row(
+        self,
+        row_index: int,
+        stop_event: threading.Event,
+        user_setting: UserSetting,
+        icon_x_list: list[int],
+        icon_y_list: list[int],
+        n_cols: int,
+    ) -> bool:
+        """执行阶段：识别单行（仅用于过滚去重检测），返回是否全部重复。不执行操作。"""
+        from endfield_essence_recognizer.core.recognition import (
+            AbandonStatusLabel,
+            LockStatusLabel,
+        )
+
+        y = icon_y_list[row_index]
+        found_any = False
+        all_duplicates = True
+        for _, relative_x in enumerate(icon_x_list):
+            if not self._window_actions.target_is_active:
+                logger.info("终末地窗口不在前台，停止基质扫描。")
+                return False
+            if stop_event.is_set():
+                logger.info("基质扫描被中断。")
+                return False
+
+            self._window_actions.click(relative_x, y)
+            self._window_actions.wait(0.3)
+
+            data = recognize_essence(self._image_source, self.ctx, self._profile)
+            if (
+                data.abandon_label == AbandonStatusLabel.MAYBE_ABANDONED
+                or data.lock_label == LockStatusLabel.MAYBE_LOCKED
+            ):
+                continue
+
+            found_any = True
+            fingerprint = self._get_essence_hash(data)
+            is_dup = fingerprint in self._scanned_essence_hashes
+            self._scanned_essence_hashes.add(fingerprint)
+            if not is_dup:
+                all_duplicates = False
+
+        return found_any and all_duplicates
+
+    def _fp_scroll_to_top(
+        self,
+        total_pages: int,
+        stop_event: threading.Event,
+    ) -> None:
+        """从第 total_pages 页翻回顶部：直接拖动右侧滚动条到最顶上。
+
+        翻到最后一页后滚动条 thumb 位于底部，直接按住它拖到滚动条顶部即可
+        一次性回到页面最上方。这比在基质区域反向拖动更稳定，避免游戏对反
+        向拖动不响应的问题。
+        """
+        scrollbar_bottom = self._profile.SCROLLBAR_CHECK_POS
+        scrollbar_top = self._profile.SCROLLBAR_TOP_POS
+        if not scrollbar_bottom or not scrollbar_top:
+            logger.warning("未配置滚动条坐标，无法自动回顶，跳过回顶操作。")
+            return
+
+        max_drag_distance = (
+            int(
+                (scrollbar_top.x - scrollbar_bottom.x) ** 2
+                + (scrollbar_top.y - scrollbar_bottom.y) ** 2
+            )
+            ** 0.5
+        )
+
+        logger.info(
+            f"[战未来] 翻回顶部：拖动右侧滚动条从 {scrollbar_bottom} 到 "
+            f"{scrollbar_top}…"
+        )
+        self._window_actions.progressive_drag(
+            scrollbar_bottom.x,
+            scrollbar_bottom.y,
+            scrollbar_top.x,
+            scrollbar_top.y,
+            step=30,
+            max_drag=max_drag_distance,
+            on_step=lambda *a, **k: False,
+        )
+        self._window_actions.wait(0.5)
+        logger.info("[战未来] 已回到顶部。")
+
+    def _scan_page_two_pass(
+        self,
+        stop_event: threading.Event,
+        user_setting: UserSetting,
+        icon_x_list: list[int],
+        icon_y_list: list[int],
+        start_row_index: int = 0,
+    ) -> None:
+        """两遍扫描一页：第一遍仅识别+决策（不点击），第二遍（倒序）重新识别后再执行。
+
+        战未来模式在第一遍结束后做全局最优分配，再于第二遍按分配结果执行锁定/弃用。
+        """
+        from endfield_essence_recognizer.core.recognition import (
+            AbandonStatusLabel,
+            LockStatusLabel,
+        )
+
+        is_future = user_setting.scan_mode == ScanMode.FUTURE_PROOF
+
+        # 计算一次武器优先级顺序（供 evaluate_essence / 战未来武器抢占使用）
+        all_weapon_ids = set(self._weapon_essence_counts.keys()) | set(
+            self._weapon_essence_levels.keys()
+        )
+        for w in self.ctx.static_game_data.list_weapons():
+            all_weapon_ids.add(w.weapon_id)
+        self._weapon_priority_order = self._sort_weapons_by_priority(all_weapon_ids)
+
+        if is_future:
+            # 战未来模式使用专属的三阶段扫描（记录 → 汇总方案 → 执行）
+            self._scan_page_future_proof(
+                stop_event, user_setting, icon_x_list, icon_y_list, start_row_index
+            )
+            return
+        rows_to_scan = list(enumerate(icon_y_list))[start_row_index:]
+
+        # ---- Pass 1：仅识别 + 决策（不点击任何按钮） ----
+        records: list[dict | None] = []
+        fp_candidates: list[FutureProofCandidate] = []
+        for i, relative_y in rows_to_scan:
+            for j, relative_x in enumerate(icon_x_list):
+                if not self._window_actions.target_is_active:
+                    logger.info("终末地窗口不在前台，停止基质扫描。")
+                    return
+                if stop_event.is_set():
+                    logger.info("基质扫描被中断。")
+                    return
+
+                logger.info(f"正在扫描第 {i + 1} 行第 {j + 1} 列的基质...")
+                self._window_actions.click(relative_x, relative_y)
+                self._window_actions.wait(0.3)
+
+                data = recognize_essence(self._image_source, self.ctx, self._profile)
+                if (
+                    data.abandon_label == AbandonStatusLabel.MAYBE_ABANDONED
+                    or data.lock_label == LockStatusLabel.MAYBE_LOCKED
+                ):
+                    records.append(None)
+                    continue
+
+                if is_future:
+                    fp = is_future_proof_candidate(
+                        data, user_setting, self.ctx.static_game_data
+                    )
+
+                    # 战未来仅处理无暇（5★/橙色）基质；非无暇直接跳过，不参与任何分配。
+                    if data.rarity != RarityLabel.FIVE:
+                        logger.opt(colors=True).info(
+                            f"非无暇基质：{self._fmt_fp(fp)}（不参与战未来分配，跳过）"
+                        )
+                        records.append(None)
+                        continue
+
+                    fp.index = len(records)
+                    fp_candidates.append(fp)
+                    if fp.is_candidate:
+                        logger.opt(colors=True).success(
+                            f"战未来候选：{self._fmt_fp(fp)}（等级达标，待分配）"
+                        )
+                    else:
+                        logger.opt(colors=True).info(
+                            f"战未来不符：{self._fmt_fp(fp)}（等级或词条不满足要求）"
+                        )
+                    rec: dict = {
+                        "x": relative_x,
+                        "y": relative_y,
+                        "data": data,
+                        "fp_index": len(fp_candidates) - 1,
+                        "keep": False,
+                    }
+                    self._total_essence_count += 1
+                else:
+                    evaluation = evaluate_essence(
+                        data,
+                        user_setting,
+                        self.ctx.static_game_data,
+                        weapon_essence_levels=self._weapon_essence_levels,
+                        weapon_priority_order=self._weapon_priority_order,
+                    )
+                    self._sync_evaluation(user_setting)
+                    if evaluation.quality != EssenceQuality.SKIP:
+                        self._total_essence_count += 1
+                    if (
+                        evaluation.quality == EssenceQuality.TRASH
+                        and evaluation.matched_weapons
+                    ):
+                        logger.opt(colors=True).warning(evaluation.log_message)
+                    else:
+                        logger.opt(colors=True).success(evaluation.log_message)
+                    if evaluation.stop_scan:
+                        logger.info("已根据设置结束本次基质扫描。")
+                        stop_event.set()
+                        return
+                    rec = {
+                        "x": relative_x,
+                        "y": relative_y,
+                        "data": data,
+                        "evaluation": evaluation,
+                        "fp_index": -1,
+                        "keep": False,
+                    }
+                records.append(rec)
+
+        # ---- 战未来：全局最优分配（每个组合仅保留最优一枚） ----
+        if is_future:
+            chosen = optimize_future_proof(
+                fp_candidates,
+                user_setting,
+                self.ctx.static_game_data,
+                weapon_priority_order=self._weapon_priority_order,
+            )
+            for c in fp_candidates:
+                if c.is_candidate and c.index in chosen:
+                    if records[c.index] is not None:
+                        records[c.index]["keep"] = True
+            self._future_proof_candidates.extend(fp_candidates)
+
+        # ---- Pass 2：倒序重新识别后执行锁定/弃用 ----
+        # 倒序可避免“弃用导致网格上移”影响尚未处理的（更靠上的）位置。
+        for rec in reversed(records):
+            if rec is None:
+                continue
+            if not self._window_actions.target_is_active:
+                logger.info("终末地窗口不在前台，停止基质扫描。")
+                return
+            if stop_event.is_set():
+                logger.info("基质扫描被中断。")
+                return
+
+            self._window_actions.click(rec["x"], rec["y"])
+            self._window_actions.wait(0.3)
+            data2 = recognize_essence(self._image_source, self.ctx, self._profile)
+            if (
+                data2.abandon_label == AbandonStatusLabel.MAYBE_ABANDONED
+                or data2.lock_label == LockStatusLabel.MAYBE_LOCKED
+            ):
+                continue
+
+            # 安全校验：两遍识别到的基质须一致
+            if not self._same_essence(rec["data"], data2):
+                logger.warning(
+                    "第二遍识别到的基质与第一遍不一致，跳过本次操作以避免误点击。"
+                )
+                continue
+
+            if is_future:
+                actions = self._future_proof_actions(data2, rec["keep"])
+            else:
+                actions = decide_actions(data2, rec["evaluation"], user_setting)
+
+            for action in actions:
+                if action.type == ActionType.CLICK_LOCK:
+                    pos = self._profile.LOCK_BUTTON_POS
+                    self._window_actions.click(pos.x, pos.y)
+                elif action.type == ActionType.CLICK_ABANDON:
+                    pos = self._profile.DEPRECATE_BUTTON_POS
+                    self._window_actions.click(pos.x, pos.y)
+                self._window_actions.wait(0.3)
+                logger.opt(colors=True).success(
+                    f"<LIGHT-YELLOW><bold>{action.log_message}</></>"
+                )
+
+    def _log_scan_statistics(self) -> None:
+        """输出武器基质数量统计（两遍扫描与单遍扫描共用）。"""
+        logger.info(f"共扫描了 {self._total_essence_count} 个基质。")
+        if self._weapon_essence_counts:
+            # 按 稀有度降序 武器ID 排序
+            def sort_key(item: tuple[WeaponId, int]) -> tuple[int, WeaponId]:
+                weapon_id, _ = item
+                weapon = self.ctx.static_game_data.get_weapon(weapon_id)
+                # 负数使稀有度按降序排序
+                rarity = -weapon.rarity if weapon else 0
+                return (rarity, weapon_id)
+
+            sorted_counts = sorted(self._weapon_essence_counts.items(), key=sort_key)
+
+            logger.info("武器基质数量统计：")
+            for weapon_id, count in sorted_counts:
+                weapon = self.ctx.static_game_data.get_weapon(weapon_id)
+                if weapon:
+                    weapon_type = self.ctx.static_game_data.get_weapon_type(
+                        weapon.weapon_type
+                    )
+                    type_name = weapon_type.name if weapon_type else "未知类型"
+                    rarity_color = self.ctx.static_game_data.get_rarity_color(
+                        weapon.rarity
+                    )
+                    logger.opt(colors=True).info(
+                        f"  <fg {rarity_color}><bold>{weapon.name}（{weapon.rarity}★ {type_name}）</></>: {count} 个基质"
+                    )
+                else:
+                    logger.opt(colors=True).info(
+                        f"  <bold>{weapon_id}</>: {count} 个基质"
+                    )
+        elif self._total_essence_count > 0:
+            # 扫描了基质但没有匹配到任何武器
+            logger.info("没有匹配到任何非垃圾武器。")
+
     def _execute_grid_scan(self, stop_event: threading.Event) -> None:
         """
         Actual execution logic for a 9*5 grid pass.
         """
-        from endfield_essence_recognizer.core.scanner.evaluate import reset_scan_claims
 
         reset_scan_claims()
 
@@ -622,6 +1667,20 @@ class ScannerEngine:
 
         icon_x_list = self._profile.essence_icon_x_list
         icon_y_list = self._profile.essence_icon_y_list
+
+        # 战未来模式强制两遍扫描；宝藏模式可在设置中关闭两遍扫描回退单遍。
+        self._future_proof_candidates = []
+        if (
+            user_setting.two_pass_scan
+            or user_setting.scan_mode == ScanMode.FUTURE_PROOF
+        ):
+            self._scan_page_two_pass(
+                stop_event, user_setting, icon_x_list, icon_y_list, 0
+            )
+            logger.info("基质扫描完成")
+            self._log_scan_statistics()
+            self._run_future_proof_report(user_setting)
+            return
 
         for (i, relative_y), (j, relative_x) in itertools.product(
             enumerate(icon_y_list), enumerate(icon_x_list)
@@ -731,41 +1790,8 @@ class ScannerEngine:
         else:
             # 扫描完成
             logger.info("基质扫描完成")
-
-        # 输出武器基质数量统计
-        logger.info(f"共扫描了 {self._total_essence_count} 个基质。")
-        if self._weapon_essence_counts:
-            # 按 稀有度降序 武器ID 排序
-            def sort_key(item: tuple[WeaponId, int]) -> tuple[int, WeaponId]:
-                weapon_id, _ = item
-                weapon = self.ctx.static_game_data.get_weapon(weapon_id)
-                # 负数使稀有度按降序排序
-                rarity = -weapon.rarity if weapon else 0
-                return (rarity, weapon_id)
-
-            sorted_counts = sorted(self._weapon_essence_counts.items(), key=sort_key)
-
-            logger.info("武器基质数量统计：")
-            for weapon_id, count in sorted_counts:
-                weapon = self.ctx.static_game_data.get_weapon(weapon_id)
-                if weapon:
-                    weapon_type = self.ctx.static_game_data.get_weapon_type(
-                        weapon.weapon_type
-                    )
-                    type_name = weapon_type.name if weapon_type else "未知类型"
-                    rarity_color = self.ctx.static_game_data.get_rarity_color(
-                        weapon.rarity
-                    )
-                    logger.opt(colors=True).info(
-                        f"  <fg {rarity_color}><bold>{weapon.name}（{weapon.rarity}★ {type_name}）</></>: {count} 个基质"
-                    )
-                else:
-                    logger.opt(colors=True).info(
-                        f"  <bold>{weapon_id}</>: {count} 个基质"
-                    )
-        elif self._total_essence_count > 0:
-            # 扫描了基质但没有匹配到任何武器
-            logger.info("没有匹配到任何非垃圾武器。")
+            self._log_scan_statistics()
+            self._run_future_proof_report(user_setting)
 
 
 class DraggableScannerEngine(ScannerEngine):
@@ -782,7 +1808,6 @@ class DraggableScannerEngine(ScannerEngine):
         """
         执行带拖拽翻页的网格扫描。
         """
-        from endfield_essence_recognizer.core.scanner.evaluate import reset_scan_claims
 
         reset_scan_claims()
 
@@ -815,6 +1840,8 @@ class DraggableScannerEngine(ScannerEngine):
         self._skip_exact_level_counts = {}
         # 重置已扫描基质指纹集合（用于翻页去重检测）
         self._scanned_essence_hashes: set[str] = set()
+        # 重置战未来候选集合（用于扫描结束后的缺失组合报告）
+        self._future_proof_candidates = []
 
         # 重置同类型计数和最佳等级记录
         user_setting._same_type_treasure_counts = {}
@@ -827,6 +1854,11 @@ class DraggableScannerEngine(ScannerEngine):
         # 从 profile 初始化同类型最佳等级，用于留大弃小策略
         if user_setting.same_type_treasure_limit_enabled:
             self._init_same_type_levels_from_profile(user_setting)
+
+        # 战未来模式：全局两遍扫描（先翻遍所有页记录 → 汇总方案 → 翻回顶部执行）
+        if user_setting.scan_mode == ScanMode.FUTURE_PROOF:
+            self._execute_future_proof_scan(stop_event, user_setting)
+            return
 
         # 检查是否启用自动翻页
         auto_page_flip = user_setting.auto_page_flip
@@ -959,6 +1991,9 @@ class DraggableScannerEngine(ScannerEngine):
             logger.info(f"已达到最大页数限制 ({max_pages})，扫描停止。")
         logger.info("基质扫描完成。")
 
+        # 战未来模式：输出缺失组合报告（含刷取地点建议）
+        self._run_future_proof_report(user_setting)
+
         # 输出武器基质数量统计
         logger.info(f"共扫描了 {self._total_essence_count} 个基质。")
         if self._weapon_essence_counts:
@@ -1008,6 +2043,16 @@ class DraggableScannerEngine(ScannerEngine):
         Args:
             start_row_index: 开始扫描的行索引（0表示从第一行开始）
         """
+        # 战未来模式强制两遍扫描；宝藏模式可在设置中关闭两遍扫描回退单遍。
+        if (
+            user_setting.two_pass_scan
+            or user_setting.scan_mode == ScanMode.FUTURE_PROOF
+        ):
+            self._scan_page_two_pass(
+                stop_event, user_setting, icon_x_list, icon_y_list, start_row_index
+            )
+            return
+
         # 从指定行开始扫描
         rows_to_scan = list(enumerate(icon_y_list))[start_row_index:]
 
