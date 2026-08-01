@@ -763,8 +763,26 @@ def _apply_same_type_treasure_limit(
     # 当限制功能关闭时，仍需将匹配的武器加入更新集合，确保扫描结果同步到引擎
     if not setting.same_type_treasure_limit_enabled:
         if matched_weapon_ids:
+            current_levels = (
+                data.levels[0] or 1,
+                data.levels[1] or 1,
+                data.levels[2] or 1,
+            )
+            stat_types = data.stat_types
+            mode = setting.same_type_keep_best_mode
             for weapon_id in matched_weapon_ids:
                 _updated_this_scan.add(weapon_id)
+                # 保留同武器中等级最高的基质，后续写回宝藏基质配置时以最高等级为准
+                best = setting._same_type_best_levels.get(weapon_id)
+                if (
+                    best is None
+                    or _level_cmp(current_levels, best, mode, stat_types) > 0
+                ):
+                    setting._same_type_best_levels[weapon_id] = current_levels
+                # 累计每把武器认领的基质数量，用于最终统计输出
+                setting._same_type_treasure_counts[weapon_id] = (
+                    setting._same_type_treasure_counts.get(weapon_id, 0) + 1
+                )
         return evaluation
 
     limit = setting.same_type_treasure_limit

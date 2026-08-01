@@ -379,6 +379,70 @@ def test_evaluate_same_type_treasure_limit_marks_later_items_as_trash(
     assert "达到设置上限" in second.log_message
 
 
+def test_evaluate_same_type_treasure_limit_disabled_updates_best_levels(
+    mock_static_game_data, default_settings, default_essence_data
+):
+    """限制关闭时，仍会更新 _same_type_best_levels 和 _same_type_treasure_counts。"""
+    default_settings.same_type_treasure_limit_enabled = False
+    default_settings.treasure_essence_stats = [
+        EssenceStats(attribute="A", secondary="B", skill="C")
+    ]
+
+    mock_static_game_data.find_weapons_by_stats.return_value = ["wpn_A", "wpn_B"]
+    weapon_mock = MagicMock()
+    weapon_mock.weapon_id = "wpn_A"
+    weapon_mock.name = "WeaponA"
+    weapon_mock.rarity = 6
+    weapon_mock.weapon_type = 1
+    mock_static_game_data.get_weapon.return_value = weapon_mock
+
+    result = evaluate_essence(
+        default_essence_data, default_settings, mock_static_game_data
+    )
+
+    assert result.quality == EssenceQuality.TREASURE
+    # _same_type_best_levels 应包含两把武器，等级均为 (1, 1, 1)（levels=[0,0,0] 或 1）
+    assert "wpn_A" in default_settings._same_type_best_levels
+    assert "wpn_B" in default_settings._same_type_best_levels
+    assert default_settings._same_type_best_levels["wpn_A"] == (1, 1, 1)
+    assert default_settings._same_type_best_levels["wpn_B"] == (1, 1, 1)
+    # _same_type_treasure_counts 应累计 1
+    assert default_settings._same_type_treasure_counts["wpn_A"] == 1
+    assert default_settings._same_type_treasure_counts["wpn_B"] == 1
+
+
+def test_evaluate_same_type_treasure_limit_disabled_keeps_highest_level(
+    mock_static_game_data, default_settings, default_essence_data
+):
+    """限制关闭时，同一武器的多次扫描应保留最高等级。"""
+    default_settings.same_type_treasure_limit_enabled = False
+    mock_static_game_data.find_weapons_by_stats.return_value = ["wpn_A"]
+    weapon_mock = MagicMock()
+    weapon_mock.weapon_id = "wpn_A"
+    weapon_mock.name = "WeaponA"
+    weapon_mock.rarity = 6
+    weapon_mock.weapon_type = 1
+    mock_static_game_data.get_weapon.return_value = weapon_mock
+
+    # 第一次扫描：低等级
+    default_essence_data.levels = [1, 1, 1]
+    evaluate_essence(default_essence_data, default_settings, mock_static_game_data)
+    assert default_settings._same_type_best_levels["wpn_A"] == (1, 1, 1)
+
+    # 第二次扫描：更高等级
+    default_essence_data.levels = [3, 2, 1]
+    evaluate_essence(default_essence_data, default_settings, mock_static_game_data)
+    assert default_settings._same_type_best_levels["wpn_A"] == (3, 2, 1)
+
+    # 第三次扫描：更低等级，不应覆盖
+    default_essence_data.levels = [2, 1, 1]
+    evaluate_essence(default_essence_data, default_settings, mock_static_game_data)
+    assert default_settings._same_type_best_levels["wpn_A"] == (3, 2, 1)
+
+    # 计数应累计 3 次
+    assert default_settings._same_type_treasure_counts["wpn_A"] == 3
+
+
 def test_evaluate_non_five_star_skip(
     mock_static_game_data, default_settings, default_essence_data
 ):
