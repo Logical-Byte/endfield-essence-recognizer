@@ -31,6 +31,8 @@ export interface ProfileData {
   weapon_priorities?: Record<string, number>
   switch_display_mode?: 'chip' | 'dot' | 'off'
   matrix_badge_display_mode?: 'small' | 'medium' | 'off'
+  /** 基质规划页刷取地点筛选：battleId -> 是否勾选；缺失的键默认视为勾选 */
+  matrix_planner_farming_locations?: Record<string, boolean>
 }
 
 export interface ProfileCollection {
@@ -377,6 +379,24 @@ export function useProfiles() {
     }
   }
 
+  async function updateMatrixPlannerFarmingLocations(locations: Record<string, boolean>) {
+    try {
+      const res = await fetch('/api/profiles/matrix_planner_farming_locations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ locations }),
+      })
+      applyActiveProfile(
+        await parseJsonResponse<ProfileData>(
+          res,
+          'Failed to update matrix planner farming locations',
+        ),
+      )
+    } catch (error) {
+      _handleError('更新基质规划刷取地点筛选失败', error)
+    }
+  }
+
   async function updateWeaponPriority(weaponId: string, priority: number) {
     try {
       const res = await fetch('/api/profiles/weapon_priority', {
@@ -413,6 +433,7 @@ export function useProfiles() {
     updateWeaponOverviewFilters,
     updateSwitchDisplayMode,
     updateMatrixBadgeDisplayMode,
+    updateMatrixPlannerFarmingLocations,
     updateWeaponPriority,
   }
 }
