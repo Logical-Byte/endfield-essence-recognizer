@@ -740,10 +740,11 @@ class ProfileManager:
             return profile.model_copy(deep=True)
 
     def clear_profile_data(self, name: str | None = None) -> ProfileData:
-        """清空指定账号的宝藏基质数据（保留账号本身、名称、版本与总览过滤器）。
+        """清空指定账号的宝藏基质数据（保留账号本身、名称、版本与展示偏好）。
 
         清空内容为 treasure_matrix 与 weapon_priorities，用于「数据有误、
-        全量重新扫描」的场景；不删除账号，也不重置武器总览过滤器等展示偏好。
+        全量重新扫描」的场景；不删除账号，也不重置武器总览过滤器、
+        刷取地点筛选等展示偏好。
 
         Args:
             name: 要清空的账号名称；None 表示清空当前激活账号。
