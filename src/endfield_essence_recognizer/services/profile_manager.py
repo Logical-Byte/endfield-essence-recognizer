@@ -801,6 +801,24 @@ class ProfileManager:
             self._commit_collection_unlocked(collection)
             return profile.model_copy(deep=True)
 
+    def update_matrix_planner_farming_locations(
+        self, locations: dict[str, bool]
+    ) -> ProfileData:
+        """更新激活账号的基质规划刷取地点筛选配置。
+
+        Args:
+            locations: 刷取地点筛选配置字典（battleId -> 是否勾选）。
+
+        Returns:
+            更新后的 ProfileData。
+        """
+        with self._lock:
+            collection = self._collection.model_copy(deep=True)
+            profile = collection.get_active()
+            profile.matrix_planner_farming_locations = locations
+            self._commit_collection_unlocked(collection)
+            return profile.model_copy(deep=True)
+
     def update_switch_display_mode(self, mode: str) -> ProfileData:
         """更新激活账号的"可切换"提示显示模式。
 
