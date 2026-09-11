@@ -25,6 +25,7 @@ exports/
 
 # local app settings
 config.json
+config.backup.*.json
 .env
 profiles.json
 version.json
