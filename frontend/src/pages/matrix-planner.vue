@@ -100,7 +100,10 @@
                   </v-card>
                 </div>
                 <v-alert v-else border="start" type="info" variant="tonal">
-                  开启「不使用预刻券」模式后，将显示所有刷取地点。
+                  <template v-if="noFarmingLocationSelected">
+                    未勾选任何刷取地点，请在右侧「需求设定」中至少勾选一个。
+                  </template>
+                  <template v-else> 开启「不使用预刻券」模式后，将显示所有刷取地点。 </template>
                 </v-alert>
               </template>
               <!-- 使用预刻券模式：左右布局 -->
@@ -250,7 +253,12 @@
                   </v-card>
                 </div>
                 <v-alert v-else border="start" type="info" variant="tonal">
-                  请在右侧添加需求的基质属性，系统会自动计算最优刷取方案。
+                  <template v-if="noFarmingLocationSelected">
+                    未勾选任何刷取地点，请在右侧「需求设定」中至少勾选一个。
+                  </template>
+                  <template v-else>
+                    请在右侧添加需求的基质属性，系统会自动计算最优刷取方案。
+                  </template>
                 </v-alert>
               </template>
             </v-expansion-panel-text>
@@ -294,6 +302,33 @@
                   你可以从武器预设中选择，也可以自定义属性组合。
                 </template>
               </p>
+
+              <!-- 刷取地点筛选 -->
+              <div class="mb-4">
+                <div class="d-flex align-center mb-1">
+                  <span class="text-body-2 text-medium-emphasis">刷取地点：</span>
+                  <v-tooltip text="仅显示勾选的能量淤积点，取消勾选的地点不会出现在左侧方案中">
+                    <template #activator="{ props }">
+                      <v-icon v-bind="props" class="ml-1" color="medium-emphasis" size="small"
+                        >mdi-information-outline</v-icon
+                      >
+                    </template>
+                  </v-tooltip>
+                </div>
+                <v-chip-group v-model="selectedFarmingLocations" column multiple>
+                  <v-chip
+                    v-for="location in alluviumLocationOptions"
+                    :key="location.battleId"
+                    color="primary"
+                    filter
+                    size="small"
+                    :value="location.battleId"
+                    variant="outlined"
+                  >
+                    {{ getDisplayName(location.battleName) }}
+                  </v-chip>
+                </v-chip-group>
+              </div>
 
               <template v-if="!noPrecraftMode">
                 <!-- Selected requirements -->
@@ -630,7 +665,7 @@ import {
 
 const route = useRoute()
 const { weaponTypes, weaponsMap, essencesMap, matrixIcons } = useStaticData()
-const { treasureMatrix } = useProfiles()
+const { treasureMatrix, activeProfile, updateMatrixPlannerFarmingLocations } = useProfiles()
 const { selectedRarities } = useRarityFilters()
 const { customStats, customMatrixEntries, fetchCustomStats } = useCustomStats()
 
@@ -657,7 +692,7 @@ const {
   moveStatDown,
   getEssenceStatDescription,
   getStatDisplayName,
-  bestChoices,
+  allChoices,
   clearAllStats,
 } = useMatrixPlanner(obtainedWeaponIds)
 
@@ -738,6 +773,79 @@ const noPrecraftMode = ref(false)
 /** 不使用预刻券模式下选中的武器ID，用于置顶包含该武器的地点 */
 const selectedWeaponForLocation = ref<string | null>(null)
 
+// --- 刷取地点筛选 ---
+
+/** 所有可选的刷取地点（能量淤积点） */
+const alluviumLocationOptions = computed(() =>
+  Object.values(energyAlluviums.value).map((alluvium) => ({
+    battleId: alluvium.battleId,
+    battleName: alluvium.battleName,
+  })),
+)
+
+/** 已落盘的刷取地点筛选配置（battleId -> 是否勾选） */
+const savedFarmingLocations = computed(
+  () => activeProfile.value.matrix_planner_farming_locations ?? {},
+)
+
+/** 当前勾选的刷取地点 battleId 列表，默认全部勾选 */
+const selectedFarmingLocations = ref<string[]>([])
+
+/** 刷取地点数据是否已就绪；就绪前不做过滤，避免静态数据到达前误清空方案 */
+const farmingLocationFilterReady = ref(false)
+
+/** 是否因未勾选任何刷取地点而导致方案列表为空 */
+const noFarmingLocationSelected = computed(
+  () => farmingLocationFilterReady.value && selectedFarmingLocations.value.length === 0,
+)
+
+// 静态数据或已保存配置变化时同步勾选状态（配置中缺失的键默认视为勾选）
+watch(
+  [alluviumLocationOptions, savedFarmingLocations],
+  ([options, saved]) => {
+    if (options.length === 0) return
+    const next = options
+      .filter((option) => saved[option.battleId] ?? true)
+      .map((option) => option.battleId)
+    const current = selectedFarmingLocations.value.toSorted().join(',')
+    if (next.toSorted().join(',') !== current) {
+      selectedFarmingLocations.value = next
+    }
+    farmingLocationFilterReady.value = true
+  },
+  { immediate: true },
+)
+
+// 勾选状态变化时落盘保存；由加载同步引起的变化不回写，避免冗余写盘
+watch(
+  selectedFarmingLocations,
+  async (newValue, oldValue) => {
+    if (!farmingLocationFilterReady.value) return
+    const oldSorted = oldValue.toSorted().join(',')
+    const newSorted = newValue.toSorted().join(',')
+    if (oldSorted === newSorted) return
+
+    // 当前勾选状态与「已保存配置 + 剩余地点默认勾选」一致时说明这是回填而非用户改动。
+    // saved 的键恒为 alluviumLocationOptions 的子集（battleId 来自固定的 EnergyAlluviums.json），
+    // 因此这个比较口径与回填 watcher 一致，不会漏掉用户真实的取消勾选。
+    const synced = alluviumLocationOptions.value
+      .filter((option) => savedFarmingLocations.value[option.battleId] ?? true)
+      .map((option) => option.battleId)
+    if (synced.toSorted().join(',') === newSorted) return
+
+    const locations: Record<string, boolean> = {}
+    for (const option of alluviumLocationOptions.value) {
+      locations[option.battleId] = newValue.includes(option.battleId)
+    }
+    try {
+      await updateMatrixPlannerFarmingLocations(locations)
+    } catch {
+      // 错误已由 useProfiles 的 lastError 处理
+    }
+  },
+  { deep: true },
+)
+
 // 需求武器集合被按钮状态、排序和方案统计共用，集中计算可保持口径一致。
 const selectedRequiredWeaponIds = computed(
   () =>
@@ -810,6 +918,12 @@ const allLocationChoices = computed<LocationChoice[]>(() => {
 const displayedLocationChoices = computed<LocationChoice[]>(() => {
   let locations = [...allLocationChoices.value]
 
+  // 按勾选的刷取地点过滤
+  if (farmingLocationFilterReady.value) {
+    const enabled = new Set(selectedFarmingLocations.value)
+    locations = locations.filter((choice) => enabled.has(choice.battleId))
+  }
+
   // 如果选中了武器，将包含该武器的地点置顶
   if (selectedWeaponForLocation.value) {
     locations = locations.toSorted((a, b) => {
@@ -832,9 +946,20 @@ const displayedLocationChoices = computed<LocationChoice[]>(() => {
 
 /**
  * 使用预刻券模式下显示的方案列表
+ *
+ * 先在全部有效方案上按勾选地点过滤，再取前 5 个，避免先截断后过滤
+ * 导致勾选地点中的有效方案被挤出列表。
  */
 const displayedBattleChoices = computed<BattleChoice[]>(() => {
-  return bestChoices.value
+  let choices = allChoices.value
+
+  // 按勾选的刷取地点过滤
+  if (farmingLocationFilterReady.value) {
+    const enabled = new Set(selectedFarmingLocations.value)
+    choices = choices.filter((choice) => enabled.has(choice.battleId))
+  }
+
+  return choices.slice(0, 5)
 })
 
 // 武器图标渲染时会逐个判断是否命中当前方案，预先汇总命中集合减少模板函数开销。

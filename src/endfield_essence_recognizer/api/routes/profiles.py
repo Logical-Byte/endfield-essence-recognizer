@@ -439,6 +439,21 @@ async def update_weapon_overview_filters(
     return manager.update_weapon_overview_filters(request.filters)
 
 
+class UpdateMatrixPlannerFarmingLocationsRequest(BaseModel):
+    """更新基质规划刷取地点筛选的请求体。"""
+
+    locations: dict[str, bool] = Field(default_factory=dict)
+
+
+@router.post("/matrix_planner_farming_locations")
+async def update_matrix_planner_farming_locations(
+    request: UpdateMatrixPlannerFarmingLocationsRequest,
+    manager: ProfileManager = Depends(get_profile_manager),
+) -> ProfileData:
+    """更新当前激活账号的基质规划刷取地点筛选配置。"""
+    return manager.update_matrix_planner_farming_locations(request.locations)
+
+
 VALID_SWITCH_MODES: Final = {"chip", "dot", "off"}
 
 

@@ -619,15 +619,51 @@ def test_clear_profile_data_active(profile_manager: ProfileManager):
     profile_manager.update_weapon_overview_filters(
         {"3star": False, "4star": True, "5star": True, "6star": True, "custom": True}
     )
+    profile_manager.update_matrix_planner_farming_locations(
+        {"world_energy_point_group01": False, "world_energy_point_group02": True}
+    )
 
     cleared = profile_manager.clear_profile_data()
 
     assert cleared.treasure_matrix == []
     assert cleared.weapon_priorities == {}
-    # 展示偏好（过滤器）、名称与版本保留
+    # 展示偏好（过滤器、刷取地点筛选）、名称与版本保留
     assert cleared.weapon_overview_filters["3star"] is False
+    assert cleared.matrix_planner_farming_locations == {
+        "world_energy_point_group01": False,
+        "world_energy_point_group02": True,
+    }
     assert cleared.name == "default"
     assert cleared.version == 1
+
+
+def test_update_matrix_planner_farming_locations_persists(
+    profile_manager: ProfileManager, temp_profiles_file: Path
+):
+    """刷取地点筛选更新后立即落盘，重新加载后保持不变。"""
+    profile_manager.load()
+    locations = {
+        "world_energy_point_group01": True,
+        "world_energy_point_group02": False,
+    }
+
+    profile = profile_manager.update_matrix_planner_farming_locations(locations)
+
+    assert profile.matrix_planner_farming_locations == locations
+    data = json.loads(temp_profiles_file.read_text(encoding="utf-8"))
+    assert data["profiles"]["default"]["matrix_planner_farming_locations"] == locations
+
+    reloaded = ProfileManager(temp_profiles_file)
+    reloaded.load()
+    assert reloaded.get_active_profile().matrix_planner_farming_locations == locations
+
+
+def test_update_matrix_planner_farming_locations_defaults_empty(
+    profile_manager: ProfileManager,
+):
+    """未设置过刷取地点筛选时默认为空字典（前端视缺失键为全部勾选）。"""
+    profile_manager.load()
+    assert profile_manager.get_active_profile().matrix_planner_farming_locations == {}
 
 
 def test_clear_profile_data_named_keeps_active(profile_manager: ProfileManager):

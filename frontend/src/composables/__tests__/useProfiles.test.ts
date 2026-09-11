@@ -292,6 +292,34 @@ describe('useProfiles', () => {
     expect(activeProfile.value.matrix_badge_display_mode).toBe('medium')
   })
 
+  it('updateMatrixPlannerFarmingLocations 发送地点筛选并更新本地账号快照', async () => {
+    const locations = {
+      world_energy_point_group01: true,
+      world_energy_point_group02: false,
+    }
+    fetchMock.mockResolvedValueOnce(
+      mockResponse({
+        version: 1,
+        name: 'default',
+        treasure_matrix: [],
+        matrix_planner_farming_locations: locations,
+      }),
+    )
+    const { updateMatrixPlannerFarmingLocations, activeProfile } = useProfiles()
+
+    await updateMatrixPlannerFarmingLocations(locations)
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      '/api/profiles/matrix_planner_farming_locations',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ locations }),
+      }),
+    )
+    expect(activeProfile.value.matrix_planner_farming_locations).toEqual(locations)
+  })
+
   it('写操作接口返回 ProfileData 时直接更新本地快照，不重复拉取', async () => {
     fetchMock.mockResolvedValueOnce(
       mockResponse({

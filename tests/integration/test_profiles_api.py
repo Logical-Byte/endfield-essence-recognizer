@@ -73,3 +73,24 @@ def test_batch_farming_unknown_weapon_returns_error(client):
     results = response.json()
     assert results[0]["error"] == "Weapon not found"
     assert results[0]["recommendation"] is None
+
+
+def test_update_matrix_planner_farming_locations(client):
+    """刷取地点筛选通过 API 更新并返回完整账号数据。"""
+    locations = {
+        "world_energy_point_group01": True,
+        "world_energy_point_group02": False,
+    }
+    response = client.post(
+        "/api/profiles/matrix_planner_farming_locations",
+        json={"locations": locations},
+    )
+    assert response.status_code == 200
+    assert response.json()["matrix_planner_farming_locations"] == locations
+
+
+def test_update_matrix_planner_farming_locations_empty_body(client):
+    """空请求体默认为空筛选配置，不报错。"""
+    response = client.post("/api/profiles/matrix_planner_farming_locations", json={})
+    assert response.status_code == 200
+    assert response.json()["matrix_planner_farming_locations"] == {}

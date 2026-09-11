@@ -85,6 +85,10 @@ class ProfileData(BaseModel):
     matrix_badge_display_mode: Literal["small", "medium", "off"] = "small"
     """武器总览基质图标显示模式：'small'=小号(默认), 'medium'=中号(2倍), 'off'=关闭。"""
 
+    matrix_planner_farming_locations: dict[str, bool] = Field(default_factory=dict)
+    """基质规划页刷取地点筛选配置。键为淤积点 battleId，值为是否勾选；
+    缺失的键默认视为勾选（即默认全部勾选）。"""
+
 
 class ProfileCollection(BaseModel):
     """所有账号的集合。"""
