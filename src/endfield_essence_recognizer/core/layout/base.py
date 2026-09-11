@@ -152,3 +152,8 @@ class ResolutionProfile(Protocol):
     def SCROLLBAR_CHECK_POS(self) -> Point:
         """滚动条检测位置。"""
         ...
+
+    @property
+    def SCROLLBAR_TOP_CHECK_POS(self) -> Point:
+        """滚动条顶部检测位置（冗余清理回页首时判断是否已滚动到位）。"""
+        ...

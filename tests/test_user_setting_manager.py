@@ -325,6 +325,9 @@ def test_user_setting_schema_stability():
         "same_type_keep_best",
         "same_type_keep_best_mode",
         "same_type_non_downgrade_filter",
+        "redundant_cleanup_enabled",
+        "redundant_cleanup_trigger",
+        "redundant_action",
         "auto_page_flip",
         "fix_grid_row_offset_after_page_flip",
         "fix_page_flip_overscroll",
@@ -531,6 +534,30 @@ def test_migration_sets_all_required_fields():
 
     # v6→v7 补充的字段（留大弃小等级比较方式）
     assert migrated.same_type_keep_best_mode == "sum"
+
+    # v8→v9 补充的字段（冗余清理，默认关闭）
+    assert migrated.redundant_cleanup_enabled is False
+    assert migrated.redundant_cleanup_trigger == "scan_complete"
+    assert migrated.redundant_action == "deprecate"
+
+
+def test_migrate_v8_to_v9_adds_redundant_cleanup_fields():
+    """v8 → v9: 补充冗余清理字段，默认关闭，已有字段保留。"""
+    v8_config = {
+        "version": 8,
+        "trash_weapon_ids": ["w1"],
+        "same_type_treasure_limit_enabled": True,
+        "same_type_treasure_limit": 2,
+    }
+
+    migrated = UserSetting.migrate_from_old_version(v8_config)
+
+    assert migrated.version == UserSetting._VERSION
+    assert migrated.trash_weapon_ids == ["w1"]
+    assert migrated.same_type_treasure_limit == 2
+    assert migrated.redundant_cleanup_enabled is False
+    assert migrated.redundant_cleanup_trigger == "scan_complete"
+    assert migrated.redundant_action == "deprecate"
 
 
 def test_legacy_cn_update_mirror_normalizes_to_yituliu_flow():

@@ -49,6 +49,7 @@ def decide_actions(
     data: EssenceData,
     evaluation: EvaluationResult,
     setting: UserSetting,
+    target_action: Action | None = None,
 ) -> list[ScannerAction]:
     """
     Decides what physical actions to perform based on the current state vs desired quality.
@@ -66,6 +67,8 @@ def decide_actions(
         data: Current state of the essence (locked?, observed?).
         evaluation: The judged quality (Treasure/Trash) from evaluate_essence.
         setting: User preferences for actions (e.g. treasure_action=LOCK).
+        target_action: 覆盖目标操作（冗余清理传入 setting.redundant_action）；
+            None 时按 quality 取 treasure_action / trash_action。
 
     Returns:
         An ordered list of actions to apply to the game client sequentially.
@@ -75,14 +78,16 @@ def decide_actions(
 
     actions: list[ScannerAction] = []
 
+    if target_action is None:
+        target_action = (
+            setting.treasure_action
+            if evaluation.quality == EssenceQuality.TREASURE
+            else setting.trash_action
+        )
+
     # --- Lock Logic ---
     should_lock = False
     should_unlock = False
-
-    if evaluation.quality == EssenceQuality.TREASURE:
-        target_action = setting.treasure_action
-    else:  # TRASH
-        target_action = setting.trash_action
 
     if target_action == Action.LOCK:
         should_lock = True

@@ -277,3 +277,22 @@ class DynamicResolutionProfile(ResolutionProfile):
         x = self._width - right_margin
         y = self._height - bottom_margin
         return Point(x, y)
+
+    @property
+    def SCROLLBAR_TOP_CHECK_POS(self) -> Point:
+        """滚动条顶部检测位置，用于判断是否回到第一页。
+
+        与行末检测（SCROLLBAR_CHECK_POS）同一套缩放律，取对称的顶部边距：
+        右边距 ≈ 高度 × 0.432，顶部边距 ≈ 高度 × 0.12。
+        """
+        base_height = 1080
+        base_right_margin = 467
+        base_top_margin = 130
+
+        scale = self._height / base_height
+        right_margin = round(base_right_margin * scale)
+        top_margin = round(base_top_margin * scale)
+
+        x = self._width - right_margin
+        y = top_margin
+        return Point(x, y)

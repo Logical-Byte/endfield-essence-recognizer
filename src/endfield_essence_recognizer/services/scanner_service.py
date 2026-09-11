@@ -120,6 +120,14 @@ class ScannerService:
                     # 扫描完成后保存数据并同步（无论是正常完成还是被中断）
                     # 使用保存的引擎引用，而不是 self._current_engine
                     self._on_scan_complete(engine_ref)
+                    # 线程退出后复位停止状态。手动停止后紧接着的冗余清理会
+                    # 清除停止事件继续运行，停止标记必须在线程真正结束时复位，
+                    # 否则 is_running 会永远为 True、后续扫描被拒。
+                    with self._lock:
+                        if self._thread is threading.current_thread():
+                            self._thread = None
+                            self._current_engine = None
+                        self._stopping = False
 
             self._thread = threading.Thread(
                 target=wrapped_execute,

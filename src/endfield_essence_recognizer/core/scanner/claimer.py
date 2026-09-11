@@ -22,6 +22,7 @@ from endfield_essence_recognizer.core.scanner.evaluate import (
     _order_candidate_ids,
 )
 from endfield_essence_recognizer.core.scanner.models import (
+    ClaimKind,
     ClaimResult,
     ClassificationResult,
     EssenceData,
@@ -410,7 +411,11 @@ class ClaimContext:
                     f"[相同等级] 武器 {self._display(wid)} 已记录等级 {current_levels}，"
                     f"消耗存量跳过名额（剩余 {skip - 1}），不重复认领"
                 )
-                return ClaimResult(updated_levels={wid: current_levels})
+                return ClaimResult(
+                    updated_levels={wid: current_levels},
+                    claim_kind=ClaimKind.SKIP_EXISTING,
+                    owner_key=wid,
+                )
 
         # ② 组内空槽：优先序中第一把无记录的武器认领落盘（孪生武器不饿死）
         for wid in weapon_ids:
@@ -424,6 +429,8 @@ class ClaimContext:
                 return ClaimResult(
                     accepted_weapon_id=wid,
                     updated_levels={wid: current_levels},
+                    claim_kind=ClaimKind.NEW_SLOT,
+                    owner_key=wid,
                 )
 
         # ③ 无空槽：判定宝藏、不落盘（占用该武器限额名额）
@@ -438,6 +445,8 @@ class ClaimContext:
                 return ClaimResult(
                     accepted_weapon_id=wid,
                     updated_levels={wid: self.best_levels[wid]},
+                    claim_kind=ClaimKind.COUNT_ONLY,
+                    owner_key=wid,
                 )
 
         # 全部满额：与限额语义一致，标记为养成材料
@@ -501,6 +510,11 @@ class ClaimContext:
                 updated_levels={weapon_id: current_levels},
                 cascade_updated=cascade,
                 group_stat_key=group_stat_key,
+                claim_kind=(
+                    ClaimKind.UPGRADE if old_best is not None else ClaimKind.NEW_SLOT
+                ),
+                owner_key=weapon_id,
+                released_levels=old_best,
             )
 
         # 无人可认领
@@ -523,6 +537,8 @@ class ClaimContext:
             accepted_weapon_id=target,
             updated_levels={target: self.best_levels.get(target) or current_levels},
             group_stat_key=group_stat_key,
+            claim_kind=ClaimKind.COUNT_ONLY,
+            owner_key=target,
         )
 
     def _claim_limit_on(
@@ -563,10 +579,15 @@ class ClaimContext:
                         accepted_weapon_id=weapon_id,
                         updated_levels={weapon_id: current_levels},
                         cascade_updated=cascade,
+                        claim_kind=ClaimKind.UPGRADE,
+                        owner_key=weapon_id,
+                        released_levels=old_best,
                     )
                 return ClaimResult(
                     accepted_weapon_id=weapon_id,
                     updated_levels={weapon_id: current_levels},
+                    claim_kind=ClaimKind.SKIP_EXISTING,
+                    owner_key=weapon_id,
                 )
 
             # 数量上限认领
@@ -577,6 +598,8 @@ class ClaimContext:
                 return ClaimResult(
                     accepted_weapon_id=weapon_id,
                     updated_levels={weapon_id: current_levels},
+                    claim_kind=ClaimKind.NEW_SLOT,
+                    owner_key=weapon_id,
                 )
 
             # 未被认领：判断拒绝原因
@@ -719,13 +742,19 @@ class ClaimContext:
             if keep_best and self._try_keep_best(
                 stat_key, current_levels, mode, stat_types
             ):
-                return ClaimResult()
+                return ClaimResult(
+                    claim_kind=ClaimKind.UPGRADE,
+                    owner_key=stat_key,
+                )
 
             # 数量上限：未达上限则新增并计数
             if self._try_claim_slot(
                 stat_key, current_levels, limit, keep_best, mode, stat_types
             ):
-                return ClaimResult()
+                return ClaimResult(
+                    claim_kind=ClaimKind.NEW_SLOT,
+                    owner_key=stat_key,
+                )
 
             # 未被认领：未达上限说明是被留大弃小拦下的更差基质
             count = self.treasure_counts.get(stat_key, 0)
@@ -769,7 +798,11 @@ class ClaimContext:
                     skip = self.equal_skips.get(weapon_id, 0)
                     if skip > 0:
                         self.equal_skips[weapon_id] = skip - 1
-                        return ClaimResult(accepted_weapon_id=weapon_id)
+                        return ClaimResult(
+                            accepted_weapon_id=weapon_id,
+                            claim_kind=ClaimKind.SKIP_EXISTING,
+                            owner_key=stat_key,
+                        )
                 if (
                     best is not None
                     and _level_cmp(current_levels, best, mode, stat_types) > 0
@@ -778,6 +811,9 @@ class ClaimContext:
                     return ClaimResult(
                         accepted_weapon_id=weapon_id,
                         updated_levels={weapon_id: current_levels},
+                        claim_kind=ClaimKind.UPGRADE,
+                        owner_key=stat_key,
+                        released_levels=best,
                     )
 
             if count < limit:
@@ -801,6 +837,8 @@ class ClaimContext:
                 return ClaimResult(
                     accepted_weapon_id=weapon_id,
                     updated_levels={weapon_id: current_levels},
+                    claim_kind=ClaimKind.NEW_SLOT,
+                    owner_key=stat_key,
                 )
 
         # 虚拟武器
@@ -821,7 +859,10 @@ class ClaimContext:
                 break
             self.treasure_counts[stat_key] = count + 1
             self.best_levels[virtual_key] = current_levels
-            return ClaimResult()
+            return ClaimResult(
+                claim_kind=ClaimKind.VIRTUAL_SLOT,
+                owner_key=stat_key,
+            )
 
         return ClaimResult(
             reject_reason=RejectReason.LIMIT,

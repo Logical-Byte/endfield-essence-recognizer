@@ -708,6 +708,53 @@
               </v-radio-group>
             </v-col>
           </v-row>
+
+          <v-divider class="my-4" />
+
+          <h2>对于<span class="text-warning">冗余基质</span>，我们</h2>
+          <p class="text-body-2 text-medium-emphasis mb-2">
+            <strong>冗余基质：</strong
+            >本次扫描中，同一把武器在后面扫到了相同/更好等级，先扫到的那一枚为「冗余基质」。<br />
+            <strong>启用条件：</strong
+            >右侧开启「冗余清理（实验性）」，且分组为「按武器划分」并「开启数量上限」，否则不产生任何记录与操作。<br />
+          </p>
+          <v-row align="center">
+            <v-col cols="12" md="6">
+              <v-radio-group v-model="redundantAction" color="primary" density="comfortable">
+                <v-radio label="不去动它" value="keep" />
+                <v-radio label="把它锁上" value="lock" />
+                <v-radio label="把它标记为弃用" value="deprecate" />
+                <v-radio label="如果锁着，则解锁" value="unlock" />
+                <v-radio label="如果已标记为弃用，则取消弃用" value="undeprecate" />
+                <v-radio label="解锁且取消弃用" value="unlock_and_undeprecate" />
+                <v-radio label="如果没有上锁，则弃用" value="deprecate_if_not_locked" />
+                <v-radio label="如果没有弃用，则上锁" value="lock_if_not_deprecated" />
+                <v-radio label="如果缺少词条，则弃用" value="deprecate_if_missing_stats" />
+              </v-radio-group>
+            </v-col>
+            <v-col cols="12" md="6">
+              <v-switch
+                v-model="redundantCleanupEnabled"
+                color="primary"
+                density="comfortable"
+                hide-details
+                label="冗余清理（实验性）"
+              />
+              <v-alert border="start" class="mt-2 mb-4" type="info" variant="tonal">
+                启用后，将在扫描结束后回到顶部，逐页清理本次扫描中的冗余基质。
+              </v-alert>
+              <v-radio-group
+                v-model="redundantCleanupTrigger"
+                color="primary"
+                density="comfortable"
+                :disabled="!redundantCleanupEnabled"
+                label="清理时机"
+              >
+                <v-radio label="仅在扫描到尾页时启用" value="scan_complete" />
+                <v-radio label="所有情况下均启用（含手动停止扫描）" value="always" />
+              </v-radio-group>
+            </v-col>
+          </v-row>
         </v-expansion-panel-text>
       </v-expansion-panel>
 
@@ -986,6 +1033,9 @@ const sameTypeGroupMode = ref<'by_stat' | 'by_weapon'>('by_stat')
 const sameTypeKeepBest = ref(true)
 const sameTypeKeepBestMode = ref<'sequential' | 'sum' | 'weighted_sum'>('sequential')
 const sameTypeNonDowngradeFilter = ref(true)
+const redundantCleanupEnabled = ref(false)
+const redundantCleanupTrigger = ref<'scan_complete' | 'always'>('scan_complete')
+const redundantAction = ref('deprecate')
 const updateFlow = ref('github')
 const updateGithubMirror = ref('github')
 const updateProxyEnabled = ref(false)
@@ -1190,7 +1240,7 @@ function isTypePartiallySelected(groupId: string): boolean {
 const config = computed(() => {
   const proxyUrl = updateProxyEnabled.value ? `http://127.0.0.1:${updateProxyPort.value}` : ''
   return {
-    version: 8,
+    version: 9,
     trash_weapon_ids: notSelectedWeaponIds.value,
     treasure_essence_stats: treasureEssenceStats.value,
     treasure_essence_match_mode: 'all' as const,
@@ -1230,6 +1280,9 @@ const config = computed(() => {
     same_type_keep_best: sameTypeKeepBest.value,
     same_type_keep_best_mode: sameTypeKeepBestMode.value,
     same_type_non_downgrade_filter: sameTypeNonDowngradeFilter.value,
+    redundant_cleanup_enabled: redundantCleanupEnabled.value,
+    redundant_cleanup_trigger: redundantCleanupTrigger.value,
+    redundant_action: redundantAction.value,
     update_mirror: updateGithubMirror.value,
     update_flow: updateFlow.value,
     update_github_mirror: updateGithubMirror.value,
@@ -1277,6 +1330,9 @@ async function getConfig() {
     same_type_keep_best,
     same_type_keep_best_mode,
     same_type_non_downgrade_filter,
+    redundant_cleanup_enabled,
+    redundant_cleanup_trigger,
+    redundant_action,
     update_flow,
     update_github_mirror,
     update_mirror,
@@ -1319,6 +1375,9 @@ async function getConfig() {
   sameTypeKeepBest.value = same_type_keep_best !== false
   sameTypeKeepBestMode.value = same_type_keep_best_mode || 'sequential'
   sameTypeNonDowngradeFilter.value = same_type_non_downgrade_filter !== false
+  redundantCleanupEnabled.value = redundant_cleanup_enabled === true
+  redundantCleanupTrigger.value = redundant_cleanup_trigger || 'scan_complete'
+  redundantAction.value = redundant_action || 'deprecate'
   updateFlow.value = normalizeUpdateFlow(update_flow, update_mirror)
   updateGithubMirror.value = update_github_mirror || getLegacyGithubMirror(update_mirror)
   updateMirrorChyanResId.value = update_mirrorchyan_res_id || ''

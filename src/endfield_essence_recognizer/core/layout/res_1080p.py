@@ -98,3 +98,8 @@ class Resolution1080p(ResolutionProfile):
     def SCROLLBAR_CHECK_POS(self) -> Point:
         """滚动条检测位置，用于判断是否到达底部"""
         return Point(1453, 950)
+
+    @property
+    def SCROLLBAR_TOP_CHECK_POS(self) -> Point:
+        """滚动条顶部检测位置，用于判断是否回到第一页"""
+        return Point(1453, 130)

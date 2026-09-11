@@ -88,6 +88,16 @@ class KeepBestMode(StrEnum):
     """概率和值：按升级难度加权比较（等级越高越难升，权重越大）。"""
 
 
+class CleanupTriggerMode(StrEnum):
+    """冗余清理（实验性）的触发时机。"""
+
+    SCAN_COMPLETE = "scan_complete"
+    """仅在扫描到尾页（自然完成）时清理。"""
+
+    ALWAYS = "always"
+    """所有情况下均清理（含手动停止扫描）。"""
+
+
 class EssenceStats(BaseModel):
     """自定义宝藏基质属性组合，支持可选的显示名称。"""
 
@@ -111,7 +121,7 @@ class EssenceStats(BaseModel):
 
 
 class UserSetting(BaseModel):
-    _VERSION: ClassVar[int] = 8
+    _VERSION: ClassVar[int] = 9
     _same_type_treasure_counts: dict[tuple[str | None, ...], int] = PrivateAttr(
         default_factory=dict
     )
@@ -194,6 +204,15 @@ class UserSetting(BaseModel):
 
     same_type_keep_best_mode: KeepBestMode = KeepBestMode.SUM
     """留大弃小策略中等级比较的方式：依次比对 / 和值比对 / 概率和值。"""
+
+    redundant_cleanup_enabled: bool = False
+    """冗余清理（实验性）总开关；关闭时不产生任何记录与额外操作。"""
+
+    redundant_cleanup_trigger: CleanupTriggerMode = CleanupTriggerMode.SCAN_COMPLETE
+    """冗余清理的触发时机：仅在扫描到尾页时 / 所有情况下（含手动停止）。"""
+
+    redundant_action: Action = Action.DEPRECATE
+    """对判定为冗余的基质执行的操作（「基质操作规则」中「对于冗余基质」）。"""
 
     auto_page_flip: bool = True
     """扫描时是否自动翻页"""
@@ -335,6 +354,13 @@ class UserSetting(BaseModel):
                 entry["id"] = uuid4().hex
             seen.add(entry["id"])
 
+    @staticmethod
+    def _migrate_v8_to_v9(data: dict) -> None:
+        """v8 → v9: 添加冗余清理（实验性）设置，默认关闭。"""
+        data.setdefault("redundant_cleanup_enabled", False)
+        data.setdefault("redundant_cleanup_trigger", "scan_complete")
+        data.setdefault("redundant_action", "deprecate")
+
     # 迁移函数映射表：版本号 -> 迁移函数
     # 使用 __func__ 提取底层函数，避免存储 staticmethod 对象（兼容性更好）
     _MIGRATIONS: ClassVar[dict[int, Any]] = {
@@ -344,6 +370,7 @@ class UserSetting(BaseModel):
         5: _migrate_v5_to_v6.__func__,
         6: _migrate_v6_to_v7.__func__,
         7: _migrate_v7_to_v8.__func__,
+        8: _migrate_v8_to_v9.__func__,
     }
 
     @classmethod

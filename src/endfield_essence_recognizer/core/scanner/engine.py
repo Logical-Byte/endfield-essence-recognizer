@@ -1,6 +1,7 @@
 import itertools
 import math
 import threading
+from dataclasses import dataclass
 
 import numpy as np
 
@@ -27,17 +28,47 @@ from endfield_essence_recognizer.core.scanner.classifier import classify_essence
 from endfield_essence_recognizer.core.scanner.context import (
     ScannerContext,
 )
-from endfield_essence_recognizer.core.scanner.evaluate import _group_stat_key
+from endfield_essence_recognizer.core.scanner.evaluate import (
+    _group_stat_key,
+    _normalize_by_stat_type,
+)
 from endfield_essence_recognizer.core.scanner.log_builder import build_evaluation_result
 from endfield_essence_recognizer.core.scanner.models import (
+    ClaimKind,
     EssenceData,
     EssenceQuality,
+    EvaluationResult,
 )
 from endfield_essence_recognizer.core.window.adapter import InMemoryImageSource
 from endfield_essence_recognizer.game_data.models.v2 import StatType, WeaponId
-from endfield_essence_recognizer.schemas.user_setting import UserSetting
+from endfield_essence_recognizer.schemas.user_setting import (
+    CleanupTriggerMode,
+    SameTypeGroupMode,
+    UserSetting,
+)
 from endfield_essence_recognizer.services.user_setting_manager import UserSettingManager
 from endfield_essence_recognizer.utils.log import logger
+
+#: 冗余清理回页首手势的拖动距离（像素）。不随分辨率缩放：
+#: 过小的拖动可能无法被游戏识别。
+_SCROLL_TOP_DRAG_PX = 16
+
+
+@dataclass
+class _CleanupRecord:
+    """冗余清理（实验性）：单枚宝藏基质的物理记录。
+
+    仅记录本轮扫描判定为宝藏的基质；位置使用逻辑索引（页、行、列），
+    回访时结合本次会话的 ResolutionProfile 反查点击坐标。
+    """
+
+    page: int
+    row: int
+    col: int
+    levels: tuple[int, int, int]
+    fingerprint: str
+    owner: str
+    """最终归属武器 ID（级联可转移）。"""
 
 
 def check_scene(
@@ -289,6 +320,15 @@ class ScannerEngine:
         # 跟踪每个属性组合已跳过的同等级基质次数
         self._skip_exact_level_counts: dict[tuple, int] = {}
 
+        # 冗余清理（实验性）运行时状态
+        self._cleanup_active = False
+        self._cleanup_records: list[_CleanupRecord] = []
+        self._cleanup_designated: dict[str, list[_CleanupRecord]] = {}
+        self._cleanup_page_index = 1
+        self._cleanup_flipped_pages = False
+        self._cleanup_corrected_pages: set[int] = set()
+        self._cleanup_max_page = 1
+
         from endfield_essence_recognizer.utils.log import str_properties_and_attrs
 
         logger.opt(lazy=True).debug(
@@ -343,6 +383,274 @@ class ScannerEngine:
             for weapon_id in self.ctx.static_game_data.find_weapons_by_stats(*stat_key):
                 result[weapon_id] = count
         return result
+
+    # ── 冗余清理（实验性）──
+
+    def _init_cleanup_state(self, user_setting: UserSetting) -> None:
+        """按用户设置初始化本轮扫描的冗余清理状态（无副作用）。"""
+        self._cleanup_records = []
+        self._cleanup_designated = {}
+        self._cleanup_page_index = 1
+        self._cleanup_flipped_pages = False
+        self._cleanup_corrected_pages = set()
+        self._cleanup_max_page = 1
+        self._cleanup_active = (
+            user_setting.redundant_cleanup_enabled
+            and user_setting.same_type_treasure_limit_enabled
+            and user_setting.same_type_group_mode == SameTypeGroupMode.BY_WEAPON
+        )
+        if user_setting.redundant_cleanup_enabled and not self._cleanup_active:
+            logger.warning(
+                "冗余清理已开启，但当前配置暂不支持（需启用数量上限且按武器划分），本次跳过。"
+            )
+
+    def _get_essence_hash(self, data: EssenceData) -> str:
+        """
+        生成基质指纹用于去重检测。
+
+        使用稀有度、属性类型和属性等级作为指纹。
+        """
+        stats_str = "_".join(str(s) if s is not None else "?" for s in data.stats)
+        levels_str = "_".join(str(lv) if lv is not None else "?" for lv in data.levels)
+        return f"{data.rarity.value}_{stats_str}_{levels_str}"
+
+    def _record_cleanup_claim(
+        self,
+        claim_result,
+        data: EssenceData,
+        page: int,
+        row: int,
+        col: int,
+    ) -> None:
+        """按认领路径把一枚宝藏基质记入冗余清理的名额账本。
+
+        账本语义与 ClaimContext 的名额状态机一致：
+        - 新增名额 / 仅计数 / 存量跳过 → 追加为当前持有者；
+        - 升级替换 → 释放旧最优持有者，级联则把释放记录转移归属。
+        """
+        kind = claim_result.claim_kind
+        if kind not in (
+            ClaimKind.NEW_SLOT,
+            ClaimKind.UPGRADE,
+            ClaimKind.SKIP_EXISTING,
+            ClaimKind.COUNT_ONLY,
+        ):
+            return
+        owner = claim_result.owner_key
+        if not isinstance(owner, str) or not owner:
+            return
+
+        # 记录语义顺序（属性、副属性、技能）的等级，与 claimer 的
+        # released_levels / best_levels 对齐；识别位置顺序不保证等于语义顺序
+        _stat_key, _ordered_types, current_levels = _normalize_by_stat_type(
+            data.stats, data.stat_types, data.levels
+        )
+        record = _CleanupRecord(
+            page=page,
+            row=row,
+            col=col,
+            levels=current_levels,
+            fingerprint=self._get_essence_hash(data),
+            owner=owner,
+        )
+        self._cleanup_records.append(record)
+        self._cleanup_designated.setdefault(owner, []).append(record)
+
+        if kind == ClaimKind.UPGRADE:
+            released = self._release_cleanup_holder(owner, claim_result.released_levels)
+            if released is not None and claim_result.cascade_updated:
+                # 级联：释放的旧等级转移给目标武器（_cascade_freed 每次至多一个目标）
+                for target_weapon in claim_result.cascade_updated:
+                    released.owner = target_weapon
+                    self._cleanup_designated.setdefault(target_weapon, []).append(
+                        released
+                    )
+                    break
+
+    def _release_cleanup_holder(
+        self, owner: str, released_levels: tuple[int, int, int] | None
+    ) -> _CleanupRecord | None:
+        """释放 owner 当前最优持有者（最近追加的同等级记录）；找不到则返回 None。"""
+        if released_levels is None:
+            return None
+        records = self._cleanup_designated.get(owner)
+        if not records:
+            return None
+        for index in range(len(records) - 1, -1, -1):
+            if records[index].levels == released_levels:
+                return records.pop(index)
+        return None
+
+    def _cleanup_records_snapshot(self) -> int:
+        """返回当前账本记录数，供翻页过冲检测首行 pass 的回滚使用。"""
+        return len(self._cleanup_records)
+
+    def _cleanup_records_rollback(self, snapshot: int) -> None:
+        """回滚自快照以来新增的账本记录。
+
+        翻页过冲检测时，首行扫到的是上一页的重复基质，其位置记录会随
+        3/4 行校正失效；回滚后这些基质仍由上一页的正确位置记录覆盖。
+        designated 中残留的引用无副作用：判定只遍历 _cleanup_records。
+        """
+        del self._cleanup_records[snapshot:]
+
+    def _maybe_run_cleanup(
+        self,
+        scan_completed_naturally: bool,
+        stop_event: threading.Event,
+        user_setting: UserSetting,
+    ) -> None:
+        """按触发模式决定是否执行冗余清理。
+
+        手动停止触发的清理会先清除停止事件（清理过程中用户可再次按停止取消）。
+        """
+        if not self._cleanup_active:
+            return
+        if not scan_completed_naturally and (
+            user_setting.redundant_cleanup_trigger != CleanupTriggerMode.ALWAYS
+        ):
+            return
+        if not scan_completed_naturally:
+            stop_event.clear()
+        try:
+            self._run_cleanup(stop_event, user_setting)
+        except Exception:
+            logger.exception("冗余清理执行失败，已跳过。")
+
+    def _run_cleanup(
+        self, stop_event: threading.Event, user_setting: UserSetting
+    ) -> None:
+        """执行冗余清理：判定冗余 → 回第一页 → 逐页回访 → 按规则操作。"""
+        kept_ids = {
+            id(record)
+            for records in self._cleanup_designated.values()
+            for record in records
+        }
+        redundant = [
+            record for record in self._cleanup_records if id(record) not in kept_ids
+        ]
+        if not redundant:
+            logger.info("冗余清理：本轮扫描没有冗余基质。")
+            return
+
+        logger.info(f"冗余清理：发现 {len(redundant)} 枚冗余基质，开始清理。")
+        self._cleanup_max_page = max((record.page for record in redundant), default=1)
+        if not self._reset_to_first_page(stop_event):
+            # 放弃原因已由 _reset_to_first_page 记录；停止事件则补一条中断日志
+            if stop_event.is_set():
+                logger.info("冗余清理被中断。")
+            return
+        current_page = 1
+
+        by_page: dict[int, list[_CleanupRecord]] = {}
+        for record in redundant:
+            by_page.setdefault(record.page, []).append(record)
+
+        for page in sorted(by_page):
+            if not self._window_actions.target_is_active:
+                logger.warning("终末地窗口不在前台，中止冗余清理。")
+                return
+            if stop_event.is_set():
+                logger.info("冗余清理被中断。")
+                return
+            if not self._advance_to_page(current_page, page, stop_event, user_setting):
+                logger.warning("冗余清理：翻页失败，放弃本次清理。")
+                return
+            current_page = page
+            outcome = self._visit_cleanup_records(
+                by_page[page], stop_event, user_setting
+            )
+            if outcome == "page_mismatch":
+                logger.warning("冗余清理：整页指纹均不匹配，放弃本次清理。")
+                return
+            if outcome == "aborted":
+                return
+        logger.info("冗余清理：清理完成。")
+
+    def _visit_cleanup_records(
+        self,
+        page_records: list[_CleanupRecord],
+        stop_event: threading.Event,
+        user_setting: UserSetting,
+    ) -> str:
+        """回访一页内的冗余基质并按「对于冗余基质」规则操作。
+
+        Returns:
+            "done" 至少一枚指纹匹配 / "page_mismatch" 全部不匹配 /
+            "aborted" 窗口失焦或用户停止。
+        """
+        matched_any = False
+        for record in page_records:
+            if not self._window_actions.target_is_active:
+                logger.warning("终末地窗口不在前台，中止冗余清理。")
+                return "aborted"
+            if stop_event.is_set():
+                logger.info("冗余清理被中断。")
+                return "aborted"
+
+            position = f"第{record.page}页第{record.row + 1}行第{record.col + 1}列"
+            self._window_actions.click(
+                self._profile.essence_icon_x_list[record.col],
+                self._profile.essence_icon_y_list[record.row],
+            )
+            self._window_actions.wait(0.3)
+
+            data = recognize_essence(self._image_source, self.ctx, self._profile)
+            if (
+                data.abandon_label == AbandonStatusLabel.MAYBE_ABANDONED
+                or data.lock_label == LockStatusLabel.MAYBE_LOCKED
+            ):
+                logger.warning(f"[冗余清理] {position} 识别不确定，跳过。")
+                continue
+            if self._get_essence_hash(data) != record.fingerprint:
+                logger.warning(f"[冗余清理] {position} 指纹不匹配，跳过。")
+                continue
+
+            matched_any = True
+            levels_text = "/".join(str(level) for level in record.levels)
+            evaluation = EvaluationResult(
+                quality=EssenceQuality.TRASH,
+                log_message="",
+            )
+            actions = decide_actions(
+                data,
+                evaluation,
+                user_setting,
+                target_action=user_setting.redundant_action,
+            )
+            if not actions:
+                logger.info(
+                    f"[冗余清理] {position} 等级 {levels_text} 已符合目标状态，无需操作。"
+                )
+                continue
+
+            for action in actions:
+                if action.type == ActionType.CLICK_LOCK:
+                    pos = self._profile.LOCK_BUTTON_POS
+                    self._window_actions.click(pos.x, pos.y)
+                elif action.type == ActionType.CLICK_ABANDON:
+                    pos = self._profile.DEPRECATE_BUTTON_POS
+                    self._window_actions.click(pos.x, pos.y)
+                self._window_actions.wait(0.3)
+            logger.opt(colors=True).success(
+                f"[冗余清理] {position} 基质等级 <magenta>{levels_text}</> "
+                "已按「对于冗余基质」规则处理。"
+            )
+        return "done" if matched_any else "page_mismatch"
+
+    def _reset_to_first_page(self, stop_event: threading.Event) -> bool:
+        """回到第一页。基类无翻页：当前页即第一页。"""
+        return True
+
+    def _advance_to_page(
+        self,
+        current_page: int,
+        target_page: int,
+        stop_event: threading.Event,
+        user_setting: UserSetting,
+    ) -> bool:
+        """从当前页前进到目标页。基类无翻页：直接成功。"""
+        return True
 
     def _sort_weapons_by_priority(self, weapon_ids: set[str]) -> list[str]:
         """按优先级排序武器ID（高优先级在前）。
@@ -555,6 +863,9 @@ class ScannerEngine:
         self._total_essence_count = 0
         self._skip_exact_level_counts = {}
 
+        # 初始化冗余清理（实验性）状态
+        self._init_cleanup_state(user_setting)
+
         # 从 profile 初始化已有武器等级，用于同等级跳过判断
         self._init_weapon_levels_from_profile()
 
@@ -576,6 +887,9 @@ class ScannerEngine:
 
         icon_x_list = self._profile.essence_icon_x_list
         icon_y_list = self._profile.essence_icon_y_list
+
+        # 是否自然完成（未被打断）；冗余清理按此区分触发模式
+        scan_completed_naturally = False
 
         for (i, relative_y), (j, relative_x) in itertools.product(
             enumerate(icon_y_list), enumerate(icon_x_list)
@@ -646,6 +960,10 @@ class ScannerEngine:
             if evaluation.quality != EssenceQuality.SKIP:
                 self._total_essence_count += 1
 
+            # 冗余清理（实验性）：记录本轮判为宝藏的基质
+            if self._cleanup_active and evaluation.quality == EssenceQuality.TREASURE:
+                self._record_cleanup_claim(claim_result, data, page=1, row=i, col=j)
+
             # 同步认领结果到引擎
             for weapon_id, levels in claim_result.updated_levels.items():
                 self._weapon_essence_levels[weapon_id] = levels
@@ -693,6 +1011,10 @@ class ScannerEngine:
         else:
             # 扫描完成
             logger.info("基质扫描完成")
+            scan_completed_naturally = True
+
+        # 冗余清理（实验性）：按触发模式执行
+        self._maybe_run_cleanup(scan_completed_naturally, stop_event, user_setting)
 
         # 输出武器基质数量统计
         logger.info(f"共扫描了 {self._total_essence_count} 个基质。")
@@ -775,6 +1097,9 @@ class DraggableScannerEngine(ScannerEngine):
         # 重置已扫描基质指纹集合（用于翻页去重检测）
         self._scanned_essence_hashes: set[str] = set()
 
+        # 初始化冗余清理（实验性）状态
+        self._init_cleanup_state(user_setting)
+
         # 从 profile 初始化已有武器等级，用于同等级跳过判断
         self._init_weapon_levels_from_profile()
 
@@ -816,6 +1141,9 @@ class DraggableScannerEngine(ScannerEngine):
         is_last_page = False
         max_pages = 100  # 最大页数限制，防止无限循环
 
+        # 是否自然完成（扫到最后一页）；冗余清理按此区分触发模式
+        scan_completed_naturally = False
+
         # 初始化渐进拖动相关变量
         progressive_drag_distance = 0
         max_drag_distance = (
@@ -827,6 +1155,9 @@ class DraggableScannerEngine(ScannerEngine):
         while not stop_event.is_set() and page_count < max_pages:
             page_count += 1
             logger.info(f"开始扫描第 {page_count} 页基质...")
+            self._cleanup_page_index = page_count
+            if page_count > 1:
+                self._cleanup_flipped_pages = True
 
             if is_last_page and page_count > 1:
                 # 最后一页：根据渐进滚动距离计算需要跳过的行数
@@ -848,11 +1179,17 @@ class DraggableScannerEngine(ScannerEngine):
                     start_row_index=start_row,
                 )
             elif page_count > 1:
-                # 非首页：先扫描第一行（含操作），检测是否全部重复
+                # 非首页：先扫描第一行（含操作），检测是否全部重复。
+                # 冗余清理：过冲检测首行先不入账——若确认过冲并执行 3/4 行
+                # 校正，该 pass 的位置记录作废，回滚账本；该页校正后的网格
+                # 偏移记入 _cleanup_corrected_pages，清理导航时重放校正。
+                cleanup_snapshot = self._cleanup_records_snapshot()
                 all_dup = self._scan_single_row(
                     0, stop_event, user_setting, icon_x_list, icon_y_list
                 )
                 if all_dup and user_setting.fix_page_flip_overscroll:
+                    self._cleanup_records_rollback(cleanup_snapshot)
+                    self._cleanup_corrected_pages.add(page_count)
                     row_height = (
                         icon_y_list[1] - icon_y_list[0] if len(icon_y_list) > 1 else 0
                     )
@@ -889,6 +1226,7 @@ class DraggableScannerEngine(ScannerEngine):
             # 如果已经扫描完最后一页，停止扫描
             if is_last_page:
                 logger.info("已扫描完最后一页，基质扫描完成。")
+                scan_completed_naturally = True
                 break
 
             # 检查停止事件
@@ -928,6 +1266,10 @@ class DraggableScannerEngine(ScannerEngine):
 
         if page_count >= max_pages:
             logger.info(f"已达到最大页数限制 ({max_pages})，扫描停止。")
+
+        # 冗余清理（实验性）：按触发模式执行
+        self._maybe_run_cleanup(scan_completed_naturally, stop_event, user_setting)
+
         logger.info("基质扫描完成。")
 
         # 输出武器基质数量统计
@@ -1051,6 +1393,19 @@ class DraggableScannerEngine(ScannerEngine):
                 if evaluation.quality != EssenceQuality.SKIP:
                     self._total_essence_count += 1
 
+                # 冗余清理（实验性）：记录本轮判为宝藏的基质
+                if (
+                    self._cleanup_active
+                    and evaluation.quality == EssenceQuality.TREASURE
+                ):
+                    self._record_cleanup_claim(
+                        claim_result,
+                        data,
+                        page=self._cleanup_page_index,
+                        row=i,
+                        col=j,
+                    )
+
                 # 同步认领结果到引擎
                 for weapon_id, levels in claim_result.updated_levels.items():
                     self._weapon_essence_levels[weapon_id] = levels
@@ -1130,6 +1485,145 @@ class DraggableScannerEngine(ScannerEngine):
         except Exception as e:
             logger.warning(f"滚动条检测失败: {e}")
             return False
+
+    def _check_scrollbar_at_top(self) -> bool:
+        """检测滚动条是否已回到顶部（冗余清理回页首用）。
+
+        与 _check_scrollbar_at_bottom 对称：检测 SCROLLBAR_TOP_CHECK_POS
+        附近是否有亮点（滑块顶端），有则说明已滚动到第一页。
+        """
+        check_pos = self._profile.SCROLLBAR_TOP_CHECK_POS
+        try:
+            # 根据分辨率计算搜索半径（1080p 为 2，其他分辨率按比例缩放）
+            resolution = self._profile.RESOLUTION
+            scale_factor = resolution[1] / 1080
+            radius = max(1, round(2 * scale_factor))
+
+            roi = Region(
+                Point(check_pos.x - radius, check_pos.y - radius),
+                Point(check_pos.x + radius + 1, check_pos.y + radius + 1),
+            )
+            screenshot = self._image_source.screenshot(roi)
+
+            has_bright = bool(np.any(np.all(screenshot[:, :, :3] > 100, axis=2)))
+            if has_bright:
+                logger.debug(f"检测到滚动条顶部亮点 at ({check_pos.x}, {check_pos.y})")
+                return True
+
+            logger.debug(f"未检测到滚动条顶部亮点 at ({check_pos.x}, {check_pos.y})")
+            return False
+
+        except Exception as e:
+            logger.warning(f"滚动条顶部检测失败: {e}")
+            return False
+
+    def _reset_to_first_page(self, stop_event: threading.Event) -> bool:
+        """冗余清理：滚动条顶端 16px 上拖，配合顶部亮点检测回到第一页。
+
+        拖动距离恒定 16px（不随分辨率缩放，过小可能无法被游戏识别）；
+        起点随分辨率缩放。本轮从未翻页时无需确认（物理上就在第一页）；
+        翻过页但 3 次尝试仍未确认回到顶部时放弃清理——不能按假定页码
+        继续，指纹校验无法区分相同内容的基质。
+        """
+        if not self._cleanup_flipped_pages:
+            logger.debug("冗余清理：本轮未翻页，直接按第一页处理。")
+            return True
+
+        top = self._profile.SCROLLBAR_TOP_CHECK_POS
+        start = Point(top.x, top.y + _SCROLL_TOP_DRAG_PX)
+
+        if self._check_scrollbar_at_top():
+            logger.debug("冗余清理：已在第一页。")
+            return True
+
+        for attempt in range(1, 4):
+            if stop_event.is_set():
+                return False
+            self._window_actions.progressive_drag(
+                start.x,
+                start.y,
+                top.x,
+                top.y,
+                step=8,
+                max_drag=_SCROLL_TOP_DRAG_PX,
+            )
+            self._window_actions.wait(0.5)
+            if self._check_scrollbar_at_top():
+                logger.info(f"冗余清理：已回到第一页（第 {attempt} 次尝试）。")
+                return True
+
+        logger.warning("冗余清理：3 次尝试未确认回到第一页，放弃本次清理。")
+        return False
+
+    def _advance_to_page(
+        self,
+        current_page: int,
+        target_page: int,
+        stop_event: threading.Event,
+        user_setting: UserSetting,
+    ) -> bool:
+        """冗余清理：从当前页向前翻页到目标页，完全复用扫描时的翻页机件。
+
+        与扫描翻页保持同一路径（渐进拖动 + 行末检测 + 暗带对齐），保证
+        回访页的网格行偏移与扫描时一致；到达扫描期执行过过冲校正的页时
+        重放同参数的 3/4 行校正。提前检测到列表底部时，仅当目标页就是
+        最后扫描页（_cleanup_max_page）才视为到达，否则翻页序列已发散，
+        放弃本次清理。
+        """
+        drag_start = self._profile.DRAG_START_POS
+        drag_end = self._profile.DRAG_END_POS
+        scrollbar_pos = self._profile.SCROLLBAR_CHECK_POS
+        icon_x_list = self._profile.essence_icon_x_list
+        icon_y_list = self._profile.essence_icon_y_list
+
+        row_height = icon_y_list[1] - icon_y_list[0] if len(icon_y_list) > 1 else 0
+        max_drag_distance = (
+            int((drag_end.x - drag_start.x) ** 2 + (drag_end.y - drag_start.y) ** 2)
+            ** 0.5
+        )
+
+        pages_remaining = target_page - current_page
+        for _ in range(pages_remaining):
+            if stop_event.is_set() or not self._window_actions.target_is_active:
+                logger.warning("冗余清理：翻页中止。")
+                return False
+            logger.debug("冗余清理：向前翻页。")
+            _distance, is_last_page = self._progressive_drag(
+                drag_start,
+                drag_end,
+                scrollbar_pos,
+                stop_event,
+                step=50,
+                max_drag=max_drag_distance,
+                row_height=row_height,
+            )
+            if is_last_page:
+                # 提前到底：物理位置即最后扫描页，仅当目标页就是它时视为到达
+                if target_page != self._cleanup_max_page:
+                    logger.warning(
+                        f"冗余清理：翻页提前到达列表底部，但目标为第 {target_page} 页"
+                        f"（最后扫描页为第 {self._cleanup_max_page} 页），放弃本次清理。"
+                    )
+                    return False
+                break
+            if user_setting.fix_grid_row_offset_after_page_flip:
+                self._align_grid_rows_after_drag(drag_start, icon_x_list, icon_y_list)
+            if self._check_scrollbar_at_bottom(scrollbar_pos):
+                # 同提前到底处理：翻页后检测到底部
+                if target_page != self._cleanup_max_page:
+                    logger.warning(
+                        f"冗余清理：翻页后到达列表底部，但目标为第 {target_page} 页"
+                        f"（最后扫描页为第 {self._cleanup_max_page} 页），放弃本次清理。"
+                    )
+                    return False
+                break
+
+        # 重放扫描期对该页执行的过冲校正（3/4 行），保证与记录时的网格布局一致
+        if target_page in self._cleanup_corrected_pages:
+            if row_height > 0:
+                self._correct_overscroll(drag_start, round(row_height * 3 / 4))
+                logger.debug(f"冗余清理：回放第 {target_page} 页的过冲校正。")
+        return True
 
     def _progressive_drag(
         self,
@@ -1467,16 +1961,6 @@ class DraggableScannerEngine(ScannerEngine):
         )
         return result
 
-    def _get_essence_hash(self, data: EssenceData) -> str:
-        """
-        生成基质指纹用于去重检测。
-
-        使用稀有度、属性类型和属性等级作为指纹。
-        """
-        stats_str = "_".join(str(s) if s is not None else "?" for s in data.stats)
-        levels_str = "_".join(str(lv) if lv is not None else "?" for lv in data.levels)
-        return f"{data.rarity.value}_{stats_str}_{levels_str}"
-
     def _scan_single_row(
         self,
         row_index: int,
@@ -1570,6 +2054,16 @@ class DraggableScannerEngine(ScannerEngine):
 
             if evaluation.quality != EssenceQuality.SKIP:
                 self._total_essence_count += 1
+
+            # 冗余清理（实验性）：记录本轮判为宝藏的基质
+            if self._cleanup_active and evaluation.quality == EssenceQuality.TREASURE:
+                self._record_cleanup_claim(
+                    claim_result,
+                    data,
+                    page=self._cleanup_page_index,
+                    row=row_index,
+                    col=j,
+                )
 
             # 同步认领结果到引擎
             for weapon_id, levels in claim_result.updated_levels.items():

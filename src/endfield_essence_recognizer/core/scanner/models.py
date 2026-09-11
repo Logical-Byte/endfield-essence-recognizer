@@ -88,6 +88,32 @@ class RejectReason(StrEnum):
     """非降级原则过滤：无法升级任何匹配武器已有基质。"""
 
 
+class ClaimKind(StrEnum):
+    """认领路径类型。
+
+    供引擎的冗余清理做物理基质记录与"名额释放"判定：识别某枚物理基质
+    究竟占用了名额、替换了旧持有者、还是只是页面存量的实体被重扫。
+    """
+
+    NONE = "none"
+    """无认领（非宝藏 / 被拒绝 / 保留不落盘）。"""
+
+    NEW_SLOT = "new_slot"
+    """新增名额认领。"""
+
+    UPGRADE = "upgrade"
+    """替换已保存最优（释放旧持有者）。"""
+
+    SKIP_EXISTING = "skip_existing"
+    """存量跳过：宝藏页已记录基质的实体被重扫，不计新名额。"""
+
+    COUNT_ONLY = "count_only"
+    """仅计数（同等级占名额 / 等级不变同步计数）。"""
+
+    VIRTUAL_SLOT = "virtual_slot"
+    """按基质分组的虚拟槽认领（无武器归属）。"""
+
+
 @dataclass
 class ClassificationResult:
     """Layer 1 输出：纯分类结果，不含认领决策。"""
@@ -138,3 +164,12 @@ class ClaimResult:
 
     group_stat_key: tuple | None = None
     """属性组合 key（展示计数用）。"""
+
+    claim_kind: ClaimKind = ClaimKind.NONE
+    """认领路径类型，供冗余清理的物理基质记录与名额释放判定使用。"""
+
+    owner_key: str | tuple | None = None
+    """认领归属 key（武器 ID 或属性组合元组）；冗余判定按此分组。"""
+
+    released_levels: LevelTuple | None = None
+    """UPGRADE 时被释放的旧等级（用于定位被替换的物理基质记录）。"""
