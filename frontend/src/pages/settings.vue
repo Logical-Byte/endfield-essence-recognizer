@@ -713,8 +713,10 @@
 
           <h2>对于<span class="text-warning">冗余基质</span>，我们</h2>
           <p class="text-body-2 text-medium-emphasis mb-2">
-            扫描结束时会对比本轮记录，将同一武器名下多余的已锁定宝藏基质判定为冗余基质，
-            并按下方规则操作。需先开启「冗余清理（实验性）」，否则不产生任何记录与操作。
+            <strong>冗余基质：</strong
+            >本次扫描中，同一把武器在后面扫到了相同/更好等级，先扫到的那一枚为「冗余基质」。<br />
+            <strong>启用条件：</strong
+            >右侧开启「冗余清理（实验性）」，且分组为「按武器划分」并「开启数量上限」，否则不产生任何记录与操作。<br />
           </p>
           <v-row align="center">
             <v-col cols="12" md="6">
@@ -739,7 +741,7 @@
                 label="冗余清理（实验性）"
               />
               <v-alert border="start" class="mt-2 mb-4" type="info" variant="tonal">
-                开启后，扫描结束后会回到背包顶部逐页回访并清理冗余基质；关闭时扫描行为与之前完全一致。
+                启用后，将在扫描结束后回到顶部，逐页清理本次扫描中的冗余基质。
               </v-alert>
               <v-radio-group
                 v-model="redundantCleanupTrigger"
