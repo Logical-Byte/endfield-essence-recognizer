@@ -821,3 +821,341 @@ def test_init_same_type_levels_custom_entries_feed_stat_key_counts(
     assert ctx.treasure_counts["custom:abc"] == 1
     assert ctx.treasure_counts[("A", "B", "C")] == 1
     assert ctx.best_levels[("A", "B", "C")] == (2, 1, 1)
+
+
+# ---------------------------------------------------------------------------
+# 扫描前跳过已处理过的基质（skip_locked_essence / skip_deprecated_essence）
+# ---------------------------------------------------------------------------
+
+
+def _enable_skip_marked(mock_user_setting_manager, **flags) -> None:
+    """打开"扫描前跳过已处理过的基质"开关（默认两类都开）。
+
+    ``flags`` 用于只打开其中一类，例如
+    ``_enable_skip_marked(manager, skip_locked_essence=True)``。
+    """
+    settings = {"skip_locked_essence": True, "skip_deprecated_essence": True}
+    settings.update(flags)
+    mock_user_setting_manager.get_user_setting.return_value = UserSetting(**settings)
+
+
+def _build_scanner_engine(ctx, user_setting_manager, profile) -> ScannerEngine:
+    return ScannerEngine(
+        ctx=ctx,
+        image_source=MockImageSource(),
+        window_actions=MockWindowActions(),
+        user_setting_manager=user_setting_manager,
+        profile=profile,
+    )
+
+
+def test_skip_marked_detector_not_used_when_disabled(
+    mock_scanner_context, mock_user_setting_manager, mock_profile
+):
+    """开关关闭时不做任何检测，扫描行为与改动前一致。"""
+    window_actions = MockWindowActions()
+    engine = ScannerEngine(
+        ctx=mock_scanner_context,
+        image_source=MockImageSource(),
+        window_actions=window_actions,
+        user_setting_manager=mock_user_setting_manager,
+        profile=mock_profile,
+    )
+
+    engine.execute(threading.Event())
+
+    mock_scanner_context.skip_marker_detector.find_marked_cells.assert_not_called()
+    assert window_actions.click_calls == [(100, 200)]
+
+
+def test_skip_marked_locked_cell_is_not_clicked_nor_recognized(
+    mock_scanner_context, mock_user_setting_manager, mock_profile
+):
+    """开关打开且该格被标记（锁定 / 弃用）时，不点击也不做整屏识别。"""
+    _enable_skip_marked(mock_user_setting_manager)
+    mock_scanner_context.skip_marker_detector.find_marked_cells.return_value = {
+        (0, 0): SkipMarkerLabel.LOCKED
+    }
+
+    window_actions = MockWindowActions()
+    engine = _build_scanner_engine(
+        mock_scanner_context, mock_user_setting_manager, mock_profile
+    )
+    engine._window_actions = window_actions
+
+    engine.execute(threading.Event())
+
+    assert window_actions.click_calls == []
+    mock_scanner_context.attr_recognizer.recognize_roi.assert_not_called()
+
+
+def test_skip_marked_only_locked_cells_are_skipped(
+    mock_scanner_context, mock_user_setting_manager, mock_profile
+):
+    """同一页里只有被判定为已处理过的格子被跳过，其余照常扫描。"""
+    _enable_skip_marked(mock_user_setting_manager)
+    mock_profile.essence_icon_x_list = [100, 200]
+    mock_profile.essence_icon_y_list = [200, 300]
+    mock_scanner_context.skip_marker_detector.find_marked_cells.return_value = {
+        (0, 1): SkipMarkerLabel.LOCKED,
+        (1, 0): SkipMarkerLabel.DEPRECATED,
+    }
+
+    window_actions = MockWindowActions()
+    engine = _build_scanner_engine(
+        mock_scanner_context, mock_user_setting_manager, mock_profile
+    )
+    engine._window_actions = window_actions
+
+    engine.execute(threading.Event())
+
+    assert window_actions.click_calls == [(100, 200), (200, 300)]
+
+
+def test_skip_marked_falls_back_when_template_not_loaded(
+    mock_scanner_context, mock_user_setting_manager, mock_profile
+):
+    """模板未加载时安全降级：不检测、不跳过，全部照常扫描。"""
+    _enable_skip_marked(mock_user_setting_manager)
+    mock_scanner_context.skip_marker_detector.loaded = False
+    mock_scanner_context.skip_marker_detector.loaded_labels = set()
+
+    window_actions = MockWindowActions()
+    engine = _build_scanner_engine(
+        mock_scanner_context, mock_user_setting_manager, mock_profile
+    )
+    engine._window_actions = window_actions
+
+    engine.execute(threading.Event())
+
+    mock_scanner_context.skip_marker_detector.find_marked_cells.assert_not_called()
+    assert window_actions.click_calls == [(100, 200)]
+
+
+@pytest.mark.parametrize(
+    ("flags", "expected_clicks"),
+    [
+        ({"skip_locked_essence": True, "skip_deprecated_essence": False}, [(200, 200)]),
+        ({"skip_locked_essence": False, "skip_deprecated_essence": True}, [(100, 200)]),
+        ({"skip_locked_essence": True, "skip_deprecated_essence": True}, []),
+        (
+            {"skip_locked_essence": False, "skip_deprecated_essence": False},
+            [(100, 200), (200, 200)],
+        ),
+    ],
+)
+def test_skip_marked_switches_are_independent(
+    mock_scanner_context,
+    mock_user_setting_manager,
+    mock_profile,
+    flags,
+    expected_clicks,
+):
+    """锁定与弃用由各自开关独立控制，关闭的那类照常点击识别。"""
+    mock_profile.essence_icon_x_list = [100, 200]
+    mock_profile.essence_icon_y_list = [200]
+
+    # 第 1 列锁定、第 2 列弃用
+    mock_scanner_context.skip_marker_detector.find_marked_cells.return_value = {
+        (0, 0): SkipMarkerLabel.LOCKED,
+        (0, 1): SkipMarkerLabel.DEPRECATED,
+    }
+
+    if not any(flags.values()):
+        mock_user_setting_manager.get_user_setting.return_value = UserSetting(**flags)
+    else:
+        _enable_skip_marked(mock_user_setting_manager, **flags)
+
+    window_actions = MockWindowActions()
+    engine = _build_scanner_engine(
+        mock_scanner_context, mock_user_setting_manager, mock_profile
+    )
+    engine._window_actions = window_actions
+
+    engine.execute(threading.Event())
+
+    assert window_actions.click_calls == expected_clicks
+
+
+def test_skip_marked_ignores_label_whose_template_is_missing(
+    mock_scanner_context, mock_user_setting_manager, mock_profile
+):
+    """只启用弃用、但弃用模板缺失时：不跳过任何格子，也不误用锁定模板。"""
+    _enable_skip_marked(
+        mock_user_setting_manager,
+        skip_locked_essence=False,
+        skip_deprecated_essence=True,
+    )
+    mock_scanner_context.skip_marker_detector.loaded_labels = {SkipMarkerLabel.LOCKED}
+    mock_scanner_context.skip_marker_detector.find_marked_cells.return_value = {
+        (0, 0): SkipMarkerLabel.LOCKED,
+    }
+
+    window_actions = MockWindowActions()
+    engine = _build_scanner_engine(
+        mock_scanner_context, mock_user_setting_manager, mock_profile
+    )
+    engine._window_actions = window_actions
+
+    engine.execute(threading.Event())
+
+    # 检测到了锁定标记，但用户没开锁定开关 → 仍要点击
+    assert window_actions.click_calls == [(100, 200)]
+
+
+def _capture_loguru_messages(action) -> list[str]:
+    """捕获 loguru 日志消息。
+
+    本项目用 loguru（``utils.log``），pytest 的 ``caplog`` 只能抓标准 logging，
+    所以这里临时挂一个 sink。
+    """
+    from loguru import logger as loguru_logger
+
+    messages: list[str] = []
+    sink_id = loguru_logger.add(
+        lambda message: messages.append(message.record["message"]), level="DEBUG"
+    )
+    try:
+        action()
+    finally:
+        loguru_logger.remove(sink_id)
+    return messages
+
+
+def test_skip_marked_log_separates_locked_and_deprecated(
+    mock_scanner_context, mock_user_setting_manager, mock_profile
+):
+    """扫描日志里要把已锁定与已弃用的数量分开显示。"""
+    _enable_skip_marked(mock_user_setting_manager)
+    mock_profile.essence_icon_x_list = [100, 200, 300]
+    mock_profile.essence_icon_y_list = [200]
+    mock_scanner_context.skip_marker_detector.find_marked_cells.return_value = {
+        (0, 0): SkipMarkerLabel.LOCKED,
+        (0, 1): SkipMarkerLabel.DEPRECATED,
+        (0, 2): SkipMarkerLabel.DEPRECATED,
+    }
+
+    engine = _build_scanner_engine(
+        mock_scanner_context, mock_user_setting_manager, mock_profile
+    )
+
+    messages = _capture_loguru_messages(lambda: engine.execute(threading.Event()))
+
+    summary = [m for m in messages if "将跳过这些格子的点击与识别" in m]
+    assert summary, "未输出跳过汇总日志"
+    assert "1 个已锁定" in summary[0], summary[0]
+    assert "2 个已弃用" in summary[0], summary[0]
+    # 顺序固定为"已锁定、已弃用"，不随 set 迭代顺序变化
+    assert summary[0].index("已锁定") < summary[0].index("已弃用"), summary[0]
+
+    assert "第 1 行第 1 列的基质已锁定，跳过。" in messages
+    assert "第 1 行第 2 列的基质已弃用，跳过。" in messages
+    assert "第 1 行第 3 列的基质已弃用，跳过。" in messages
+
+
+def test_skip_marked_scan_single_row_skips_locked_columns(
+    mock_scanner_context, mock_user_setting_manager, mock_profile, monkeypatch
+):
+    """``_scan_single_row`` 跳过已标记的列，且跳过的格子不计入"全部重复"判定。"""
+    _enable_skip_marked(mock_user_setting_manager)
+    mock_profile.essence_icon_x_list = [100, 200]
+    mock_profile.essence_icon_y_list = [200]
+
+    window_actions = MockWindowActions()
+    engine = DraggableScannerEngine(
+        ctx=mock_scanner_context,
+        image_source=MockImageSource(),
+        window_actions=window_actions,
+        user_setting_manager=mock_user_setting_manager,
+        profile=mock_profile,
+    )
+
+    recognized: list[int] = []
+
+    # _scan_single_row 依赖 _execute_grid_scan 初始化的运行时状态
+    engine._scanned_essence_hashes = set()
+    from endfield_essence_recognizer.core.scanner.claimer import ClaimContext
+
+    engine._claim_context = ClaimContext(
+        [],
+        mock_user_setting_manager.get_user_setting(),
+        mock_scanner_context.static_game_data,
+    )
+
+    def fake_recognize_essence(image_source, ctx, profile):
+        recognized.append(len(recognized))
+        from endfield_essence_recognizer.core.scanner.models import EssenceData
+
+        return EssenceData(
+            stats=[None, None, None],
+            stat_types=[None, None, None],
+            levels=[None, None, None],
+            rarity=RarityLabel.OTHER,
+            abandon_label=AbandonStatusLabel.NOT_ABANDONED,
+            lock_label=LockStatusLabel.NOT_LOCKED,
+        )
+
+    monkeypatch.setattr(
+        scanner_engine_module, "recognize_essence", fake_recognize_essence
+    )
+
+    result = engine._scan_single_row(
+        0,
+        threading.Event(),
+        mock_user_setting_manager.get_user_setting(),
+        mock_profile.essence_icon_x_list,
+        mock_profile.essence_icon_y_list,
+        {(0, 0): SkipMarkerLabel.LOCKED},
+    )
+
+    # 只点击并识别了未锁定的第 2 列
+    assert window_actions.click_calls == [(200, 200)]
+    assert len(recognized) == 1
+    # 跳过的格子不参与重复判定
+    assert result is False
+
+
+def test_skip_marked_draggable_detects_once_per_page_and_after_overscroll(
+    mock_scanner_context, mock_user_setting_manager, mock_profile, monkeypatch
+):
+    """自动翻页时每页检测一次；过冲微调后内容位置改变，必须重新检测。"""
+    setting = UserSetting(
+        auto_page_flip=True,
+        skip_locked_essence=True,
+        skip_deprecated_essence=True,
+    )
+    setting.fix_page_flip_overscroll = True
+    mock_user_setting_manager.get_user_setting.return_value = setting
+
+    mock_profile.essence_icon_x_list = [100]
+    mock_profile.essence_icon_y_list = [200, 300]
+    mock_profile.DRAG_START_POS = Point(100, 900)
+    mock_profile.DRAG_END_POS = Point(100, 100)
+    mock_profile.SCROLLBAR_CHECK_POS = None
+
+    engine = DraggableScannerEngine(
+        ctx=mock_scanner_context,
+        image_source=MockImageSource(),
+        window_actions=MockWindowActions(),
+        user_setting_manager=mock_user_setting_manager,
+        profile=mock_profile,
+    )
+
+    monkeypatch.setattr(scanner_engine_module, "check_scene", lambda *_args: True)
+    monkeypatch.setattr(engine, "_scan_current_page", MagicMock())
+    monkeypatch.setattr(engine, "_scan_single_row", MagicMock(return_value=True))
+    monkeypatch.setattr(engine, "_correct_overscroll", MagicMock())
+    monkeypatch.setattr(
+        engine,
+        "_progressive_drag",
+        MagicMock(side_effect=[(800, False), (100, True)]),
+    )
+    monkeypatch.setattr(
+        engine, "_check_scrollbar_at_bottom", MagicMock(return_value=False)
+    )
+
+    engine.execute(threading.Event())
+
+    detector = mock_scanner_context.skip_marker_detector
+    # 第 1 页 1 次 + 第 2 页 1 次 + 过冲微调后重测 1 次 + 第 3 页（末页）1 次
+    assert detector.find_marked_cells.call_count == 4
