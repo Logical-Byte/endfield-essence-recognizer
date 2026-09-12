@@ -15,6 +15,7 @@ from endfield_essence_recognizer.core.recognition import (
     DeliverySceneRecognizer,
     LockStatusRecognizer,
     RarityRecognizer,
+    SkipMarkerDetector,
     UISceneRecognizer,
 )
 from endfield_essence_recognizer.core.scanner.context import (
@@ -43,6 +44,7 @@ from .recognition import (
     get_delivery_scene_recognizer_dep,
     get_lock_status_recognizer_dep,
     get_rarity_recognizer_dep,
+    get_skip_marker_detector_dep,
     get_ui_scene_recognizer_dep,
 )
 from .services import (
@@ -88,6 +90,7 @@ def get_scanner_context_dep(
     lock_status_recognizer: LockStatusRecognizer = Depends(
         get_lock_status_recognizer_dep
     ),
+    skip_marker_detector: SkipMarkerDetector = Depends(get_skip_marker_detector_dep),
     rarity_recognizer: RarityRecognizer = Depends(get_rarity_recognizer_dep),
     ui_scene_recognizer: UISceneRecognizer = Depends(get_ui_scene_recognizer_dep),
     static_data: StaticGameData = Depends(get_static_game_data),
@@ -100,6 +103,7 @@ def get_scanner_context_dep(
         attr_level_recognizer=attr_level_recognizer,
         abandon_status_recognizer=abandon_status_recognizer,
         lock_status_recognizer=lock_status_recognizer,
+        skip_marker_detector=skip_marker_detector,
         rarity_recognizer=rarity_recognizer,
         ui_scene_recognizer=ui_scene_recognizer,
         static_game_data=static_data,

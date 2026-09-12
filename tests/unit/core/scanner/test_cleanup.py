@@ -16,6 +16,8 @@ from endfield_essence_recognizer.core.recognition import (
     AttributeLevelRecognizer,
     LockStatusLabel,
     RarityLabel,
+    SkipMarkerDetector,
+    SkipMarkerLabel,
 )
 from endfield_essence_recognizer.core.recognition.tasks.ui import UISceneLabel
 from endfield_essence_recognizer.core.recognition.template_recognizer import (
@@ -128,6 +130,14 @@ def mock_scanner_context():
     rarity_recognizer = MagicMock(spec=TemplateRecognizer)
     rarity_recognizer.recognize_roi_fallback.return_value = (RarityLabel.OTHER, 0.9)
 
+    skip_marker_detector = MagicMock(spec=SkipMarkerDetector)
+    skip_marker_detector.loaded = True
+    skip_marker_detector.loaded_labels = {
+        SkipMarkerLabel.LOCKED,
+        SkipMarkerLabel.DEPRECATED,
+    }
+    skip_marker_detector.find_marked_cells.return_value = {}
+
     static_game_data = MagicMock()
     static_game_data.get_stat.return_value = MagicMock(name="TestStat")
     static_game_data.list_weapons.return_value = []
@@ -138,6 +148,7 @@ def mock_scanner_context():
         attr_level_recognizer=attr_level_recognizer,
         abandon_status_recognizer=abandon_status_recognizer,
         lock_status_recognizer=lock_status_recognizer,
+        skip_marker_detector=skip_marker_detector,
         rarity_recognizer=rarity_recognizer,
         ui_scene_recognizer=ui_scene_recognizer,
         static_game_data=static_game_data,
