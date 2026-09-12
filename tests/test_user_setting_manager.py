@@ -331,6 +331,8 @@ def test_user_setting_schema_stability():
         "auto_page_flip",
         "fix_grid_row_offset_after_page_flip",
         "fix_page_flip_overscroll",
+        "skip_locked_essence",
+        "skip_deprecated_essence",
         "update_mirror",
         "update_flow",
         "update_github_mirror",
@@ -539,6 +541,29 @@ def test_migration_sets_all_required_fields():
     assert migrated.redundant_cleanup_enabled is False
     assert migrated.redundant_cleanup_trigger == "scan_complete"
     assert migrated.redundant_action == "deprecate"
+
+    # v9→v10 补充的字段（扫描前跳过已处理过的基质，默认关闭）
+    assert migrated.skip_locked_essence is False
+    assert migrated.skip_deprecated_essence is False
+
+
+def test_migrate_v9_to_v10_adds_skip_marked_essence_fields():
+    """v9 → v10: 补充"扫描前跳过已处理过的基质"开关，默认关闭，已有字段保留。"""
+    v9_config = {
+        "version": 9,
+        "trash_weapon_ids": ["w1"],
+        "redundant_cleanup_enabled": True,
+        "redundant_cleanup_trigger": "always",
+    }
+
+    migrated = UserSetting.migrate_from_old_version(v9_config)
+
+    assert migrated.version == UserSetting._VERSION
+    assert migrated.trash_weapon_ids == ["w1"]
+    assert migrated.redundant_cleanup_enabled is True
+    assert migrated.redundant_cleanup_trigger == "always"
+    assert migrated.skip_locked_essence is False
+    assert migrated.skip_deprecated_essence is False
 
 
 def test_migrate_v8_to_v9_adds_redundant_cleanup_fields():

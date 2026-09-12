@@ -36,6 +36,10 @@ from .tasks.essence_rarity import (
     RarityLabel,
     build_rarity_profile,
 )
+from .tasks.skip_marker import (
+    SkipMarkerDetector,
+    SkipMarkerLabel,
+)
 from .tasks.ui import (
     UISceneLabel,
     build_ui_scene_profile,
@@ -130,6 +134,18 @@ def prepare_rarity_recognizer() -> RarityRecognizer:
     return HueRecognizer("RarityRecognizer", build_rarity_profile())
 
 
+@lru_cache
+def prepare_skip_marker_detector() -> SkipMarkerDetector:
+    """构造并返回卡片状态标记检测器实例，并加载其模板。
+
+    用于在**点击之前**判断卡片是否已被用户处理过（锁定 / 弃用），
+    扫描时跳过这些基质。
+    """
+    detector = SkipMarkerDetector()
+    detector.load_templates()
+    return detector
+
+
 __all__ = [
     "AbandonStatusLabel",
     "AbandonStatusRecognizer",
@@ -149,6 +165,8 @@ __all__ = [
     "RarityLabel",
     "RarityRecognizer",
     "RecognitionProfile",
+    "SkipMarkerDetector",
+    "SkipMarkerLabel",
     "TemplateDescriptor",
     "TemplateRecognizer",
     "UISceneLabel",
@@ -161,5 +179,6 @@ __all__ = [
     "prepare_lock_status_recognizer",
     "prepare_rarity_recognizer",
     "prepare_recognizer",
+    "prepare_skip_marker_detector",
     "prepare_ui_scene_recognizer",
 ]

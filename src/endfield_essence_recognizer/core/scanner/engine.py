@@ -15,6 +15,7 @@ from endfield_essence_recognizer.core.recognition import (
     AbandonStatusLabel,
     LockStatusLabel,
     RarityLabel,
+    SkipMarkerLabel,
 )
 from endfield_essence_recognizer.core.recognition.tasks.ui import UISceneLabel
 from endfield_essence_recognizer.core.scanner.action_logic import (
@@ -99,6 +100,66 @@ def check_scene(
         )
         return False
     return True
+
+
+def detect_skipped_cells(
+    image_source: ImageSource,
+    ctx: ScannerContext,
+    profile: ResolutionProfile,
+    user_setting: UserSetting,
+) -> dict[tuple[int, int], SkipMarkerLabel]:
+    """整页扫描前检测哪些格子要跳过，以及跳过的原因（0 起算的 ``(row, col)``）。
+
+    用户已处理过的卡片会在未点开时带有状态角标：锁定（= 保留）或弃用
+    （= 作为养成材料）。两者渲染在卡片的同一位置，可以整页截图后一次性识别，
+    从而跳过这些格子的"点击 → 整屏识别"流程。
+
+    锁定与弃用分别由 ``user_setting.skip_locked_essence`` /
+    ``skip_deprecated_essence`` 控制，两个开关都关闭时不截图、不检测。
+
+    检测不确定的格子（分数处于模糊区间、区域越界、模板未加载）一律按未标记
+    处理，由调用方回退到点击后识别 —— 即本函数只可能少跳过，不会错跳过。
+    """
+    enabled_labels: set[SkipMarkerLabel] = set()
+    if user_setting.skip_locked_essence:
+        enabled_labels.add(SkipMarkerLabel.LOCKED)
+    if user_setting.skip_deprecated_essence:
+        enabled_labels.add(SkipMarkerLabel.DEPRECATED)
+    if not enabled_labels:
+        return {}
+
+    detector = ctx.skip_marker_detector
+    usable_labels = detector.loaded_labels & enabled_labels
+    if not usable_labels:
+        logger.warning("卡片状态标记模板未加载，本次扫描不会跳过已锁定或已弃用的基质。")
+        return {}
+    if usable_labels != enabled_labels:
+        missing = "、".join(
+            label.value for label in sorted(enabled_labels - usable_labels)
+        )
+        logger.warning(f"{missing} 的标记模板未加载，本次扫描不会跳过该类基质。")
+
+    marked_cells = detector.find_marked_cells(
+        image_source.screenshot(),
+        profile.essence_icon_x_list,
+        profile.essence_icon_y_list,
+    )
+    skipped_cells = {
+        cell: label for cell, label in marked_cells.items() if label in usable_labels
+    }
+    if skipped_cells:
+        counts = {
+            label: sum(1 for value in skipped_cells.values() if value is label)
+            for label in usable_labels
+        }
+        # 固定按"已锁定、已弃用"的顺序输出，不随 set 迭代顺序变化
+        summary = "、".join(
+            f"{counts[label]} 个{label.value}"
+            for label in (SkipMarkerLabel.LOCKED, SkipMarkerLabel.DEPRECATED)
+            if counts.get(label)
+        )
+        logger.info(f"检测到 {summary}的基质，将跳过这些格子的点击与识别。")
+    return skipped_cells
 
 
 def recognize_essence(
@@ -888,6 +949,11 @@ class ScannerEngine:
         icon_x_list = self._profile.essence_icon_x_list
         icon_y_list = self._profile.essence_icon_y_list
 
+        # 扫描前检测已锁定基质（开关关闭时为空集）
+        skipped_cells = detect_skipped_cells(
+            self._image_source, self.ctx, self._profile, user_setting
+        )
+
         # 是否自然完成（未被打断）；冗余清理按此区分触发模式
         scan_completed_naturally = False
 
@@ -901,6 +967,13 @@ class ScannerEngine:
             if stop_event.is_set():
                 logger.info("基质扫描被中断。")
                 break
+
+            marker_label = skipped_cells.get((i, j))
+            if marker_label is not None:
+                logger.debug(
+                    f"第 {i + 1} 行第 {j + 1} 列的基质{marker_label.value}，跳过。"
+                )
+                continue
 
             logger.info(f"正在扫描第 {i + 1} 行第 {j + 1} 列的基质...")
 
@@ -1159,6 +1232,11 @@ class DraggableScannerEngine(ScannerEngine):
             if page_count > 1:
                 self._cleanup_flipped_pages = True
 
+            # 本页开始扫描前检测已锁定基质（翻页拖动已完成，页面内容已稳定）
+            skipped_cells = detect_skipped_cells(
+                self._image_source, self.ctx, self._profile, user_setting
+            )
+
             if is_last_page and page_count > 1:
                 # 最后一页：根据渐进滚动距离计算需要跳过的行数
                 row_height = (
@@ -1177,6 +1255,7 @@ class DraggableScannerEngine(ScannerEngine):
                     icon_x_list,
                     icon_y_list,
                     start_row_index=start_row,
+                    skipped_cells=skipped_cells,
                 )
             elif page_count > 1:
                 # 非首页：先扫描第一行（含操作），检测是否全部重复。
@@ -1185,7 +1264,7 @@ class DraggableScannerEngine(ScannerEngine):
                 # 偏移记入 _cleanup_corrected_pages，清理导航时重放校正。
                 cleanup_snapshot = self._cleanup_records_snapshot()
                 all_dup = self._scan_single_row(
-                    0, stop_event, user_setting, icon_x_list, icon_y_list
+                    0, stop_event, user_setting, icon_x_list, icon_y_list, skipped_cells
                 )
                 if all_dup and user_setting.fix_page_flip_overscroll:
                     self._cleanup_records_rollback(cleanup_snapshot)
@@ -1198,8 +1277,17 @@ class DraggableScannerEngine(ScannerEngine):
                     logger.info(
                         "检测到第一行为重复基质，已向上微调 3/4 行，重新扫描第一行"
                     )
+                    # 微调改变了页面内容位置，锁定角标随之移动，必须重新检测
+                    skipped_cells = detect_skipped_cells(
+                        self._image_source, self.ctx, self._profile, user_setting
+                    )
                     self._scan_single_row(
-                        0, stop_event, user_setting, icon_x_list, icon_y_list
+                        0,
+                        stop_event,
+                        user_setting,
+                        icon_x_list,
+                        icon_y_list,
+                        skipped_cells,
                     )
                 elif all_dup:
                     logger.debug(
@@ -1212,6 +1300,7 @@ class DraggableScannerEngine(ScannerEngine):
                     icon_x_list,
                     icon_y_list,
                     start_row_index=1,
+                    skipped_cells=skipped_cells,
                 )
             else:
                 # 首页：从第一行开始扫描
@@ -1221,6 +1310,7 @@ class DraggableScannerEngine(ScannerEngine):
                     icon_x_list,
                     icon_y_list,
                     start_row_index=0,
+                    skipped_cells=skipped_cells,
                 )
 
             # 如果已经扫描完最后一页，停止扫描
@@ -1315,13 +1405,19 @@ class DraggableScannerEngine(ScannerEngine):
         icon_x_list: list[int],
         icon_y_list: list[int],
         start_row_index: int = 0,
+        skipped_cells: dict[tuple[int, int], SkipMarkerLabel] | None = None,
     ) -> None:
         """
         扫描当前页的所有基质。
 
         Args:
             start_row_index: 开始扫描的行索引（0表示从第一行开始）
+            skipped_cells: 本页要跳过的格子及其标记类型
+                （0 起算的 ``(row, col)`` -> ``SkipMarkerLabel``），
+                这些格子直接跳过点击与识别。
         """
+        skipped_cells = skipped_cells or {}
+
         # 从指定行开始扫描
         rows_to_scan = list(enumerate(icon_y_list))[start_row_index:]
 
@@ -1334,6 +1430,13 @@ class DraggableScannerEngine(ScannerEngine):
                 if stop_event.is_set():
                     logger.info("基质扫描被中断。")
                     return
+
+                marker_label = skipped_cells.get((i, j))
+                if marker_label is not None:
+                    logger.debug(
+                        f"第 {i + 1} 行第 {j + 1} 列的基质{marker_label.value}，跳过。"
+                    )
+                    continue
 
                 logger.info(f"正在扫描第 {i + 1} 行第 {j + 1} 列的基质...")
 
@@ -1968,6 +2071,7 @@ class DraggableScannerEngine(ScannerEngine):
         user_setting: UserSetting,
         icon_x_list: list[int],
         icon_y_list: list[int],
+        skipped_cells: dict[tuple[int, int], SkipMarkerLabel] | None = None,
     ) -> bool:
         """
         扫描指定的单行基质（含识别、评估、操作），并返回是否全部是已扫描过的基质。
@@ -1978,10 +2082,15 @@ class DraggableScannerEngine(ScannerEngine):
             user_setting: 用户设置
             icon_x_list: 列 X 坐标列表
             icon_y_list: 行 Y 坐标列表
+            skipped_cells: 本页要跳过的格子及其标记类型
+                （0 起算的 ``(row, col)`` -> ``SkipMarkerLabel``）。
+                被跳过的格子不参与"是否全部重复"的判定。
 
         Returns:
             True 如果该行所有可识别基质都是已扫描过的（全部重复），False 否则
         """
+        skipped_cells = skipped_cells or {}
+
         y = icon_y_list[row_index]
         found_any = False
         all_duplicates = True
@@ -1994,6 +2103,13 @@ class DraggableScannerEngine(ScannerEngine):
             if stop_event.is_set():
                 logger.info("基质扫描被中断。")
                 return False
+
+            marker_label = skipped_cells.get((row_index, j))
+            if marker_label is not None:
+                logger.debug(
+                    f"第 {row_index + 1} 行第 {j + 1} 列的基质{marker_label.value}，跳过。"
+                )
+                continue
 
             logger.info(f"正在扫描第 {row_index + 1} 行第 {j + 1} 列的基质...")
 

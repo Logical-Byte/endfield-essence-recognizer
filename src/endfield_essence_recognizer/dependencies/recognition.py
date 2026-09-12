@@ -8,6 +8,7 @@ from endfield_essence_recognizer.core.recognition import (
     DeliverySceneRecognizer,
     LockStatusRecognizer,
     RarityRecognizer,
+    SkipMarkerDetector,
     UISceneRecognizer,
     prepare_abandon_status_recognizer,
     prepare_attribute_level_recognizer,
@@ -16,6 +17,7 @@ from endfield_essence_recognizer.core.recognition import (
     prepare_delivery_scene_recognizer,
     prepare_lock_status_recognizer,
     prepare_rarity_recognizer,
+    prepare_skip_marker_detector,
     prepare_ui_scene_recognizer,
 )
 from endfield_essence_recognizer.dependencies.services import get_static_game_data
@@ -86,3 +88,11 @@ def get_rarity_recognizer_dep() -> RarityRecognizer:
     Get the default rarity Recognizer instance.
     """
     return prepare_rarity_recognizer()
+
+
+@lru_cache
+def get_skip_marker_detector_dep() -> SkipMarkerDetector:
+    """
+    Get the default skip marker Detector instance.
+    """
+    return prepare_skip_marker_detector()

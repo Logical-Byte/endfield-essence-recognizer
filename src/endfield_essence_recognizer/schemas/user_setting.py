@@ -121,7 +121,7 @@ class EssenceStats(BaseModel):
 
 
 class UserSetting(BaseModel):
-    _VERSION: ClassVar[int] = 9
+    _VERSION: ClassVar[int] = 10
     _same_type_treasure_counts: dict[tuple[str | None, ...], int] = PrivateAttr(
         default_factory=dict
     )
@@ -220,6 +220,10 @@ class UserSetting(BaseModel):
     """是否启用翻页后网格行偏移修复（实验性质）"""
     fix_page_flip_overscroll: bool = False
     """是否启用翻页滚动过量修正（实验性质）"""
+    skip_locked_essence: bool = False
+    """是否在扫描前识别卡片的锁定角标，跳过已锁定的基质（不点击、不识别）。"""
+    skip_deprecated_essence: bool = False
+    """是否在扫描前识别卡片的弃用角标，跳过已弃用的基质（不点击、不识别）。"""
 
     update_mirror: str = "github"
     """兼容旧字段：GitHub 下载镜像源。"""
@@ -361,6 +365,13 @@ class UserSetting(BaseModel):
         data.setdefault("redundant_cleanup_trigger", "scan_complete")
         data.setdefault("redundant_action", "deprecate")
 
+    @staticmethod
+    def _migrate_v9_to_v10(data: dict) -> None:
+        """v9 → v10: 添加"扫描前跳过已处理过的基质"开关（锁定 / 弃用各一个），
+        默认关闭。"""
+        data.setdefault("skip_locked_essence", False)
+        data.setdefault("skip_deprecated_essence", False)
+
     # 迁移函数映射表：版本号 -> 迁移函数
     # 使用 __func__ 提取底层函数，避免存储 staticmethod 对象（兼容性更好）
     _MIGRATIONS: ClassVar[dict[int, Any]] = {
@@ -371,6 +382,7 @@ class UserSetting(BaseModel):
         6: _migrate_v6_to_v7.__func__,
         7: _migrate_v7_to_v8.__func__,
         8: _migrate_v8_to_v9.__func__,
+        9: _migrate_v9_to_v10.__func__,
     }
 
     @classmethod
