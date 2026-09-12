@@ -156,6 +156,14 @@ class SkipMarkerDetector:
         """
         x0 = center.x + _SEARCH_OFFSET_X
         y0 = center.y + _SEARCH_OFFSET_Y
+        # 负索引会从图像末尾反向切片，取到无关像素；必须显式拒绝越界窗口
+        if (
+            x0 < 0
+            or y0 < 0
+            or x0 + _SEARCH_WIDTH > frame.shape[1]
+            or y0 + _SEARCH_HEIGHT > frame.shape[0]
+        ):
+            return None, _UNDETERMINED_SCORE
         patch = frame[y0 : y0 + _SEARCH_HEIGHT, x0 : x0 + _SEARCH_WIDTH]
 
         best_label: SkipMarkerLabel | None = None

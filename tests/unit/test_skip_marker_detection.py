@@ -53,6 +53,7 @@ from endfield_essence_recognizer.core.recognition.tasks.skip_marker import (
     _SEARCH_OFFSET_X,
     _SEARCH_OFFSET_Y,
     _SEARCH_WIDTH,
+    _UNDETERMINED_SCORE,
     SkipMarkerDetector,
     SkipMarkerLabel,
 )
@@ -448,6 +449,29 @@ class TestSkipMarkerDetector:
                 page, profile.essence_icon_x_list, profile.essence_icon_y_list
             )
             == {}
+        )
+
+    def test_window_beyond_top_left_edge_is_undetermined(
+        self, detector: SkipMarkerDetector
+    ) -> None:
+        """搜索窗超出图像左/上边缘时必须返回"无法判断"，不能靠负索引取到末尾像素。"""
+        profile = _profile_for(*SCREENSHOT_SIZE)
+        page = _synthetic_page(profile, set(), _lock_template())
+        height, width = page.shape[:2]
+        # 让 x0 / y0 均为负且绝对值大于窗口尺寸，负索引切片会落到图像右下角
+        center = Point(
+            -_SEARCH_OFFSET_X - _SEARCH_WIDTH - 5,
+            -_SEARCH_OFFSET_Y - _SEARCH_HEIGHT - 5,
+        )
+        wrapped_x0 = width + center.x + _SEARCH_OFFSET_X
+        wrapped_y0 = height + center.y + _SEARCH_OFFSET_Y
+        page[wrapped_y0 : wrapped_y0 + 20, wrapped_x0 : wrapped_x0 + 20] = (
+            _lock_template()
+        )
+
+        assert detector.score_cell_by_label(page, center) == (
+            None,
+            _UNDETERMINED_SCORE,
         )
 
     def test_marker_outside_the_search_window_is_not_detected(
