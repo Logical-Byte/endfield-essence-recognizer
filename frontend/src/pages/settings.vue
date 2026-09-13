@@ -631,10 +631,14 @@
           <v-divider class="my-4" />
 
           <h2>扫描前跳过已处理过的基质</h2>
-          <v-alert border="start" class="mb-4" type="info" variant="tonal">
-            启用后，每页开始扫描前会先识别卡片左下角的状态角标，被识别的基质直接跳过（不点击、不识别），
-            从而节省扫描时间。识别不确定的卡片仍按原流程点击后判定，不会漏扫。
-          </v-alert>
+          <v-alert border="start" class="mb-4" type="warning" variant="tonal">
+            被跳过的基质不会被重新识别和判定：不占用数量上限、不参与冗余清理，
+            也不会被「宝藏基质、养成材料、冗余清理」规则解锁或取消弃用。
+            </v-alert>
+            <v-alert border="start" class="mt-2" type="info" variant="tonal">
+            首次使用本工具、或刚修改过「设置」判定、「宝藏基质」数据时，
+            请先关闭这两个开关完整扫描一遍，后续再开启以加速扫描。
+            </v-alert>
           <v-switch
             v-model="skipLockedEssence"
             color="primary"
@@ -642,9 +646,6 @@
             hide-details
             label="跳过已锁定的基质"
           />
-          <v-alert border="start" class="mt-2 mb-4" type="info" variant="tonal">
-            已锁定的基质是你决定保留的，扫描时可以安全跳过。
-          </v-alert>
           <v-switch
             v-model="skipDeprecatedEssence"
             color="primary"
@@ -652,8 +653,8 @@
             hide-details
             label="跳过已弃用的基质"
           />
-          <v-alert border="start" class="mt-2 mb-4" type="info" variant="tonal">
-            已弃用的基质是你标记为养成材料的，扫描时可以安全跳过。
+          <v-alert border="start" class="mb-2" type="info" variant="tonal">
+            启用后，每页开始扫描前会先识别基质左下角的角标，从而节省扫描时间。
           </v-alert>
 
           <h2>扫描时自动翻页</h2>

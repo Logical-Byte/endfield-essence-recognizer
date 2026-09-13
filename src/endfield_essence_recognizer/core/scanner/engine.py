@@ -1,6 +1,7 @@
 import itertools
 import math
 import threading
+from collections import Counter
 from dataclasses import dataclass
 
 import numpy as np
@@ -378,6 +379,12 @@ class ScannerEngine:
         self._weapon_essence_counts: dict[WeaponId, int] = {}
         self._weapon_essence_levels: dict[WeaponId, tuple[int, int, int]] = {}
         self._total_essence_count: int = 0
+        # 按（品质, 稀有度）统计计入总数的基质，供扫描收尾汇总
+        self._quality_rarity_counts: Counter[tuple[EssenceQuality, RarityLabel]] = (
+            Counter()
+        )
+        # 按角标类型统计扫描前直接跳过的格子数
+        self._skipped_marker_counts: Counter[SkipMarkerLabel] = Counter()
         # 跟踪每个属性组合已跳过的同等级基质次数
         self._skip_exact_level_counts: dict[tuple, int] = {}
 
@@ -446,6 +453,42 @@ class ScannerEngine:
         return result
 
     # ── 冗余清理（实验性）──
+
+    def _log_scan_summary(self) -> None:
+        """输出扫描收尾的四行汇总。
+
+        依次为：计入总数的基质数、按稀有度的分布、宝藏与养成材料各自的
+        稀有度分布（无瑕 / 高纯，配色与识别日志一致）、按角标类型拆分的跳过数。
+        """
+        counts = self._quality_rarity_counts
+
+        def rarity_total(rarity: RarityLabel) -> int:
+            return sum(
+                count for (_quality, label), count in counts.items() if label == rarity
+            )
+
+        def colored_pair(quality: EssenceQuality) -> str:
+            five_star = counts[(quality, RarityLabel.FIVE)]
+            four_star = counts[(quality, RarityLabel.FOUR)]
+            return f"<yellow>{five_star}</>/<magenta>{four_star}</>"
+
+        logger.info(f"共扫描了 {self._total_essence_count} 个基质。")
+        logger.info(
+            f"无瑕基质 {rarity_total(RarityLabel.FIVE)} 个，"
+            f"高纯基质 {rarity_total(RarityLabel.FOUR)} 个。"
+        )
+        logger.opt(colors=True).info(
+            f"宝藏基质 {colored_pair(EssenceQuality.TREASURE)} 个、"
+            f"养成材料 {colored_pair(EssenceQuality.TRASH)} 个。"
+        )
+        skipped_counts = self._skipped_marker_counts
+        breakdown = "、".join(
+            f"{label.value} {skipped_counts[label]}"
+            for label in (SkipMarkerLabel.LOCKED, SkipMarkerLabel.DEPRECATED)
+            if skipped_counts[label]
+        )
+        suffix = f"（{breakdown}）" if breakdown else ""
+        logger.info(f"跳过 {sum(skipped_counts.values())} 个基质{suffix}。")
 
     def _init_cleanup_state(self, user_setting: UserSetting) -> None:
         """按用户设置初始化本轮扫描的冗余清理状态（无副作用）。"""
@@ -922,6 +965,8 @@ class ScannerEngine:
         self._weapon_essence_counts = {}
         self._weapon_essence_levels = {}
         self._total_essence_count = 0
+        self._quality_rarity_counts = Counter()
+        self._skipped_marker_counts = Counter()
         self._skip_exact_level_counts = {}
 
         # 初始化冗余清理（实验性）状态
@@ -970,6 +1015,7 @@ class ScannerEngine:
 
             marker_label = skipped_cells.get((i, j))
             if marker_label is not None:
+                self._skipped_marker_counts[marker_label] += 1
                 logger.debug(
                     f"第 {i + 1} 行第 {j + 1} 列的基质{marker_label.value}，跳过。"
                 )
@@ -1032,6 +1078,7 @@ class ScannerEngine:
             # 统计基质总数（跳过 SKIP 的基质）
             if evaluation.quality != EssenceQuality.SKIP:
                 self._total_essence_count += 1
+                self._quality_rarity_counts[(evaluation.quality, data.rarity)] += 1
 
             # 冗余清理（实验性）：记录本轮判为宝藏的基质
             if self._cleanup_active and evaluation.quality == EssenceQuality.TREASURE:
@@ -1090,7 +1137,7 @@ class ScannerEngine:
         self._maybe_run_cleanup(scan_completed_naturally, stop_event, user_setting)
 
         # 输出武器基质数量统计
-        logger.info(f"共扫描了 {self._total_essence_count} 个基质。")
+        self._log_scan_summary()
         display_counts = self._get_display_essence_counts()
         if display_counts:
             # 按 稀有度降序 武器ID 排序
@@ -1166,6 +1213,8 @@ class DraggableScannerEngine(ScannerEngine):
         self._weapon_essence_counts = {}
         self._weapon_essence_levels = {}
         self._total_essence_count = 0
+        self._quality_rarity_counts = Counter()
+        self._skipped_marker_counts = Counter()
         self._skip_exact_level_counts = {}
         # 重置已扫描基质指纹集合（用于翻页去重检测）
         self._scanned_essence_hashes: set[str] = set()
@@ -1363,7 +1412,7 @@ class DraggableScannerEngine(ScannerEngine):
         logger.info("基质扫描完成。")
 
         # 输出武器基质数量统计
-        logger.info(f"共扫描了 {self._total_essence_count} 个基质。")
+        self._log_scan_summary()
         display_counts = self._get_display_essence_counts()
         if display_counts:
             # 按 稀有度降序 武器ID 排序
@@ -1433,6 +1482,7 @@ class DraggableScannerEngine(ScannerEngine):
 
                 marker_label = skipped_cells.get((i, j))
                 if marker_label is not None:
+                    self._skipped_marker_counts[marker_label] += 1
                     logger.debug(
                         f"第 {i + 1} 行第 {j + 1} 列的基质{marker_label.value}，跳过。"
                     )
@@ -1495,6 +1545,7 @@ class DraggableScannerEngine(ScannerEngine):
                 # 统计基质总数（跳过 SKIP 的基质）
                 if evaluation.quality != EssenceQuality.SKIP:
                     self._total_essence_count += 1
+                    self._quality_rarity_counts[(evaluation.quality, data.rarity)] += 1
 
                 # 冗余清理（实验性）：记录本轮判为宝藏的基质
                 if (
@@ -2106,6 +2157,7 @@ class DraggableScannerEngine(ScannerEngine):
 
             marker_label = skipped_cells.get((row_index, j))
             if marker_label is not None:
+                self._skipped_marker_counts[marker_label] += 1
                 logger.debug(
                     f"第 {row_index + 1} 行第 {j + 1} 列的基质{marker_label.value}，跳过。"
                 )
@@ -2170,6 +2222,7 @@ class DraggableScannerEngine(ScannerEngine):
 
             if evaluation.quality != EssenceQuality.SKIP:
                 self._total_essence_count += 1
+                self._quality_rarity_counts[(evaluation.quality, data.rarity)] += 1
 
             # 冗余清理（实验性）：记录本轮判为宝藏的基质
             if self._cleanup_active and evaluation.quality == EssenceQuality.TREASURE:

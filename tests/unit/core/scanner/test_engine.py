@@ -28,6 +28,10 @@ from endfield_essence_recognizer.core.scanner.engine import (
     DraggableScannerEngine,
     ScannerEngine,
 )
+from endfield_essence_recognizer.core.scanner.models import (
+    EssenceQuality,
+    EvaluationResult,
+)
 from endfield_essence_recognizer.schemas.user_setting import (
     EssenceStats,
     UserSetting,
@@ -1051,6 +1055,48 @@ def test_skip_marked_log_separates_locked_and_deprecated(
     assert "第 1 行第 1 列的基质已锁定，跳过。" in messages
     assert "第 1 行第 2 列的基质已弃用，跳过。" in messages
     assert "第 1 行第 3 列的基质已弃用，跳过。" in messages
+
+
+def test_scan_summary_reports_rarity_quality_and_skipped(
+    monkeypatch, mock_scanner_context, mock_user_setting_manager, mock_profile
+):
+    """扫描收尾四行汇总：总数、稀有度分布、宝藏/养成材料的稀有度分布、按角标拆分的跳过数。"""
+    _enable_skip_marked(mock_user_setting_manager)
+    mock_profile.essence_icon_x_list = [100, 200, 300]
+    mock_profile.essence_icon_y_list = [200, 300]
+    # 第 1 行：锁定、弃用、弃用，全部跳过；第 2 行：无瑕、高纯、无瑕，正常识别
+    mock_scanner_context.skip_marker_detector.find_marked_cells.return_value = {
+        (0, 0): SkipMarkerLabel.LOCKED,
+        (0, 1): SkipMarkerLabel.DEPRECATED,
+        (0, 2): SkipMarkerLabel.DEPRECATED,
+    }
+    mock_scanner_context.rarity_recognizer.recognize_roi_fallback.side_effect = [
+        (RarityLabel.FIVE, 0.9),
+        (RarityLabel.FOUR, 0.9),
+        (RarityLabel.FIVE, 0.9),
+    ]
+    # 第 2 行第 1 枚判为宝藏，其余为养成材料
+    qualities = iter(
+        [EssenceQuality.TREASURE, EssenceQuality.TRASH, EssenceQuality.TRASH]
+    )
+    monkeypatch.setattr(
+        scanner_engine_module,
+        "build_evaluation_result",
+        lambda *_args, **_kwargs: EvaluationResult(
+            quality=next(qualities), log_message=""
+        ),
+    )
+
+    engine = _build_scanner_engine(
+        mock_scanner_context, mock_user_setting_manager, mock_profile
+    )
+
+    messages = _capture_loguru_messages(lambda: engine.execute(threading.Event()))
+
+    assert "共扫描了 3 个基质。" in messages
+    assert "无瑕基质 2 个，高纯基质 1 个。" in messages
+    assert "宝藏基质 1/0 个、养成材料 1/1 个。" in messages
+    assert "跳过 3 个基质（已锁定 1、已弃用 2）。" in messages
 
 
 def test_skip_marked_scan_single_row_skips_locked_columns(
