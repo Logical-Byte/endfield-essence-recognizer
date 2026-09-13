@@ -634,11 +634,11 @@
           <v-alert border="start" class="mb-4" type="warning" variant="tonal">
             被跳过的基质不会被重新识别和判定：不占用数量上限、不参与冗余清理，
             也不会被「宝藏基质、养成材料、冗余清理」规则解锁或取消弃用。
-            </v-alert>
-            <v-alert border="start" class="mt-2" type="info" variant="tonal">
+          </v-alert>
+          <v-alert border="start" class="mt-2" type="info" variant="tonal">
             首次使用本工具、或刚修改过「设置」判定、「宝藏基质」数据时，
             请先关闭这两个开关完整扫描一遍，后续再开启以加速扫描。
-            </v-alert>
+          </v-alert>
           <v-switch
             v-model="skipLockedEssence"
             color="primary"
