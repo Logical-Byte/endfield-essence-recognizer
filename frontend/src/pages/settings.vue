@@ -630,6 +630,33 @@
 
           <v-divider class="my-4" />
 
+          <h2>扫描前跳过已处理过的基质</h2>
+          <v-alert border="start" class="mb-4" type="warning" variant="tonal">
+            被跳过的基质不会被重新识别和判定：不占用数量上限、不参与冗余清理，
+            也不会被「宝藏基质、养成材料、冗余清理」规则解锁或取消弃用。
+          </v-alert>
+          <v-alert border="start" class="mt-2" type="info" variant="tonal">
+            首次使用本工具、或刚修改过「设置」判定、「宝藏基质」数据时，
+            请先关闭这两个开关完整扫描一遍，后续再开启以加速扫描。
+          </v-alert>
+          <v-switch
+            v-model="skipLockedEssence"
+            color="primary"
+            density="comfortable"
+            hide-details
+            label="跳过已锁定的基质"
+          />
+          <v-switch
+            v-model="skipDeprecatedEssence"
+            color="primary"
+            density="comfortable"
+            hide-details
+            label="跳过已弃用的基质"
+          />
+          <v-alert border="start" class="mb-2" type="info" variant="tonal">
+            启用后，每页开始扫描前会先识别基质左下角的角标，从而节省扫描时间。
+          </v-alert>
+
           <h2>扫描时自动翻页</h2>
           <v-switch
             v-model="autoPageFlip"
@@ -1009,6 +1036,8 @@ const nonFiveStarBehavior = ref('process')
 const autoPageFlip = ref(true)
 const fixGridRowOffsetAfterPageFlip = ref(true)
 const fixPageFlipOverscroll = ref(false)
+const skipLockedEssence = ref(false)
+const skipDeprecatedEssence = ref(false)
 const highLevelTreasureEnabled = ref(false)
 const highLevelTreasureAttributeThreshold = ref(3)
 const highLevelTreasureSecondaryThreshold = ref(3)
@@ -1240,7 +1269,7 @@ function isTypePartiallySelected(groupId: string): boolean {
 const config = computed(() => {
   const proxyUrl = updateProxyEnabled.value ? `http://127.0.0.1:${updateProxyPort.value}` : ''
   return {
-    version: 9,
+    version: 10,
     trash_weapon_ids: notSelectedWeaponIds.value,
     treasure_essence_stats: treasureEssenceStats.value,
     treasure_essence_match_mode: 'all' as const,
@@ -1250,6 +1279,8 @@ const config = computed(() => {
     auto_page_flip: autoPageFlip.value,
     fix_grid_row_offset_after_page_flip: fixGridRowOffsetAfterPageFlip.value,
     fix_page_flip_overscroll: fixPageFlipOverscroll.value,
+    skip_locked_essence: skipLockedEssence.value,
+    skip_deprecated_essence: skipDeprecatedEssence.value,
     high_level_treasure_enabled: highLevelTreasureEnabled.value,
     high_level_treasure_attribute_threshold: highLevelTreasureAttributeThreshold.value,
     high_level_treasure_secondary_threshold: highLevelTreasureSecondaryThreshold.value,
@@ -1306,6 +1337,8 @@ async function getConfig() {
     auto_page_flip,
     fix_grid_row_offset_after_page_flip,
     fix_page_flip_overscroll,
+    skip_locked_essence,
+    skip_deprecated_essence,
     high_level_treasure_enabled,
     high_level_treasure_attribute_threshold,
     high_level_treasure_secondary_threshold,
@@ -1349,6 +1382,8 @@ async function getConfig() {
   autoPageFlip.value = auto_page_flip !== undefined ? auto_page_flip : true
   fixGridRowOffsetAfterPageFlip.value = fix_grid_row_offset_after_page_flip !== false
   fixPageFlipOverscroll.value = fix_page_flip_overscroll === true
+  skipLockedEssence.value = skip_locked_essence === true
+  skipDeprecatedEssence.value = skip_deprecated_essence === true
   highLevelTreasureEnabled.value = high_level_treasure_enabled
   highLevelTreasureAttributeThreshold.value = high_level_treasure_attribute_threshold
   highLevelTreasureSecondaryThreshold.value = high_level_treasure_secondary_threshold

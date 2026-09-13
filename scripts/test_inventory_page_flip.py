@@ -79,6 +79,7 @@ def build_context():
         get_attribute_recognizer_dep,
         get_lock_status_recognizer_dep,
         get_rarity_recognizer_dep,
+        get_skip_marker_detector_dep,
         get_ui_scene_recognizer_dep,
     )
     from endfield_essence_recognizer.dependencies.services import get_static_game_data
@@ -88,6 +89,7 @@ def build_context():
         attr_level_recognizer=get_attribute_level_recognizer_dep(),
         abandon_status_recognizer=get_abandon_status_recognizer_dep(),
         lock_status_recognizer=get_lock_status_recognizer_dep(),
+        skip_marker_detector=get_skip_marker_detector_dep(),
         rarity_recognizer=get_rarity_recognizer_dep(),
         ui_scene_recognizer=get_ui_scene_recognizer_dep(),
         static_game_data=get_static_game_data(),
