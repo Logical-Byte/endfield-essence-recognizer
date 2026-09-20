@@ -4,7 +4,7 @@
       <v-icon class="mr-2">mdi-sword-cross</v-icon>
       武器总览
       <v-chip class="ml-2" color="success" size="small" variant="flat">
-        {{ ownedCount }} / {{ totalCount }}
+        {{ countText }}
       </v-chip>
     </v-expansion-panel-title>
     <v-expansion-panel-text>
@@ -493,11 +493,35 @@ onMounted(async () => {
   }
 })
 
+/** 内置武器总数（分母） */
 const totalCount = computed(() =>
   weaponTypes.value.reduce((sum, wType) => sum + wType.weaponIds.length, 0),
 )
 
-const ownedCount = computed(() => ownedWeaponIds.value.size)
+/** 已拥有的内置武器数：矩阵条目里排除自定义基质（含旧格式 custom_stat_ 前缀） */
+const ownedBuiltinCount = computed(
+  () => [...ownedWeaponIds.value].filter((weaponId) => !isCustomEntry(weaponId)).length,
+)
+
+/** 已拥有的自定义基质数：以配置里的自定义条目为准，幽灵引用（配置中已删除）不计入 */
+const ownedCustomCount = computed(
+  () => customMatrixEntries.value.filter((entry) => isWeaponOwned(entry.syntheticId)).length,
+)
+
+/** 配置中定义的自定义基质总数（分母） */
+const customTotalCount = computed(() => customMatrixEntries.value.length)
+
+/**
+ * 标题计数文本：内置武器 xx/77，自定义基质 yy/YY。
+ *
+ * 自定义基质与内置武器分母不同源（一个是静态武器表，一个是配置里的自定义条目），
+ * 合成一个分数会自相矛盾，因此拆成两段；没有自定义基质时只显示内置段。
+ */
+const countText = computed(() => {
+  const builtinText = `内置 ${ownedBuiltinCount.value} / ${totalCount.value}`
+  if (customTotalCount.value === 0) return builtinText
+  return `${builtinText} · 自定义 ${ownedCustomCount.value} / ${customTotalCount.value}`
+})
 
 // 过滤后的武器类型列表
 //

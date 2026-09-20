@@ -520,10 +520,7 @@ const deleteCustomName = ref('')
 watch(weaponId, () => {
   // 弹窗关闭时清理防抖定时器，避免关窗后发起无效请求
   if (!weaponId.value) {
-    if (detailSaveTimer) {
-      clearTimeout(detailSaveTimer)
-      detailSaveTimer = null
-    }
+    clearDetailSaveTimers()
     return
   }
 
@@ -612,9 +609,9 @@ async function removeNonCustomEntry(weaponId: string) {
   }
 }
 
-/** 非自定义基质：等级/优先级变化时自动保存（防抖） */
+/** 非自定义基质：等级变化时自动保存（防抖）；未拥有的武器没有基质条目，等级无处可写 */
 let detailSaveTimer: ReturnType<typeof setTimeout> | null = null
-watch([detailAffix1, detailAffix2, detailAffix3, detailPriority], async () => {
+watch([detailAffix1, detailAffix2, detailAffix3], async () => {
   const id = weaponId.value
   // 仅对已存在的非自定义条目自动保存
   if (!id || id === '__new_custom__' || isCustomEntry(id)) return
@@ -647,13 +644,54 @@ watch([detailAffix1, detailAffix2, detailAffix3, detailPriority], async () => {
   }, 400)
 })
 
-onUnmounted(() => {
-  // 清理防抖定时器，避免组件销毁后发起无效请求
+/**
+ * 非自定义基质：优先级变化时自动保存（防抖）。
+ *
+ * 优先级存在 profile.weapon_priorities，与「是否拥有基质」无关：只有它能表达
+ * 「未拥有基质但用户设过优先级」，而未拥有的武器同样需要这个设置——扫描时它
+ * 决定同属性武器中谁先认领基质。因此这条路径不设拥有状态守卫，否则在总览里
+ * 给未拥有武器设的优先级一关弹窗就会丢。
+ *
+ * 打开弹窗/切换武器时的回填不写盘：那时 detailPriority 与已存值本就相等。
+ */
+let detailPrioritySaveTimer: ReturnType<typeof setTimeout> | null = null
+watch(detailPriority, () => {
+  const id = weaponId.value
+  if (!id || id === '__new_custom__' || isCustomEntry(id)) return
+  if (detailPriority.value === getUserPriority(id)) return
+
+  // 值与武器一起捕获：回调只能写「用户当时选的那把武器 + 那个值」，否则切换
+  // 武器后 400ms 内触发时读到的是新武器的优先级，会把它写到旧武器上。
+  const nextPriority = detailPriority.value
+
+  if (detailPrioritySaveTimer) clearTimeout(detailPrioritySaveTimer)
+  const timer = setTimeout(async () => {
+    try {
+      await updateWeaponPriority(id, nextPriority)
+    } catch {
+      // toast 已由 _handleError 统一弹出，此处不再重复。
+    } finally {
+      // 只清自己：请求期间用户又改过优先级时，新定时器不能被误清成"无定时器"，
+      // 否则后续变更既清不掉它，关窗后它还会继续落盘。
+      if (detailPrioritySaveTimer === timer) detailPrioritySaveTimer = null
+    }
+  }, 400)
+  detailPrioritySaveTimer = timer
+})
+
+/** 清理两个自动保存的防抖定时器，避免关窗/销毁后发起无效请求 */
+function clearDetailSaveTimers() {
   if (detailSaveTimer) {
     clearTimeout(detailSaveTimer)
     detailSaveTimer = null
   }
-})
+  if (detailPrioritySaveTimer) {
+    clearTimeout(detailPrioritySaveTimer)
+    detailPrioritySaveTimer = null
+  }
+}
+
+onUnmounted(clearDetailSaveTimers)
 
 /** 打开删除自定义基质的二次确认弹窗 */
 function promptDeleteCustomEntry() {
