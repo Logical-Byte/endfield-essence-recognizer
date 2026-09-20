@@ -1,15 +1,18 @@
 """宝藏基质导出接口的图片 base64 体积上限回归测试。
 
-覆盖两点：
+覆盖三点：
 1. schema 层：`image_base64` 声明了长度上限，边界内通过、超限抛 ValidationError；
-2. 路由层：超限请求在校验阶段就被拒（4xx），不会落盘、也不会打开导出目录。
+2. 路由层：超限请求在校验阶段就被拒（4xx），不会落盘、也不会打开导出目录；
+3. 两层上限的关系：schema 的字符上限必须比路由的字节上限更宽松，否则路由
+   本来允许的图片会被 schema 提前拒掉。
 
 本文件只有一处 HTTP POST，且其载荷严格大于 MAX_IMAGE_BASE64_CHARS；
-边界内的用例一律走 `TreasureMatrixExportRequest.model_validate`。
+边界内的用例一律走 `TreasureMatrixExportRequest.model_validate` 或本地长度计算。
 """
 
 from __future__ import annotations
 
+import base64
 from typing import TYPE_CHECKING
 
 import pydantic
@@ -76,6 +79,18 @@ def test_image_base64_field_declares_max_length_metadata() -> None:
     max_lengths = [item.max_length for item in metadata if hasattr(item, "max_length")]
 
     assert max_lengths == [MAX_IMAGE_BASE64_CHARS]
+
+
+def test_schema_character_limit_is_looser_than_route_byte_limit() -> None:
+    """schema 的字符上限必须比路由的字节上限宽松，否则会拦掉路由允许的图片。
+
+    这条不变量此前只写在 matrix_export.py 的注释里（且算错过一次），这里用真实
+    解码长度把它钉住：取 schema 允许的最长占位载荷，其解码字节数必须已经超过
+    路由的 _MAX_EXPORT_BYTES——能突破路由上限，才说明 schema 不会比路由先拒绝。
+    """
+    longest_allowed = base64.b64decode("a" * MAX_IMAGE_BASE64_CHARS)
+
+    assert len(longest_allowed) > matrix_export._MAX_EXPORT_BYTES
 
 
 def test_oversize_image_base64_rejected_before_route_body(
