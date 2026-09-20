@@ -660,16 +660,23 @@ watch(detailPriority, () => {
   if (!id || id === '__new_custom__' || isCustomEntry(id)) return
   if (detailPriority.value === getUserPriority(id)) return
 
+  // 值与武器一起捕获：回调只能写「用户当时选的那把武器 + 那个值」，否则切换
+  // 武器后 400ms 内触发时读到的是新武器的优先级，会把它写到旧武器上。
+  const nextPriority = detailPriority.value
+
   if (detailPrioritySaveTimer) clearTimeout(detailPrioritySaveTimer)
-  detailPrioritySaveTimer = setTimeout(async () => {
+  const timer = setTimeout(async () => {
     try {
-      await updateWeaponPriority(id, detailPriority.value)
+      await updateWeaponPriority(id, nextPriority)
     } catch {
       // toast 已由 _handleError 统一弹出，此处不再重复。
     } finally {
-      detailPrioritySaveTimer = null
+      // 只清自己：请求期间用户又改过优先级时，新定时器不能被误清成"无定时器"，
+      // 否则后续变更既清不掉它，关窗后它还会继续落盘。
+      if (detailPrioritySaveTimer === timer) detailPrioritySaveTimer = null
     }
   }, 400)
+  detailPrioritySaveTimer = timer
 })
 
 /** 清理两个自动保存的防抖定时器，避免关窗/销毁后发起无效请求 */
