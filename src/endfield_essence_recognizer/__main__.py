@@ -1,6 +1,6 @@
 import threading
 
-from endfield_essence_recognizer.deps import (
+from endfield_essence_recognizer.dependencies import (
     get_scanner_service,
 )
 from endfield_essence_recognizer.server import get_server

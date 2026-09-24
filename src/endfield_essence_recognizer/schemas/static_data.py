@@ -1,0 +1,156 @@
+from enum import StrEnum
+
+from pydantic import AliasGenerator, BaseModel, ConfigDict, Field
+from pydantic.alias_generators import to_camel
+
+type StatId = str
+"""
+表示基质的唯一标识符 (statTermId)。
+"""
+
+
+class StatType(StrEnum):
+    ATTRIBUTE = "ATTRIBUTE"
+    SECONDARY = "SECONDARY"
+    SKILL = "SKILL"
+
+
+class WeaponInfo(BaseModel):
+    id: str = Field(description="武器的唯一标识符")
+    name: str = Field(description="武器名称")
+    icon_url: str = Field(description="武器图片的URL")
+    rarity: int = Field(description="武器稀有度，整数表示")
+    attribute_stat_id: StatId | None = Field(
+        default=None, description="表示武器基础属性的基质ID"
+    )
+    secondary_stat_id: StatId | None = Field(
+        default=None, description="表示武器次要属性的基质ID"
+    )
+    skill_stat_id: StatId | None = Field(
+        default=None, description="表示武器技能属性的基质ID"
+    )
+
+    model_config = ConfigDict(
+        from_attributes=True,
+        alias_generator=AliasGenerator(
+            validation_alias=to_camel,
+            serialization_alias=to_camel,
+        ),
+        populate_by_name=True,
+    )
+
+
+class WeaponTypeInfo(BaseModel):
+    id: str = Field(description="武器类型百科组 ID (groupId)")
+    name: str = Field(description="武器类型名称，如单手剑、双手剑等")
+    icon_url: str = Field(description="武器类型图标的URL")
+    sort_order: int = Field(description="武器类型的排序顺序")
+    weapon_ids: list[str] = Field(description="属于该类型的武器 ID 列表")
+
+    model_config = ConfigDict(
+        from_attributes=True,
+        alias_generator=AliasGenerator(
+            validation_alias=to_camel,
+            serialization_alias=to_camel,
+        ),
+        populate_by_name=True,
+    )
+
+
+class StatInfo(BaseModel):
+    id: StatId = Field(description="基质的唯一标识符")
+    name: str = Field(description="基质名称")
+    tag_name: str = Field(description="基质标签名称 (tagName)")
+    type: StatType = Field(description="基质类型")
+
+    model_config = ConfigDict(
+        from_attributes=True,
+        alias_generator=AliasGenerator(
+            validation_alias=to_camel,
+            serialization_alias=to_camel,
+        ),
+        populate_by_name=True,
+    )
+
+
+class WeaponListResponse(BaseModel):
+    weapons: list[WeaponInfo] = Field(description="武器列表")
+
+    model_config = ConfigDict(
+        alias_generator=AliasGenerator(
+            validation_alias=to_camel,
+            serialization_alias=to_camel,
+        ),
+        populate_by_name=True,
+    )
+
+
+class WeaponTypeListResponse(BaseModel):
+    weapon_types: list[WeaponTypeInfo] = Field(description="武器类型列表")
+
+    model_config = ConfigDict(
+        alias_generator=AliasGenerator(
+            validation_alias=to_camel,
+            serialization_alias=to_camel,
+        ),
+        populate_by_name=True,
+    )
+
+
+class StatListResponse(BaseModel):
+    items: list[StatInfo] = Field(description="基质列表")
+
+    model_config = ConfigDict(
+        alias_generator=AliasGenerator(
+            validation_alias=to_camel,
+            serialization_alias=to_camel,
+        ),
+        populate_by_name=True,
+    )
+
+
+class RarityColorResponse(BaseModel):
+    colors: dict[int, str] = Field(description="稀有度到颜色代码的映射")
+
+
+class MatrixIconResponse(BaseModel):
+    essence_bg: str = Field(description="基质底板图片的URL")
+    default_icon: str = Field(description="默认基质的图标URL（技能属性缺失时显示）")
+    skills: dict[str, str] = Field(description="技能属性ID到图标URL的映射")
+
+    model_config = ConfigDict(
+        alias_generator=AliasGenerator(
+            validation_alias=to_camel,
+            serialization_alias=to_camel,
+        ),
+        populate_by_name=True,
+    )
+
+
+class EnergyAlluviumInfo(BaseModel):
+    battle_id: str = Field(description="战斗的唯一标识符")
+    battle_name: str = Field(description="战斗的中文显示名称")
+    image_url: str | None = Field(default=None, description="背景图片的 URL")
+    secondary_stats: list[StatId] = Field(description="可刷出的次属性词条 ID 列表")
+    skill_stats: list[StatId] = Field(description="可刷出的技能词条 ID 列表")
+
+    model_config = ConfigDict(
+        from_attributes=True,
+        alias_generator=AliasGenerator(
+            validation_alias=to_camel,
+            serialization_alias=to_camel,
+        ),
+        populate_by_name=True,
+    )
+
+
+class EnergyAlluviumListResponse(BaseModel):
+    items: list[EnergyAlluviumInfo] = Field(description="能量淤积点列表")
+
+    model_config = ConfigDict(
+        alias_generator=AliasGenerator(
+            validation_alias=to_camel,
+            serialization_alias=to_camel,
+        ),
+        populate_by_name=True,
+    )

@@ -6,8 +6,13 @@ dist/
 wheels/
 *.egg-info
 
+# Rust 构建产物
+target/
+
 # Virtual environments
 .venv
+.tmp/
+.uv-cache/
 
 # logs
 logs/
@@ -15,9 +20,23 @@ logs/
 # screenshots by the server
 screenshots/
 
+# 宝藏基质导出的图片
+exports/
+
 # local app settings
 config.json
+config.backup.*.json
 .env
+profiles.json
+version.json
 
 # enfield data table config
 src/endfield_essence_recognizer/data/endfielddata/TableCfg/**.json
+
+# 仅限本地用 不上传
+AGENTS.md
+.claude/
+CLAUDE.md
+
+# 依赖目录
+node_modules/

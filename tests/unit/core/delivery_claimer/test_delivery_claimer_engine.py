@@ -92,8 +92,9 @@ def test_execute_initial_scene_check_fails_resolution(
 ):
     """Test that execution stops immediately if window resolution doesn't match profile.
 
-    When the client size doesn't match the configured resolution, _check_scene returns
-    False and no scene verification screenshot is taken.
+    When the client size doesn't match the configured resolution,
+    _check_window_and_scene returns False before scene verification, so no
+    screenshot is taken.
     """
     mock_image_source.get_client_size.return_value = (1280, 720)
     stop_event = threading.Event()

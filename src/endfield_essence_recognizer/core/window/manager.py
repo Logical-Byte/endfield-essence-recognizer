@@ -1,4 +1,4 @@
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 
 import pygetwindow
 from cv2.typing import MatLike
@@ -8,8 +8,10 @@ from endfield_essence_recognizer.core.window.windows_utils import (
     click_on_window,
     get_client_size,
     get_support_window,
+    progressive_drag_on_window,
     screenshot_window,
 )
+from endfield_essence_recognizer.exceptions import WindowNotFoundError
 
 
 class WindowManager:
@@ -24,7 +26,7 @@ class WindowManager:
     """
 
     def __init__(self, supported_titles: Sequence[str]):
-        self._supported_titles = supported_titles
+        self._supported_titles = list(supported_titles)
         self._window: pygetwindow.Window | None = None
 
     def _get_window(self) -> pygetwindow.Window | None:
@@ -36,6 +38,11 @@ class WindowManager:
     def clear(self) -> None:
         """Clear the cached window instance."""
         self._window = None
+
+    @property
+    def supported_titles(self) -> list[str]:
+        """Get the list of supported window titles."""
+        return self._supported_titles
 
     @property
     def target_exists(self) -> bool:
@@ -54,7 +61,7 @@ class WindowManager:
         Returns True if an operation was performed, False otherwise.
         """
         window = self._get_window()
-        if window and (window.isMinimized or window.isMaximized):
+        if window is not None and (window.isMinimized or window.isMaximized):
             window.restore()
             return True
         return False
@@ -84,10 +91,8 @@ class WindowManager:
     def get_client_size(self) -> tuple[int, int]:
         """Return the (width, height) of the window's client area."""
         window = self._get_window()
-        if not window:
-            raise RuntimeError(
-                f"No window found matching titles: {self._supported_titles}"
-            )
+        if window is None:
+            raise WindowNotFoundError(self._supported_titles)
         return get_client_size(window)
 
     def screenshot(self, relative_region: Region | None = None) -> MatLike:
@@ -96,17 +101,52 @@ class WindowManager:
         Returns a BGR numpy array compatible with OpenCV.
         """
         window = self._get_window()
-        if not window:
-            raise RuntimeError(
-                f"No window found matching titles: {self._supported_titles}"
-            )
+        if window is None:
+            raise WindowNotFoundError(self._supported_titles)
         return screenshot_window(window, relative_region)
 
     def click(self, relative_x: int, relative_y: int) -> None:
         """Perform a mouse click at the relative coordinates within the client area."""
         window = self._get_window()
-        if not window:
-            raise RuntimeError(
-                f"No window found matching titles: {self._supported_titles}"
-            )
+        if window is None:
+            raise WindowNotFoundError(self._supported_titles)
         click_on_window(window, relative_x, relative_y)
+
+    def progressive_drag(
+        self,
+        start_x: int,
+        start_y: int,
+        end_x: int,
+        end_y: int,
+        step: int = 50,
+        max_drag: int = 0,
+        on_step: Callable[[int, int, int], bool] | None = None,
+    ) -> tuple[int, bool]:
+        """
+        Perform a progressive drag with step-by-step movement and optional callback.
+
+        The mouse button is held down while moving incrementally, allowing for
+        intermediate checks between steps (e.g., scrollbar detection).
+
+        Args:
+            start_x: Starting X coordinate relative to the client area.
+            start_y: Starting Y coordinate relative to the client area.
+            end_x: Ending X coordinate relative to the client area.
+            end_y: Ending Y coordinate relative to the client area.
+            step: Pixel distance per step.
+            max_drag: Maximum drag distance (0 for unlimited).
+            on_step: Optional callback called after each step with (step_index, x, y).
+                     Return True to stop the drag early.
+
+        Returns:
+            A tuple of (actual_drag_distance, stopped_early) where:
+            - actual_drag_distance: The actual distance dragged in pixels
+            - stopped_early: True if the drag was stopped early by callback
+        """
+        window = self._get_window()
+        if window is None:
+            raise WindowNotFoundError(self._supported_titles)
+
+        return progressive_drag_on_window(
+            window, start_x, start_y, end_x, end_y, step, max_drag, on_step
+        )

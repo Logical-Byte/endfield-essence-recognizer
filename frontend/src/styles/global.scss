@@ -48,3 +48,37 @@ ul > li::marker,
 ol > li::marker {
   font-family: $mono-font;
 }
+
+// 自定义基质小图标样式（全局共享）
+.essence-icon-small {
+  width: 1.5rem;
+  height: 1.5rem;
+  vertical-align: middle;
+  border-radius: 4px;
+}
+
+// 自定义基质区段标题的小图标：底板 + 默认基质图标叠加
+.essence-icon-stack {
+  position: relative;
+  display: inline-block;
+  width: 1.5rem;
+  height: 1.5rem;
+  vertical-align: middle;
+  border-radius: 4px;
+  overflow: hidden;
+  flex-shrink: 0;
+
+  > img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  // 叠加层（默认基质图标）与技能属性图标同样向右下偏移 5%
+  > img + img {
+    transform: translate(5%, -5%);
+  }
+}

@@ -1,11 +1,8 @@
-// Plugins
-import Vue from '@vitejs/plugin-vue'
-import Vuetify, { transformAssetUrls } from 'vite-plugin-vuetify'
-import VueDevTools from 'vite-plugin-vue-devtools'
-
-// Utilities
-import { defineConfig } from 'vite'
 import { fileURLToPath, URL } from 'node:url'
+import Vue from '@vitejs/plugin-vue'
+import { defineConfig } from 'vite'
+import VueDevTools from 'vite-plugin-vue-devtools'
+import Vuetify, { transformAssetUrls } from 'vite-plugin-vuetify'
 
 // https://vitejs.dev/config/
 export default defineConfig({

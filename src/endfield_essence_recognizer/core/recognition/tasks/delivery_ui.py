@@ -5,7 +5,7 @@ Detect delivery-related UI scenes.
 import importlib.resources
 from enum import StrEnum
 
-from endfield_essence_recognizer.core.recognition.base import (
+from endfield_essence_recognizer.core.recognition.template_recognizer import (
     RecognitionProfile,
     TemplateDescriptor,
 )

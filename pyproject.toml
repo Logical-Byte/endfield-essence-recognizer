@@ -1,14 +1,17 @@
 [project]
 name = "endfield-essence-recognizer"
-version = "0.6.0"
+version = "1.3.0"
 description = "不知道哪些基质该留哪些该扔？逝逝这个妙妙小工具吧！"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "aiofiles>=24.1.0",
     "fastapi>=0.127.0",
+    "httpx>=0.28.1",
     "keyboard>=0.13.5",
     "loguru>=0.7.3",
     "opencv-python>=4.12.0.88",
+    "packaging>=24.0",
     "pyautogui>=0.9.54",
     "pydantic>=2.12.5",
     "pydantic-settings>=2.12.0",
@@ -23,11 +26,11 @@ dependencies = [
 [dependency-groups]
 dev = [
     "fastapi[standard]>=0.127.0",
-    "httpx>=0.28.1",
     "pillow>=12.0.0",
     "pre-commit>=4.5.1",
     "pytest>=9.0.2",
     "pytest-asyncio>=1.3.0",
+    "ruff==0.15.0",
 ]
 build = [
     "pyinstaller>=6.17.0",

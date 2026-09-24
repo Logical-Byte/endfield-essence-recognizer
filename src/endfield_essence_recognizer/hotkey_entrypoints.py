@@ -1,4 +1,3 @@
-import asyncio
 from contextlib import contextmanager
 from functools import wraps
 
@@ -6,42 +5,16 @@ import keyboard
 
 from endfield_essence_recognizer.core.config import ServerConfig
 from endfield_essence_recognizer.core.interfaces import HotkeyHandler
-from endfield_essence_recognizer.core.scanner.context import ScannerContext
-from endfield_essence_recognizer.core.scanner.engine import (
-    recognize_once,
-)
-from endfield_essence_recognizer.core.window import WindowManager
-from endfield_essence_recognizer.deps import (
-    default_delivery_claimer_engine,
-    default_scanner_context,
-    default_scanner_engine,
-    default_user_setting_manager,
-    get_audio_service,
-    get_resolution_profile,
-    get_scanner_service,
-    get_screenshot_service,
-    get_screenshots_dir_dep,
-    get_webview_window_manager,
-    get_window_manager_singleton,
-)
-from endfield_essence_recognizer.models.screenshot import (
-    ScreenshotSaveFormat,
-)
+from endfield_essence_recognizer.schemas.scanner import TaskType
+from endfield_essence_recognizer.utils.http_client import get_hotkey_client
 from endfield_essence_recognizer.utils.log import (
     logger,
 )
 
 
-def hotkey_handler(
-    require_game_exists: bool = True,
-    require_game_or_webview_active: bool = True,
-):
+def hotkey_handler():
     """
-    Hotkey 触发时的装饰器，用于日志记录和窗口状态检查。
-
-    Args:
-        require_game_exists: 是否要求终末地游戏窗口存在。
-        require_game_or_webview_active: 是否要求终末地游戏窗口或 WebView 窗口在前台。
+    Hotkey 触发时的装饰器，用于日志记录。
     """
 
     def decorator(func: HotkeyHandler) -> HotkeyHandler:
@@ -49,191 +22,104 @@ def hotkey_handler(
         def wrapper(key: str) -> None:
             logger.debug(f'检测到热键 "{key}" 被按下。')
 
-            # 如果需要，检查游戏窗口是否存在
-            if require_game_exists:
-                if not check_game_window_exists():
-                    return
+            try:
+                # call the actual handler function
+                func(key)
 
-            # 如果需要，检查游戏窗口或 WebView 窗口是否在前台
-            if require_game_or_webview_active:
-                if not check_game_or_webview_is_active():
-                    return
+            except Exception as e:
+                logger.error(f'处理热键 "{key}" 时发生错误: {e}')
+                logger.opt(exception=e).debug("traceback:")
 
-            return func(key)
+            logger.debug(f'热键 "{key}" 处理完成。')
 
         return wrapper
 
     return decorator
 
 
-def check_game_window_exists() -> bool:
-    """
-    检查终末地游戏窗口是否存在。
-
-    Returns:
-        bool: 如果游戏窗口存在则返回 True，否则返回 False。
-    """
-    window_manager: WindowManager = get_window_manager_singleton()
-    if not window_manager.target_exists:
-        logger.debug("未检测到终末地窗口，停止快捷键操作。")
-        return False
-    return True
-
-
-def check_game_or_webview_is_active() -> bool:
-    """
-    检查终末地游戏窗口或 WebView 窗口是否在前台，打印相关日志。
-
-    Returns:
-        bool: 如果游戏窗口或 WebView 窗口在前台则返回 True，否则返回 False。
-    """
-    window_manager: WindowManager = get_window_manager_singleton()
-    webview_window_manager: WindowManager = get_webview_window_manager()
-
-    if window_manager.target_is_active:
-        logger.debug("终末地窗口在前台，允许快捷键操作。")
-        return True
-    elif webview_window_manager.target_is_active:
-        logger.debug("WebView 窗口在前台，允许快捷键操作。")
-        return True
-    else:
-        logger.debug("前台窗口不是终末地或 WebView，停止快捷键操作。")
-        return False
-
-
-@hotkey_handler(
-    require_game_exists=True,
-    require_game_or_webview_active=True,
-)
+@hotkey_handler()
 def handle_keyboard_single_recognition(key: str):
     """处理 "[" 键按下事件 - 仅识别不操作"""
-    import time
-
-    window_manager: WindowManager = get_window_manager_singleton()
-    scanner_ctx: ScannerContext = default_scanner_context()
-    if not window_manager.target_is_active:
-        logger.debug(
-            f'终末地窗口不在前台，尝试切换到前台以进行识别基质操作 "{key}" 键。'
-        )
-        if window_manager.activate():
-            time.sleep(0.3)
-        if window_manager.show():
-            # make sure the window is visible
-            time.sleep(0.3)
-
     logger.info(f'检测到 "{key}" 键，开始识别基质')
-    recognize_once(
-        window_manager,
-        scanner_ctx,
-        default_user_setting_manager().get_user_setting(),
-        get_resolution_profile(),
-    )
+    get_hotkey_client().post("/recognize_once", key_pressed=key)
 
 
-def handle_keyboard_toggle_scan():
-    """切换基质扫描状态"""
-    scanner_service = get_scanner_service()
-    audio_service = get_audio_service()
-
-    if not scanner_service.is_running():
-        logger.info("开始扫描基质")
-        scanner = default_scanner_engine()
-        scanner_service.start_scan(scanner_factory=lambda: scanner)
-        audio_service.play_enable()
-    else:
-        logger.info("停止扫描基质")
-        audio_service.play_disable()
-        scanner_service.stop_scan()
-
-
-@hotkey_handler(
-    require_game_exists=True,
-    require_game_or_webview_active=True,
-)
+@hotkey_handler()
 def handle_keyboard_auto_click(key: str):
     """处理 "]" 键按下事件 - 切换自动点击"""
     logger.info(f'检测到 "{key}" 键，切换自动点击状态')
-    handle_keyboard_toggle_scan()
+    get_hotkey_client().post(
+        "/toggle_scanning", json={"task_type": TaskType.ESSENCE}, key_pressed=key
+    )
 
 
-@hotkey_handler(
-    require_game_exists=True,
-    require_game_or_webview_active=True,
-)
+@hotkey_handler()
 def handle_keyboard_delivery_claim(key: str):
     """切换自动抢单状态"""
-    scanner_service = get_scanner_service()
-    audio_service = get_audio_service()
-
-    if not scanner_service.is_running():
-        try:
-            logger.info(f'检测到 "{key}" 键，开始自动抢单')
-            engine = default_delivery_claimer_engine()
-            scanner_service.start_scan(scanner_factory=lambda: engine)
-            audio_service.play_enable()
-        except Exception as e:
-            logger.exception(f"启动自动抢单失败: {e}")
-    else:
-        logger.info(f'检测到 "{key}" 键，停止自动抢单')
-        audio_service.play_disable()
-        scanner_service.stop_scan()
+    logger.info(f'检测到 "{key}" 键，切换自动抢单状态')
+    get_hotkey_client().post(
+        "/toggle_scanning",
+        json={"task_type": TaskType.DELIVERY_CLAIM},
+        key_pressed=key,
+    )
 
 
-@hotkey_handler(require_game_exists=False, require_game_or_webview_active=False)
+@hotkey_handler()
 def handle_keyboard_on_exit(key: str):
     """处理 Alt+Delete 按下事件 - 退出程序"""
     logger.info(f'检测到 "{key}"，正在退出程序...')
-
-    # 停止扫描器
-    scanner_service = get_scanner_service()
-    if scanner_service.is_running():
-        scanner_service.stop_scan()
-
-    # 关闭 webview 窗口，剩下的清理工作交给 main 函数
-    from endfield_essence_recognizer.webui import window
-
-    window.destroy()
+    get_hotkey_client().post("/exit", key_pressed=key)
 
 
-@hotkey_handler(
-    require_game_exists=True,
-    require_game_or_webview_active=True,
-)
+@hotkey_handler()
 def temp_handle_keyboard_save_screenshot_for_debug(key: str):
-    screenshot_service = get_screenshot_service()
+    logger.info(f'检测到 "{key}" 键，正在保存调试截图...')
+    get_hotkey_client().post(
+        "/take_and_save_screenshot",
+        json={
+            "should_focus": True,
+            "post_process": True,
+            "title": "Debug",
+            "format": "png",
+        },
+        key_pressed=key,
+    )
+
+
+def _safe_add_hotkey(key, handler, args, fallback=None):
     try:
-        full_path, file_name = asyncio.run(
-            screenshot_service.capture_and_save(
-                screenshot_dir=get_screenshots_dir_dep(),
-                resolution_profile=get_resolution_profile(),
-                should_focus=True,
-                post_process=True,
-                title="Debug",
-                fmt=ScreenshotSaveFormat.PNG,
-            )
-        )
-        logger.info(f"截图已保存到 {full_path}")
-        logger.info(f"截图文件名: {file_name}")
-    except Exception as e:
-        logger.exception(f"截图失败: {e}")
+        keyboard.add_hotkey(key, handler, args=args)
+    except Exception:
+        if fallback:
+            try:
+                keyboard.add_hotkey(fallback, handler, args=args)
+                logger.warning(f'热键 "{key}" 注册失败，已替换为 "{fallback}"')
+            except Exception as e:
+                logger.warning(
+                    f'热键 "{key}" 和备用热键 "{fallback}" 均注册失败: {e}，该热键将不可用'
+                )
+        else:
+            logger.warning(f'热键 "{key}" 注册失败，该热键将不可用')
 
 
 @contextmanager
 def bind_hotkeys(server_config: ServerConfig):
     """Context manager to bind and unbind global hotkeys."""
-    keyboard.add_hotkey("[", handle_keyboard_single_recognition, args=("[",))
-    keyboard.add_hotkey("]", handle_keyboard_auto_click, args=("]",))
-    keyboard.add_hotkey("\\", handle_keyboard_delivery_claim, args=("\\",))
-    keyboard.add_hotkey("alt+delete", handle_keyboard_on_exit, args=("alt+delete",))
+    _safe_add_hotkey("[", handle_keyboard_single_recognition, args=("[",), fallback=",")
+    _safe_add_hotkey("]", handle_keyboard_auto_click, args=("]",), fallback=".")
+    _safe_add_hotkey("\\", handle_keyboard_delivery_claim, args=("\\",))
+    _safe_add_hotkey("alt+delete", handle_keyboard_on_exit, args=("alt+delete",))
     if server_config.dev_mode:
         logger.debug("开发模式下，启用截图调试热键 `=`")
-        keyboard.add_hotkey(
+        _safe_add_hotkey(
             "=", temp_handle_keyboard_save_screenshot_for_debug, args=("=",)
         )  # 临时热键，用于调试截图功能
     logger.info("全局热键已注册")
+    _ = get_hotkey_client()  # ensure client is initialized
     try:
         yield
     finally:
+        get_hotkey_client().close()
         keyboard.unhook_all()
         logger.info("全局热键已注销")
 

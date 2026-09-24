@@ -1,0 +1,265 @@
+"""
+Resolution scaling middleware.
+
+Provides adapter classes that normalize arbitrary screen resolutions to a standard
+logical resolution, enabling resolution-independent recognition and interaction logic.
+
+Scaling strategy:
+- Aspect ratio >= 16:9 (wide): scale by height to 1080, width >= 1920
+- Aspect ratio < 16:9 (narrow): scale by width to 1920, height > 1080
+
+This ensures the right-side attribute panel always maps to the same X coordinates
+as the 1080p reference layout.
+
+The scaling layer sits between the raw window capture (physical) and the scanner engine
+(logical), transparently converting images and coordinates in both directions.
+"""
+
+import math
+from collections.abc import Callable
+
+import cv2
+from cv2.typing import MatLike
+
+from endfield_essence_recognizer.core.interfaces import ImageSource, WindowActions
+from endfield_essence_recognizer.core.layout.base import Region
+from endfield_essence_recognizer.utils.log import logger
+
+# Reference resolution (16:9 baseline).
+REF_WIDTH = 1920
+REF_HEIGHT = 1080
+REF_RATIO = REF_WIDTH / REF_HEIGHT
+
+
+def compute_logical_size(
+    physical_width: int, physical_height: int
+) -> tuple[int, int, float]:
+    """
+    Compute the logical size and scale factor for a given physical resolution.
+
+    Returns:
+        (logical_width, logical_height, scale_factor)
+    """
+    if physical_width <= 0 or physical_height <= 0:
+        raise ValueError("physical_width and physical_height must be positive integers")
+
+    ratio = physical_width / physical_height
+    if ratio >= REF_RATIO:
+        # Wide or standard: scale by height
+        scale = REF_HEIGHT / physical_height
+    else:
+        # Narrow: scale by width
+        scale = REF_WIDTH / physical_width
+    return round(physical_width * scale), round(physical_height * scale), scale
+
+
+class ScalingImageSource(ImageSource):
+    """
+    An ImageSource adapter that scales captured images to a standard logical resolution.
+
+    Scaling strategy adapts to the aspect ratio:
+    - Wide (>= 16:9): height fixed at 1080, width >= 1920
+    - Narrow (< 16:9): width fixed at 1920, height > 1080
+
+    After scaling, all ROI coordinates defined in the logical coordinate system can be
+    applied directly to the scaled image.
+    """
+
+    def __init__(self, source: ImageSource) -> None:
+        self._source = source
+
+        # Cache the physical size and compute scale factor once
+        physical_width, physical_height = source.get_client_size()
+        self._physical_width = physical_width
+        self._physical_height = physical_height
+        self._logical_width, self._logical_height, self._scale_factor = (
+            compute_logical_size(physical_width, physical_height)
+        )
+
+        logger.debug(
+            f"ScalingImageSource: "
+            f"physical={physical_width}x{physical_height} -> "
+            f"logical={self._logical_width}x{self._logical_height} "
+            f"(scale={self._scale_factor:.4f})"
+        )
+
+    @property
+    def scale_factor(self) -> float:
+        """The ratio of logical size to physical size (logical / physical)."""
+        return self._scale_factor
+
+    @property
+    def logical_size(self) -> tuple[int, int]:
+        """The logical (width, height) after scaling."""
+        return self._logical_width, self._logical_height
+
+    @property
+    def physical_size(self) -> tuple[int, int]:
+        """The original physical (width, height)."""
+        return self._physical_width, self._physical_height
+
+    def screenshot(self, relative_region: Region | None = None) -> MatLike:
+        """
+        Capture a screenshot, scale it to the logical resolution, then optionally
+        crop to the specified region.
+
+        Args:
+            relative_region: Region in logical coordinates to crop from the
+                             scaled image. If None, returns the full scaled image.
+
+        Returns:
+            The scaled (and optionally cropped) image as a BGR MatLike.
+        """
+        full_physical = self._source.screenshot()
+
+        # INTER_AREA preserves edge sharpness when downscaling, which improves
+        # template matching accuracy; INTER_LINEAR is used for upscaling.
+        target = (self._logical_width, self._logical_height)
+        interpolation = cv2.INTER_AREA if self._scale_factor < 1.0 else cv2.INTER_LINEAR
+        scaled = cv2.resize(
+            full_physical,
+            target,
+            interpolation=interpolation,
+        )
+
+        if relative_region is None:
+            return scaled
+
+        p0, p1 = relative_region.p0, relative_region.p1
+        return scaled[p0.y : p1.y, p0.x : p1.x]
+
+    def get_client_size(self) -> tuple[int, int]:
+        """Return the logical client size (after scaling)."""
+        return self._logical_width, self._logical_height
+
+
+class ScalingWindowActions(WindowActions):
+    """
+    A WindowActions adapter that maps logical coordinates back to physical coordinates.
+
+    When the scanner engine issues a click at logical position (x, y), this adapter
+    converts it to the corresponding physical screen position before delegating to
+    the underlying WindowActions implementation.
+    """
+
+    def __init__(
+        self,
+        actions: WindowActions,
+        scale_factor: float,
+    ) -> None:
+        if not math.isfinite(scale_factor) or scale_factor <= 0:
+            raise ValueError("scale_factor must be a finite positive number")
+
+        self._actions = actions
+        self._scale_factor = scale_factor
+
+    @property
+    def target_exists(self) -> bool:
+        return self._actions.target_exists
+
+    @property
+    def target_is_active(self) -> bool:
+        return self._actions.target_is_active
+
+    def restore(self) -> bool:
+        return self._actions.restore()
+
+    def activate(self) -> bool:
+        return self._actions.activate()
+
+    def show(self) -> bool:
+        return self._actions.show()
+
+    def click(self, relative_x: int, relative_y: int) -> None:
+        """
+        Perform a click at logical coordinates, mapped back to physical coordinates.
+        """
+        physical_x = round(relative_x / self._scale_factor)
+        physical_y = round(relative_y / self._scale_factor)
+        self._actions.click(physical_x, physical_y)
+
+    def wait(self, seconds: float) -> None:
+        self._actions.wait(seconds)
+
+    def _to_physical(self, logical_x: int, logical_y: int) -> tuple[int, int]:
+        """
+        Convert logical coordinates to physical coordinates.
+
+        Args:
+            logical_x: X coordinate in logical space.
+            logical_y: Y coordinate in logical space.
+
+        Returns:
+            (physical_x, physical_y) tuple in physical space.
+        """
+        return round(logical_x / self._scale_factor), round(
+            logical_y / self._scale_factor
+        )
+
+    def progressive_drag(
+        self,
+        start_x: int,
+        start_y: int,
+        end_x: int,
+        end_y: int,
+        step: int = 50,
+        max_drag: int = 0,
+        on_step: Callable[[int, int, int], bool] | None = None,
+    ) -> tuple[int, bool]:
+        """
+        Perform a progressive drag with step-by-step movement and coordinate scaling.
+
+        Logical coordinates are converted to physical coordinates before delegating
+        to the underlying WindowActions. The step size is also scaled accordingly.
+
+        Args:
+            start_x: Starting X coordinate in logical space.
+            start_y: Starting Y coordinate in logical space.
+            end_x: Ending X coordinate in logical space.
+            end_y: Ending Y coordinate in logical space.
+            step: Pixel distance per step (in logical space).
+            max_drag: Maximum drag distance in logical space (0 for unlimited).
+            on_step: Optional callback called after each step with (step_index, x, y).
+                     Return True to stop the drag early.
+
+        Returns:
+            A tuple of (actual_drag_distance, stopped_early) where:
+            - actual_drag_distance: The actual distance dragged in logical pixels
+            - stopped_early: True if the drag was stopped early by callback
+        """
+        # Convert logical coordinates to physical coordinates
+        physical_start_x, physical_start_y = self._to_physical(start_x, start_y)
+        physical_end_x, physical_end_y = self._to_physical(end_x, end_y)
+
+        # Scale step and max_drag to physical space
+        # Both are in logical space and need to be converted to physical space
+        physical_step = round(step / self._scale_factor) if step > 0 else 1
+        physical_max_drag = round(max_drag / self._scale_factor) if max_drag > 0 else 0
+
+        # Delegate to underlying actions
+        actual_distance, stopped_early = self._actions.progressive_drag(
+            physical_start_x,
+            physical_start_y,
+            physical_end_x,
+            physical_end_y,
+            physical_step,
+            physical_max_drag,
+            on_step,
+        )
+        # Convert physical distance back to logical distance
+        logical_actual = round(actual_distance * self._scale_factor)
+        return logical_actual, stopped_early
+
+
+def create_scaling_wrappers(
+    source: ImageSource,
+    actions: WindowActions,
+) -> tuple[ScalingImageSource, ScalingWindowActions]:
+    """
+    Create a consistent scaling adapter pair for one source/actions input.
+
+    The returned wrappers always share the same scale factor.
+    """
+    scaling_source = ScalingImageSource(source)
+    scaling_actions = ScalingWindowActions(actions, scaling_source.scale_factor)
+    return scaling_source, scaling_actions

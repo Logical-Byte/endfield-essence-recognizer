@@ -19,6 +19,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
+        with:
+          submodules: true
 
       - name: Set up node
         uses: actions/setup-node@v4
@@ -42,22 +44,136 @@ jobs:
         run: |
           uv sync --no-dev --group build
 
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - name: Lint updater (clippy + fmt check)
+        run: |
+          cargo clippy --release --manifest-path updater/Cargo.toml -- -D warnings
+          cargo fmt --manifest-path updater/Cargo.toml --check
+
+      - name: Build updater
+        run: cargo build --release --manifest-path updater/Cargo.toml
+
       - name: Build with PyInstaller
         run: |
-          uv run pyinstaller main.spec
+          uv run --no-dev --group build pyinstaller main.spec
 
-      - name: Add alert file
+      - name: Copy updater to dist
+        shell: pwsh
         run: |
-          New-Item -Path dist/endfield-essence-recognizer/ -Name "使用前请先解压全部文件！.txt" -ItemType "file"
+          New-Item -ItemType Directory -Force "dist/endfield-essence-recognizer/_internal" | Out-Null
+          Copy-Item "updater/target/release/eer_updater.exe" "dist/endfield-essence-recognizer/_internal/eer_updater.exe"
+
+      - name: Generate update manifest
+        run: |
+          uv run python scripts/generate_manifest.py --dist-dir dist/endfield-essence-recognizer
+
+      - name: Resolve release tag
+        id: release_tag
+        shell: pwsh
+        run: |
+          $releaseTag = "${{ github.ref_name }}"
+          if (-not $releaseTag.StartsWith("v")) {
+            $releaseTag = "v$releaseTag"
+          }
+          "normalized=$releaseTag" >> $env:GITHUB_OUTPUT
 
       - name: Zip the built files
         shell: pwsh
         run: |
           cd dist
-          Compress-Archive -Path "endfield-essence-recognizer/*" -DestinationPath "endfield-essence-recognizer-${{ github.ref_name }}-${{ matrix.os }}.zip"
+          $releaseTag = "${{ steps.release_tag.outputs.normalized }}"
+          Compress-Archive -Path "endfield-essence-recognizer/*" -DestinationPath "endfield-essence-recognizer-$releaseTag-${{ matrix.os }}.zip"
+
+      - name: Resolve previous release
+        id: previous_release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $currentTag = "${{ steps.release_tag.outputs.normalized }}"
+          $currentVersion = $currentTag.TrimStart("v")
+
+          $releases = gh release list --exclude-drafts --exclude-pre-releases --limit 50 --json tagName
+          $previousTag = ($releases | ConvertFrom-Json |
+            Where-Object { $_.tagName -ne $currentTag -and $_.tagName -match '^v\d+\.\d+\.\d+$' } |
+            Select-Object -First 1).tagName
+
+          if (-not $previousTag) {
+            "has_previous=false" >> $env:GITHUB_OUTPUT
+            Write-Host "No previous stable release found; skip incremental package."
+            exit 0
+          }
+
+          $previousVersion = $previousTag.TrimStart("v")
+          "has_previous=true" >> $env:GITHUB_OUTPUT
+          "current_tag=$currentTag" >> $env:GITHUB_OUTPUT
+          "current_version=$currentVersion" >> $env:GITHUB_OUTPUT
+          "previous_tag=$previousTag" >> $env:GITHUB_OUTPUT
+          "previous_version=$previousVersion" >> $env:GITHUB_OUTPUT
+
+      - name: Download previous full package
+        if: steps.previous_release.outputs.has_previous == 'true'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          New-Item -ItemType Directory -Force "previous-release" | Out-Null
+          gh release download "${{ steps.previous_release.outputs.previous_tag }}" `
+            --pattern "endfield-essence-recognizer-${{ steps.previous_release.outputs.previous_tag }}-${{ matrix.os }}.zip" `
+            --dir "previous-release"
+
+      - name: Extract previous full package
+        id: extract_previous
+        if: steps.previous_release.outputs.has_previous == 'true'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force "previous-dist" | Out-Null
+          $zipFile = Get-ChildItem -Path "previous-release" -Filter "endfield-essence-recognizer-${{ steps.previous_release.outputs.previous_tag }}-${{ matrix.os }}.zip" | Select-Object -First 1
+          if (-not $zipFile) {
+            Write-Error "No matching zip found in previous-release/"
+            exit 1
+          }
+          Write-Host "Extracting: $($zipFile.FullName)"
+          Expand-Archive `
+            -Path $zipFile.FullName `
+            -DestinationPath "previous-dist" `
+            -Force
+          # Detect dist directory structure
+          if (Test-Path "previous-dist/endfield-essence-recognizer") {
+            "old_dist_dir=previous-dist/endfield-essence-recognizer" >> $env:GITHUB_OUTPUT
+          } else {
+            "old_dist_dir=previous-dist" >> $env:GITHUB_OUTPUT
+          }
+
+      - name: Generate incremental package
+        id: generate_incremental
+        if: steps.previous_release.outputs.has_previous == 'true'
+        shell: pwsh
+        env:
+          PYTHONIOENCODING: utf-8
+        run: |
+          # Read actual version from old manifest (tag version may differ)
+          $oldManifestPath = "${{ steps.extract_previous.outputs.old_dist_dir }}/_internal/manifest.json"
+          $oldManifest = Get-Content $oldManifestPath | ConvertFrom-Json
+          $fromVersion = $oldManifest.version
+          Write-Host "Old manifest version: $fromVersion"
+          $incrementalZip = "dist/incremental-v$fromVersion-to-${{ steps.previous_release.outputs.current_tag }}-${{ matrix.os }}.zip"
+          uv run python scripts/generate_incremental_package.py `
+            --old-dist-dir "${{ steps.extract_previous.outputs.old_dist_dir }}" `
+            --new-dist-dir "dist/endfield-essence-recognizer" `
+            --output $incrementalZip `
+            --from-version "$fromVersion" `
+            --to-version "${{ steps.previous_release.outputs.current_version }}"
+          "incremental_zip=$incrementalZip" >> $env:GITHUB_OUTPUT
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/endfield-essence-recognizer-${{ github.ref_name }}-${{ matrix.os }}.zip
+          files: |
+            dist/endfield-essence-recognizer-${{ steps.release_tag.outputs.normalized }}-${{ matrix.os }}.zip
+            dist/incremental-*-to-*-${{ matrix.os }}.zip
           generate_release_notes: true

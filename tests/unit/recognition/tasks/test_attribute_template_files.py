@@ -2,6 +2,8 @@ import os
 
 import pytest
 
+from endfield_essence_recognizer.core.path import get_root_dir
+
 if os.getenv("GITHUB_ACTIONS") == "true":
     # importing endfield_essence_recognizer.core.recognition.tasks.attribute will fail in CI
     pytest.skip("Skipping test in CI environment", allow_module_level=True)
@@ -9,10 +11,13 @@ if os.getenv("GITHUB_ACTIONS") == "true":
 from endfield_essence_recognizer.core.recognition.tasks.attribute import (
     build_attribute_profile,
 )
+from endfield_essence_recognizer.game_data.static_game_data import StaticGameData
 
 
 def get_attribute_templates():
-    profile = build_attribute_profile()
+    data_root = get_root_dir() / "resources" / "data" / "v2"
+    static_game_data = StaticGameData(data_root)
+    profile = build_attribute_profile(static_game_data)
     return profile.templates
 
 

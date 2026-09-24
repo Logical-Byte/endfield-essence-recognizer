@@ -6,25 +6,26 @@ on:
       - main
       - dev
     paths: # Only run on backend-related changes
-      - 'src/**'
-      - 'tests/**'
-      - 'ruff.toml'
-      - 'uv.lock'
-      - 'pyproject.toml'
-      - '.github/workflows/**'
+      - "src/**"
+      - "scripts/**"
+      - "tests/**"
+      - "updater/**"
+      - "ruff.toml"
+      - "uv.lock"
+      - "pyproject.toml"
+      - ".github/workflows/**"
 
   push:
     branches:
       - main
       - dev
-      # branches that ends with `-ci` or `/ci` (e.g., feature-ci, fix/ci)
-      - '**/ci'
-      - '*-ci'
       # Run on all changes
+
+  workflow_dispatch:
 
 # Ensure that only one CI run happens per PR/branch at a time
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -33,6 +34,8 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          submodules: true
 
       - name: Set up uv
         uses: astral-sh/setup-uv@v7
@@ -46,15 +49,33 @@ jobs:
         run: uvx ruff format --check .
         if: always() # Always run to report formatting issues
 
+  updater-lint:
+    name: Check Rust updater
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - name: clippy
+        run: cargo clippy --release --manifest-path updater/Cargo.toml -- -D warnings
+
+      - name: fmt check
+        run: cargo fmt --manifest-path updater/Cargo.toml --check
+
+      - name: Run Rust tests
+        run: cargo test --manifest-path updater/Cargo.toml
+
   backend-test:
     name: Run tests
     runs-on: windows-latest
-    permissions:
-      contents: read
-      checks: write
-      pull-requests: write
     steps:
       - uses: actions/checkout@v5
+        with:
+          submodules: true
 
       - name: Set up uv
         uses: astral-sh/setup-uv@v7
@@ -70,11 +91,10 @@ jobs:
       - name: Run tests
         run: uv run pytest tests -v --ci -ra --junitxml=pytest-results.xml
 
-      - name: Publish test report
-        uses: mikepenz/action-junit-report@v6
-        if: always() # Always run to publish results even if tests fail
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
-          report_paths: pytest-results.xml
-          detailed_summary: true
-          include_time_in_summary: true
-          comment: true
+          name: pytest-results
+          path: pytest-results.xml
+          retention-days: 1

@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 
 from endfield_essence_recognizer.core.layout.base import ResolutionProfile
-from endfield_essence_recognizer.models.screenshot import (
+from endfield_essence_recognizer.schemas.screenshot import (
     ImageFormat,
     ScreenshotSaveFormat,
 )
@@ -54,7 +54,8 @@ async def test_capture_as_data_uri_success(screenshot_service, mock_window_manag
 
 @pytest.mark.asyncio
 async def test_capture_as_data_uri_inactive(screenshot_service, mock_window_manager):
-    mock_window_manager.target_is_active = False
+    """测试窗口不存在时返回 None（窗口是否活跃不影响截图）"""
+    mock_window_manager.target_exists = False
 
     result = await screenshot_service.capture_as_data_uri()
 

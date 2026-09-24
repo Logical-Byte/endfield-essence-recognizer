@@ -8,7 +8,7 @@ from endfield_essence_recognizer.core.layout.base import (
     ResolutionProfile,
 )
 from endfield_essence_recognizer.core.window import WindowManager
-from endfield_essence_recognizer.models.screenshot import (
+from endfield_essence_recognizer.schemas.screenshot import (
     ImageFormat,
     ScreenshotSaveFormat,
 )
@@ -43,9 +43,10 @@ class ScreenshotService:
             quality: The quality of the encoded image (for lossy formats).
 
         Returns:
-            A data URI string or None if the window is not active.
+            A data URI string or None if the target window does not exist.
         """
-        if not self._window_manager.target_is_active:
+        # 只检查窗口是否存在
+        if not self._window_manager.target_exists:
             return None
 
         # Capture screenshot

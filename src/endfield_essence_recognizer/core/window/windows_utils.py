@@ -2,7 +2,8 @@
 Windows OS-specific window utilities.
 """
 
-from collections.abc import Sequence
+import time
+from collections.abc import Callable, Sequence
 
 import numpy as np
 import pyautogui
@@ -88,32 +89,32 @@ def _screenshot_by_win32ui(scope: Region) -> MatLike:
     bitmap.CreateCompatibleBitmap(img_dc, width, height)
     mem_dc.SelectObject(bitmap)
 
-    # 复制屏幕区域到位图
-    mem_dc.BitBlt((0, 0), (width, height), img_dc, (left, top), win32con.SRCCOPY)
+    try:
+        # 复制屏幕区域到位图
+        mem_dc.BitBlt((0, 0), (width, height), img_dc, (left, top), win32con.SRCCOPY)
 
-    # 读取位图像素数据
-    bmpinfo = bitmap.GetInfo()
-    bpp = bmpinfo["bmBitsPixel"] // 8  # 每像素字节数（通常为3或4）
-    stride = ((width * bpp + 3) // 4) * 4  # 4字节对齐的行宽
-    raw = bitmap.GetBitmapBits(True)
+        # 读取位图像素数据
+        bmpinfo = bitmap.GetInfo()
+        bpp = bmpinfo["bmBitsPixel"] // 8  # 每像素字节数（通常为3或4）
+        stride = ((width * bpp + 3) // 4) * 4  # 4字节对齐的行宽
+        raw = bitmap.GetBitmapBits(True)
 
-    # 转换为 numpy 数组
-    arr = np.frombuffer(raw, dtype=np.uint8)
-    arr = arr.reshape((height, stride))
-    arr = arr[:, : width * bpp]  # 移除对齐填充
-    arr = arr.reshape((height, width, bpp))
+        # 转换为 numpy 数组
+        arr = np.frombuffer(raw, dtype=np.uint8)
+        arr = arr.reshape((height, stride))
+        arr = arr[:, : width * bpp]  # 移除对齐填充
+        arr = arr.reshape((height, width, bpp))
 
-    # 如果是 BGRA 格式，转换为 BGR
-    if bpp == 4:
-        arr = arr[:, :, :3]  # 丢弃 alpha 通道
+        # 如果是 BGRA 格式，转换为 BGR
+        if bpp == 4:
+            arr = arr[:, :, :3]  # 丢弃 alpha 通道
 
-    # 释放 GDI 资源
-    mem_dc.DeleteDC()
-    img_dc.DeleteDC()
-    win32gui.ReleaseDC(0, screen_dc)
-    win32gui.DeleteObject(bitmap.GetHandle())
-
-    return arr.copy()
+        return arr.copy()
+    finally:
+        mem_dc.DeleteDC()
+        img_dc.DeleteDC()
+        win32gui.ReleaseDC(0, screen_dc)
+        win32gui.DeleteObject(bitmap.GetHandle())
 
 
 def screenshot_window(
@@ -174,3 +175,92 @@ def click_on_window(
     screen_x = left + relative_x
     screen_y = top + relative_y
     pyautogui.click(screen_x, screen_y)
+
+
+def progressive_drag_on_window(
+    window: pygetwindow.Window,
+    relative_start_x: int,
+    relative_start_y: int,
+    relative_end_x: int,
+    relative_end_y: int,
+    step: int = 50,
+    max_drag: int = 0,
+    on_step: Callable[[int, int, int], bool] | None = None,
+) -> tuple[int, bool]:
+    """
+    在指定窗口执行渐进式拖动，支持每步回调检测。
+
+    鼠标按住不放，逐步移动，可在每步后进行滚动条检测。
+
+    Args:
+        window: pygetwindow 窗口对象
+        relative_start_x: 拖动起始 X 坐标（相对于客户区）
+        relative_start_y: 拖动起始 Y 坐标（相对于客户区）
+        relative_end_x: 拖动终止 X 坐标（相对于客户区）
+        relative_end_y: 拖动终止 Y 坐标（相对于客户区）
+        step: 每次拖动的像素数
+        max_drag: 最大拖动距离（0 表示不限制）
+        on_step: 每步回调函数，参数为 (step_index, screen_x, screen_y)，
+                  返回 True 表示提前停止拖动
+
+    Returns:
+        (total_distance, stopped_early) 总拖动距离和是否提前停止
+    """
+    (left, top), (_right, _bottom) = _get_client_rect(window)
+
+    # 计算屏幕坐标
+    screen_start_x = left + relative_start_x
+    screen_start_y = top + relative_start_y
+    screen_end_x = left + relative_end_x
+    screen_end_y = top + relative_end_y
+
+    # 计算总拖动距离和方向
+    total_dx = screen_end_x - screen_start_x
+    total_dy = screen_end_y - screen_start_y
+    total_distance = int((total_dx**2 + total_dy**2) ** 0.5)
+
+    # 限制最大拖动距离
+    if max_drag > 0 and total_distance > max_drag:
+        scale = max_drag / total_distance
+        total_dx = int(total_dx * scale)
+        total_dy = int(total_dy * scale)
+        total_distance = max_drag
+
+    # 计算步数和每步偏移
+    steps = max(1, total_distance // step)
+    step_distance = total_distance / steps
+
+    # 移动到起点并按住鼠标
+    pyautogui.moveTo(screen_start_x, screen_start_y)
+    pyautogui.mouseDown()
+    time.sleep(0.2)
+
+    actual_distance = 0
+    stopped_early = False
+
+    try:
+        for i in range(steps):
+            # 计算当前步位置
+            progress = (i + 1) / steps
+            current_x = int(screen_start_x + total_dx * progress)
+            current_y = int(screen_start_y + total_dy * progress)
+
+            # 移动鼠标并等待游戏处理
+            pyautogui.moveTo(current_x, current_y)
+            time.sleep(0.05)
+
+            # 先检测滚动条，再累加距离
+            # 这样当检测到到底时，当前这一步的距离不会被计入
+            if on_step is not None:
+                if on_step(i, current_x, current_y):
+                    stopped_early = True
+                    break
+
+            # 检测通过后才累加距离
+            actual_distance += step_distance
+
+        return int(actual_distance), stopped_early
+
+    finally:
+        time.sleep(0.5)  # 防止移动后UI惯性滑动
+        pyautogui.mouseUp()

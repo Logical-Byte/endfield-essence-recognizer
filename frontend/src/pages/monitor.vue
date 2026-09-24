@@ -71,6 +71,20 @@
         </template>
       </v-slider>
     </div>
+
+    <!-- 监控控制按钮 -->
+    <div class="my-4">
+      <v-btn
+        :color="isMonitoring ? 'error' : 'primary'"
+        :prepend-icon="isMonitoring ? 'mdi-stop' : 'mdi-play'"
+        size="large"
+        @click="toggleMonitoring"
+      >
+        {{ isMonitoring ? '停止监控' : '开始监控' }}
+      </v-btn>
+    </div>
+
+    <!-- 截图显示区域 -->
     <img
       v-if="screenshotUrl !== null"
       alt="Screenshot"
@@ -78,14 +92,25 @@
       :src="screenshotUrl"
       style="max-width: 100%; height: auto"
     />
-    <v-alert v-else class="my-4" border="start" type="warning" variant="tonal">
-      终末地窗口不在前台
+    <v-alert v-else-if="windowNotFound" border="start" class="my-4" type="warning" variant="tonal">
+      <div class="d-flex align-center justify-space-between">
+        <span>未检测到终末地窗口，请启动游戏后重新开始监控</span>
+        <v-btn color="primary" size="small" variant="tonal" @click="startMonitoring">
+          重新开始
+        </v-btn>
+      </div>
+    </v-alert>
+    <v-alert v-else-if="!isMonitoring" border="start" class="my-4" type="info" variant="tonal">
+      点击"开始监控"按钮开始实时监控终末地窗口
+    </v-alert>
+    <v-alert v-else border="start" class="my-4" type="info" variant="tonal">
+      正在连接终末地窗口...
     </v-alert>
   </v-container>
 </template>
 
 <script lang="ts" setup>
-import { onMounted, onUnmounted, ref, watch } from 'vue'
+import { onUnmounted, ref, watch } from 'vue'
 
 const interval = ref<number>(0.1)
 const width = ref<number>(1920)
@@ -93,6 +118,8 @@ const height = ref<number>(1080)
 const format = ref<string>('jpg')
 const quality = ref<number>(75)
 const screenshotUrl = ref<string | null>(null)
+const isMonitoring = ref<boolean>(false)
+const windowNotFound = ref<boolean>(false)
 
 let timer: number | null = null
 
@@ -105,47 +132,88 @@ async function updateScreenshot() {
     timestamp: Date.now().toString(),
   })
   const url = `/api/screenshot?${params.toString()}`
-  // const oldUrl = screenshotUrl.value
-  // fetch(url)
-  //   .then((response) => response.blob())
-  //   .then((blob) => {
-  //     const newUrl = URL.createObjectURL(blob)
-  //     screenshotUrl.value = newUrl
-  //     // 释放旧的对象URL以防内存泄漏
-  //     if (oldUrl) {
-  //       URL.revokeObjectURL(oldUrl)
-  //     }
-  //   })
-  //   .catch((error) => {
-  //     console.error('Failed to fetch screenshot:', error)
-  //   })
 
-  await fetch(url)
-    .then((response) => response.json())
-    .then((dataUrl) => {
-      screenshotUrl.value = dataUrl
-    })
+  try {
+    const response = await fetch(url)
+
+    // 检查响应状态
+    if (!response.ok) {
+      // 404 或其他错误，说明窗口不存在
+      console.warn('截图失败，窗口可能不存在')
+      windowNotFound.value = true
+      stopTimer()
+      screenshotUrl.value = null
+      return
+    }
+
+    const dataUrl = await response.json()
+
+    // 检查返回值
+    if (dataUrl === null || dataUrl === undefined) {
+      // 返回 null，说明窗口不存在
+      console.warn('未检测到终末地窗口')
+      windowNotFound.value = true
+      stopTimer()
+      screenshotUrl.value = null
+      return
+    }
+
+    // 成功获取截图
+    windowNotFound.value = false
+    screenshotUrl.value = dataUrl
+  } catch (error) {
+    console.error('截图请求失败:', error)
+    windowNotFound.value = true
+    stopTimer()
+    screenshotUrl.value = null
+  }
 }
 
 function startTimer() {
   if (timer) clearInterval(timer)
-  if (interval.value > 0) {
+  if (interval.value > 0 && isMonitoring.value) {
     timer = window.setInterval(updateScreenshot, interval.value * 1000)
   }
 }
 
-onMounted(() => {
-  updateScreenshot() // 初始加载
-  startTimer()
-})
-
-onUnmounted(() => {
+function stopTimer() {
   if (timer) {
     window.clearInterval(timer)
+    timer = null
   }
+}
+
+function startMonitoring() {
+  isMonitoring.value = true
+  windowNotFound.value = false
+  updateScreenshot() // 立即执行一次
+  startTimer()
+}
+
+function stopMonitoring() {
+  isMonitoring.value = false
+  windowNotFound.value = false
+  stopTimer()
+}
+
+function toggleMonitoring() {
+  if (isMonitoring.value) {
+    stopMonitoring()
+  } else {
+    startMonitoring()
+  }
+}
+
+onUnmounted(() => {
+  stopMonitoring()
 })
 
-watch([width, height, format, quality, interval], startTimer)
+// 监听参数变化，如果正在监控则重启定时器
+watch([width, height, format, quality, interval], () => {
+  if (isMonitoring.value) {
+    startTimer()
+  }
+})
 </script>
 
 <style scoped lang="scss"></style>

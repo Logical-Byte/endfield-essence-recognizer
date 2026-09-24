@@ -1,10 +1,12 @@
+import { createRouter, createWebHistory } from 'vue-router'
 import Docs from '@/pages/docs.vue'
 import FriendLinks from '@/pages/friend-links.vue'
 import Index from '@/pages/index.vue'
+import MatrixPlanner from '@/pages/matrix-planner.vue'
 import Monitor from '@/pages/monitor.vue'
 import Settings from '@/pages/settings.vue'
+import TreasureMatrix from '@/pages/treasure-matrix.vue'
 import Yituliu from '@/pages/yituliu.vue'
-import { createRouter, createWebHistory } from 'vue-router'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -14,6 +16,18 @@ const router = createRouter({
       name: 'logs',
       component: Index,
       meta: { title: '日志', icon: 'mdi-file-document-outline' },
+    },
+    {
+      path: '/treasure-matrix',
+      name: 'treasure-matrix',
+      component: TreasureMatrix,
+      meta: { title: '宝藏基质', icon: 'mdi-diamond-stone' },
+    },
+    {
+      path: '/matrix-planner',
+      name: 'matrix-planner',
+      component: MatrixPlanner,
+      meta: { title: '基质规划', icon: 'mdi-map-search' },
     },
     {
       path: '/docs',

@@ -1,50 +1,30 @@
 <template>
   <v-app>
     <v-navigation-drawer v-model="drawer">
-      <v-card to="/" variant="flat" class="pa-4" rounded="0">
+      <v-card class="pa-4" rounded="0" to="/" variant="flat">
         <logo class="d-block mb-4 w-50 h-auto mx-auto" />
         <h1 class="text-center ma-4">终末地基质<br />妙妙小工具</h1>
       </v-card>
       <v-divider />
-      <v-list nav density="comfortable">
+      <v-list density="comfortable" nav>
         <v-list-item
-          v-for="(route, index) in router.options.routes"
+          v-for="(routeItem, index) in router.options.routes"
           :key="index"
-          :to="route.path"
           color="primary"
-          :prepend-icon="(route.meta as any)?.icon"
+          :prepend-icon="getRouteIcon(routeItem)"
+          :to="routeItem.path"
         >
-          {{ route.meta?.title ?? route.name }}
+          {{ routeItem.meta?.title ?? routeItem.name }}
         </v-list-item>
       </v-list>
     </v-navigation-drawer>
 
-    <v-app-bar app color="primary" flat density="comfortable">
-      <v-app-bar-nav-icon @click="drawer = !drawer"></v-app-bar-nav-icon>
+    <v-app-bar app color="primary" density="comfortable" flat>
+      <v-app-bar-nav-icon @click="drawer = !drawer" />
       <v-app-bar-title>{{ route.meta?.title || '终末地基质妙妙小工具' }}</v-app-bar-title>
       <template #append>
+        <profile-selector />
         <v-btn icon="mdi-update" @click="checkForUpdates(true)" />
-        <v-tooltip location="start">
-          仅游戏内文本支持多语言<br />界面文本目前仅支持简体中文
-          <template v-slot:activator="{ props }">
-            <v-btn icon v-bind="props">
-              <v-icon icon="mdi-translate" />
-              <v-menu activator="parent">
-                <v-list density="compact">
-                  <v-list-item
-                    v-for="language in usedLanguages"
-                    :key="language"
-                    :value="language"
-                    :active="currentLanguage === language"
-                    @click="setLanguage(language)"
-                  >
-                    <v-list-item-title>{{ languageToText.get(language) }}</v-list-item-title>
-                  </v-list-item>
-                </v-list>
-              </v-menu>
-            </v-btn>
-          </template>
-        </v-tooltip>
         <v-btn icon="mdi-theme-light-dark" @click="theme.toggle()" />
       </template>
     </v-app-bar>
@@ -55,19 +35,24 @@
 
     <!-- 更新提示 -->
     <UpdateDialogs />
+
+    <!-- 全局操作结果提示 -->
+    <ToastHost />
   </v-app>
 </template>
 
 <script lang="ts" setup>
-import Logo from '@/components/icons/logo.vue'
-import UpdateDialogs from '@/components/UpdateDialogs.vue'
-import { useLanguage } from '@/composables/useLanguage'
-import { useLogs } from '@/composables/useLogs'
-import { useUpdateChecker } from '@/composables/useUpdateChecker'
-import { initGameData } from '@/utils/gameData/gameData'
 import { onMounted, ref } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { type RouteRecordRaw, useRoute, useRouter } from 'vue-router'
 import { useTheme } from 'vuetify'
+import Logo from '@/components/icons/logo.vue'
+import ProfileSelector from '@/components/ProfileSelector.vue'
+import ToastHost from '@/components/ToastHost.vue'
+import UpdateDialogs from '@/components/UpdateDialogs.vue'
+import { useLogs } from '@/composables/useLogs'
+import { useProfilesEvents } from '@/composables/useProfilesEvents'
+import { useUpdateChecker } from '@/composables/useUpdateChecker'
+import { useStaticData } from '@/utils/gameData/staticData'
 
 const route = useRoute()
 const router = useRouter()
@@ -75,20 +60,56 @@ const theme = useTheme()
 
 const drawer = ref<boolean | null>(null)
 
-// 语言切换
-const { usedLanguages, languageToText, currentLanguage, setLanguage } = useLanguage()
+/** 从路由元信息中提取导航图标（meta 中的值类型未知，需先收窄） */
+function getRouteIcon(routeItem: RouteRecordRaw): string {
+  const icon = routeItem.meta?.icon
+  return typeof icon === 'string' && icon ? icon : String(routeItem.name ?? '')
+}
 
 // 初始化日志 WebSocket 连接
 useLogs()
 
+// 订阅后端事件（扫描完成后自动刷新宝藏基质等页面数据）
+useProfilesEvents()
+
 // 检查更新
 const { checkForUpdates } = useUpdateChecker()
 
+const { fetchStaticData } = useStaticData()
+
+function scheduleStartupUpdateCheck() {
+  const runCheck = () => {
+    void checkForUpdates(false, { silent: true, timeoutMs: 2500 })
+  }
+
+  // 页面加载完成后再等待浏览器空闲，尽量降低后台检查对启动体验的影响。
+  const runWhenIdle = () => {
+    const requestIdleCallback = (
+      window as Window & {
+        requestIdleCallback?: (callback: () => void, options?: { timeout?: number }) => number
+      }
+    ).requestIdleCallback
+
+    if (requestIdleCallback) {
+      requestIdleCallback(runCheck, { timeout: 3000 })
+    } else {
+      window.setTimeout(runCheck, 1500)
+    }
+  }
+
+  // 等页面资源完整加载后再做后台检查，避免启动阶段抢占交互体验。
+  if (document.readyState === 'complete') {
+    window.requestAnimationFrame(runWhenIdle)
+  } else {
+    window.addEventListener('load', () => window.requestAnimationFrame(runWhenIdle), { once: true })
+  }
+}
+
 onMounted(() => {
   // 初始化游戏数据
-  initGameData()
-  // 初始检查更新
-  checkForUpdates(false)
+  void fetchStaticData()
+  // 初始检查更新放到后台空闲时执行，手动点击更新按钮仍然会立即检查。
+  scheduleStartupUpdateCheck()
 })
 </script>
 

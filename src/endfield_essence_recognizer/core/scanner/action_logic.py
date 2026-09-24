@@ -10,7 +10,26 @@ from endfield_essence_recognizer.core.scanner.models import (
     EssenceQuality,
     EvaluationResult,
 )
-from endfield_essence_recognizer.models.user_setting import Action, UserSetting
+from endfield_essence_recognizer.game_data.models.v2 import StatType
+from endfield_essence_recognizer.schemas.user_setting import Action, UserSetting
+
+
+def _is_missing_stats(data: EssenceData) -> bool:
+    """检查基质是否缺少任意一项词条（基础属性、附加属性、技能属性）。"""
+    type_to_stat: dict[StatType, str | None] = {}
+    for stat_id, stat_type in zip(data.stats, data.stat_types, strict=True):
+        if (
+            stat_type is not None
+            and stat_id is not None
+            and stat_type not in type_to_stat
+        ):
+            type_to_stat[stat_type] = stat_id
+
+    has_attribute = StatType.ATTRIBUTE in type_to_stat
+    has_secondary = StatType.SECONDARY in type_to_stat
+    has_skill = StatType.SKILL in type_to_stat
+
+    return not (has_attribute and has_secondary and has_skill)
 
 
 class ActionType(Enum):
@@ -30,6 +49,7 @@ def decide_actions(
     data: EssenceData,
     evaluation: EvaluationResult,
     setting: UserSetting,
+    target_action: Action | None = None,
 ) -> list[ScannerAction]:
     """
     Decides what physical actions to perform based on the current state vs desired quality.
@@ -47,20 +67,27 @@ def decide_actions(
         data: Current state of the essence (locked?, observed?).
         evaluation: The judged quality (Treasure/Trash) from evaluate_essence.
         setting: User preferences for actions (e.g. treasure_action=LOCK).
+        target_action: 覆盖目标操作（冗余清理传入 setting.redundant_action）；
+            None 时按 quality 取 treasure_action / trash_action。
 
     Returns:
         An ordered list of actions to apply to the game client sequentially.
     """
+    if evaluation.quality == EssenceQuality.SKIP:
+        return []
+
     actions: list[ScannerAction] = []
+
+    if target_action is None:
+        target_action = (
+            setting.treasure_action
+            if evaluation.quality == EssenceQuality.TREASURE
+            else setting.trash_action
+        )
 
     # --- Lock Logic ---
     should_lock = False
     should_unlock = False
-
-    if evaluation.quality == EssenceQuality.TREASURE:
-        target_action = setting.treasure_action
-    else:  # TRASH
-        target_action = setting.trash_action
 
     if target_action == Action.LOCK:
         should_lock = True
@@ -89,6 +116,7 @@ def decide_actions(
     # --- Abandon Logic ---
     should_abandon = False
     should_unabandon = False
+    is_missing_stats_action = False
 
     if target_action == Action.DEPRECATE:
         should_abandon = True
@@ -99,14 +127,25 @@ def decide_actions(
         and data.lock_label == LockStatusLabel.NOT_LOCKED
     ):
         should_abandon = True
+    elif target_action == Action.DEPRECATE_IF_MISSING_STATS and _is_missing_stats(data):
+        should_abandon = True
+        is_missing_stats_action = True
 
     if data.abandon_label == AbandonStatusLabel.NOT_ABANDONED and should_abandon:
-        actions.append(
-            ScannerAction(
-                type=ActionType.CLICK_ABANDON,
-                log_message="给你自动标记为弃用了！(￣︶￣)>",
+        if is_missing_stats_action:
+            actions.append(
+                ScannerAction(
+                    type=ActionType.CLICK_ABANDON,
+                    log_message="因为缺少词条，给你自动标记为弃用了！(￣︶￣)>",
+                )
             )
-        )
+        else:
+            actions.append(
+                ScannerAction(
+                    type=ActionType.CLICK_ABANDON,
+                    log_message="给你自动标记为弃用了！(￣︶￣)>",
+                )
+            )
     elif data.abandon_label == AbandonStatusLabel.ABANDONED and should_unabandon:
         actions.append(
             ScannerAction(

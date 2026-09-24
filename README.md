@@ -5,6 +5,7 @@
 [![Vuetify](https://img.shields.io/badge/Vuetify-3.x-lightblue.svg?logo=vuetify)](https://vuetifyjs.com/)
 [![①群](https://img.shields.io/badge/①群-486622964-orange.svg?logo=qq)](https://qm.qq.com/cgi-bin/qm/qr?k=1xqRp7JwQHwGswa-8_SMFuAsRYYRnF8J)
 [![②群](https://img.shields.io/badge/②群-1082880855-orange.svg?logo=qq)](https://qm.qq.com/cgi-bin/qm/qr?k=qAmvmHCc3HuESiJhZVe6Ytgj7foOxXx9)
+[![③群](https://img.shields.io/badge/③群-1042417974-orange.svg?logo=qq)](https://qm.qq.com/cgi-bin/qm/qr?k=-GykJWhnZEN5F2aZ1nrVd3xs9RGkMBI2)
 [![官网](https://img.shields.io/badge/官网-终末地一图流-yellow.svg)](https://ef.yituliu.cn/resources/essence-recognizer)
 
 不知道哪些基质该留哪些该扔？想要当狗粮又担心万一这个基质有用？快来逝逝终末地基质妙妙小工具罢！
@@ -14,17 +15,18 @@
 反馈交流群
 - ①群：[486622964](https://qm.qq.com/cgi-bin/qm/qr?k=1xqRp7JwQHwGswa-8_SMFuAsRYYRnF8J)
 - ②群：[1082880855](https://qm.qq.com/cgi-bin/qm/qr?k=qAmvmHCc3HuESiJhZVe6Ytgj7foOxXx9)
+- ③群：[1042417974](https://qm.qq.com/cgi-bin/qm/qr?k=-GykJWhnZEN5F2aZ1nrVd3xs9RGkMBI2)
 
-![终末地基质小助手展示](https://cos.yituliu.cn/endfield/endfield-essence-recognizer/assets/终末地基质小助手展示_0.webp)
-![终末地基质小助手展示](https://cos.yituliu.cn/endfield/endfield-essence-recognizer/assets/终末地基质小助手展示_1.webp)
+![终末地基质小助手展示](https://github.com/Logical-Byte/eer-resource/blob/main/images/终末地基质小助手展示_0.webp?raw=true)
+![终末地基质小助手展示](https://github.com/Logical-Byte/eer-resource/blob/main/images/终末地基质小助手展示_1.webp?raw=true)
 
 ## 使用前准备
 
 - 请使用**管理员权限**（是 Windows 管理员，不是终末地管理员）运行本工具，否则无法捕获全局热键
 - 请在 Windows 屏幕设置中**关闭 HDR**
 - 请将终末地的界面语言更改为**简体中文**
-- 请将终末地的分辨率更改为 **1920×1080 窗口**
-  - 若您的显示器分辨率为 1920×1080，请将终末地的分辨率更改为 1920×1080 全屏后按下 **`Alt+Enter` 切换为窗口模式**
+- 支持分辨率自动缩放，按照原生 1080p 比例自动计算ROI缩放
+  - 若您的显示器为 1920×1080，可设为 1920×1080 全屏后按 **`Alt+Enter`** 切换为窗口
 - 请确保终末地的整个窗口都位于屏幕范围内且未被性能监控工具等任何其他内容遮挡
 - 请按 `N` 键打开终末地**贵重品库**并切换到**武器基质**页面
 - 在运行过程中，请确保终末地窗口**置于前台**
@@ -38,28 +40,41 @@
 
 **宝藏基质和养成材料：** 可以在设置界面自定义。默认情况下，如果这个基质和任何一把武器能对上（基质的所有属性与至少 1 件已实装武器的属性完全相同），则是宝藏，否则是养成材料。
 
+## 应用内更新
+
+- 工具支持在应用内检查并一键更新到最新版本。
+- 更新包基于 `_internal/manifest.json` 执行文件级更新，并支持从旧版本到新版本的文件级增量包，默认保留 `config.json`、`profiles.json`、`logs/`、`screenshots/` 和 `.env`。
+- 更新由独立 Rust 更新器 `_internal/eer_updater.exe` 执行，支持更新器自更新，并在复制失败时尽量回滚旧文件。
+- 如更新失败，请提供 `logs/` 目录，其中包含 `updater.log` 和版本号命名的更新状态文件。
+- 开发和发布细节见 [HOT_UPDATE_GUIDE.md](HOT_UPDATE_GUIDE.md)。
+
 ## 常见问题
 
 ### 1. 双击运行时遇到“Unhandled exception in script”弹窗报错
 
-![遇到报错解决方法](https://cos.yituliu.cn/endfield/endfield-essence-recognizer/assets/遇到报错解决方法.webp)
+![遇到报错解决方法](https://github.com/Logical-Byte/eer-resource/blob/main/images/遇到报错解决方法.webp?raw=true)
 
 这大概率是由于 Windows 自带的解压导致的。
 
 有两种解决办法：
 
 1. 改用 [7zip](https://www.7-zip.org/) 或者 [WinRAR](https://www.win-rar.com/) 解压即可解决（其他解压软件也可以试试）。
-2. 如果电脑上没安装其他解压软件，则请右键点击 zip 压缩包，点击"属性"，然后把"解除锁定"勾上，点击"确定"，再解压即可。
+2. 如果电脑上没安装其他解压软件，则请右键点击 zip 压缩包，点击“属性”，然后把“解除锁定”勾上，点击“确定”，再解压即可。
 
 ### 2. 界面窗口能打开，但是白屏
 
-白屏问题比较复杂，请参考以下临时解决方法。
+白屏问题比较复杂，请参考以下解决方法。
 
-**方法一：** 请参考 [https://github.com/Logical-Byte/endfield-essence-recognizer/issues/24#issuecomment-3830421851](https://github.com/Logical-Byte/endfield-essence-recognizer/issues/24#issuecomment-3830421851)
+**方法一：** 如果白屏界面右侧能看到一条矩形的滚动条，说明您未安装 WebView2 运行时，请前往 [https://developer.microsoft.com/zh-CN/microsoft-edge/webview2](https://developer.microsoft.com/zh-CN/microsoft-edge/webview2) 下载并安装 WebView2 运行时。
+
+选择“常青引导程序”或者“常青独立安装程序”均可。如果遇到网络问题无法下载，可以加群，在群文件里获取安装包。
 
 **方法二：** 请保持工具打开状态，用浏览器访问 [http://127.0.0.1:325/](http://127.0.0.1:325/)
+  > 如果浏览器中也白屏，则可能是您在手动更新的时候未完全删除`_internal`文件夹，请删除旧的`_internal`文件夹后重新复制
 
-**方法三：** 如果以上方法仍然解决不了，那就先凑合用。界面看不见没关系的，只要终末地在前台，按 `]` 键是可以正常使用的。
+**方法三：** 请参考 [https://github.com/Logical-Byte/endfield-essence-recognizer/issues/24#issuecomment-3830421851](https://github.com/Logical-Byte/endfield-essence-recognizer/issues/24#issuecomment-3830421851)
+
+**方法四：** 如果以上方法仍然解决不了，那就先凑合用。界面看不见没关系的，只要终末地在前台，按 `]` 键是可以正常使用的。
 
 ### 3. 明明是 1920×1080 窗口，依然提示分辨率错误
 
@@ -81,6 +96,7 @@
 如果在使用过程中遇到任何问题，或是想提出建议，欢迎 **[在 GitHub 上提 Issue](https://github.com/Logical-Byte/endfield-essence-recognizer)**，或者加入反馈交流群：
 - ①群：[486622964](https://qm.qq.com/cgi-bin/qm/qr?k=1xqRp7JwQHwGswa-8_SMFuAsRYYRnF8J)
 - ②群：[1082880855](https://qm.qq.com/cgi-bin/qm/qr?k=qAmvmHCc3HuESiJhZVe6Ytgj7foOxXx9)
+- ③群：[1042417974](https://qm.qq.com/cgi-bin/qm/qr?k=-GykJWhnZEN5F2aZ1nrVd3xs9RGkMBI2)
 
 ## 说明
 

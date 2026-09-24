@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import threading
 from typing import TYPE_CHECKING
 
 from endfield_essence_recognizer.core.interfaces import (
@@ -8,7 +7,6 @@ from endfield_essence_recognizer.core.interfaces import (
     ImageSource,
     WindowActions,
 )
-from endfield_essence_recognizer.core.layout.base import ResolutionProfile
 from endfield_essence_recognizer.core.recognition.tasks.delivery_job_reward import (
     DeliveryJobRewardLabel,
 )
@@ -18,7 +16,10 @@ from endfield_essence_recognizer.core.recognition.tasks.delivery_ui import (
 from endfield_essence_recognizer.utils.log import logger
 
 if TYPE_CHECKING:
-    from endfield_essence_recognizer.core.recognition.recognizer import Recognizer
+    import threading
+
+    from endfield_essence_recognizer.core.layout.base import ResolutionProfile
+    from endfield_essence_recognizer.core.recognition import TemplateRecognizer
     from endfield_essence_recognizer.services.audio_service import AudioService
 
 
@@ -32,8 +33,8 @@ class DeliveryClaimerEngine(AutomationEngine):
         image_source: ImageSource,
         window_actions: WindowActions,
         profile: ResolutionProfile,
-        delivery_scene_recognizer: Recognizer[DeliverySceneLabel],
-        delivery_job_reward_recognizer: Recognizer[DeliveryJobRewardLabel],
+        delivery_scene_recognizer: TemplateRecognizer[DeliverySceneLabel],
+        delivery_job_reward_recognizer: TemplateRecognizer[DeliveryJobRewardLabel],
         audio_service: AudioService,
         time_after_refresh: float = 3.0,
         time_after_recognition: float = 2.5,
@@ -57,6 +58,23 @@ class DeliveryClaimerEngine(AutomationEngine):
         logger.debug("DeliveryClaimerEngine execution finished.")
 
     def _check_window_and_scene(self) -> bool:
+        # check resolution
+        # only support 1080p for now
+        if self._profile.RESOLUTION != (1920, 1080):
+            logger.warning(
+                f"当前仅支持 1920x1080 分辨率的终末地窗口，"
+                f"检测到分辨率为 {self._profile.RESOLUTION}，停止抢单。"
+            )
+            return False
+
+        window_size = self._image_source.get_client_size()
+        if window_size != self._profile.RESOLUTION:
+            logger.warning(
+                f"当前终末地窗口分辨率为 {window_size}，"
+                f"目前仅支持 1920x1080 分辨率，停止抢单。"
+            )
+            return False
+
         if not self._window_actions.target_is_active:
             logger.info("终末地窗口不在前台，停止抢单。")
             return False
@@ -111,17 +129,9 @@ class DeliveryClaimerEngine(AutomationEngine):
         """
         Verify that we are in the correct scene.
 
-        Logs warnings if:
-        -   The window resolution does not match the profile.
-        -   The current scene is not the delivery jobs list.
+        Resolution is checked by the caller (_check_window_and_scene);
+        this method only verifies the UI scene.
         """
-        client_size = self._image_source.get_client_size()
-        if client_size != self._profile.RESOLUTION:
-            logger.warning(
-                f"窗口分辨率 {client_size} 与配置 {self._profile.RESOLUTION} 不符。"
-            )
-            return False
-
         screenshot = self._image_source.screenshot(
             self._profile.LIST_OF_DELIVERY_JOBS_SCENE_CHECK_ROI
         )

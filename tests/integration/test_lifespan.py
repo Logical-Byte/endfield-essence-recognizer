@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from loguru import logger
 
-from endfield_essence_recognizer.deps import get_log_service
+from endfield_essence_recognizer.dependencies import get_log_service
 from endfield_essence_recognizer.server import app
 
 

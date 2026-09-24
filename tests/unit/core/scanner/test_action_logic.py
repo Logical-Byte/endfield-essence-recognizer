@@ -3,6 +3,7 @@ import pytest
 from endfield_essence_recognizer.core.recognition import (
     AbandonStatusLabel,
     LockStatusLabel,
+    RarityLabel,
 )
 from endfield_essence_recognizer.core.scanner.action_logic import (
     ActionType,
@@ -13,14 +14,16 @@ from endfield_essence_recognizer.core.scanner.models import (
     EssenceQuality,
     EvaluationResult,
 )
-from endfield_essence_recognizer.models.user_setting import Action, UserSetting
+from endfield_essence_recognizer.schemas.user_setting import Action, UserSetting
 
 
 @pytest.fixture
 def default_data():
     return EssenceData(
         stats=[],
+        stat_types=[],
         levels=[],
+        rarity=RarityLabel.OTHER,
         abandon_label=AbandonStatusLabel.NOT_ABANDONED,
         lock_label=LockStatusLabel.NOT_LOCKED,
     )
@@ -174,4 +177,73 @@ def test_lock_if_not_deprecated(default_data, default_eval, default_settings):
     default_data.abandon_label = AbandonStatusLabel.NOT_ABANDONED
     default_data.lock_label = LockStatusLabel.LOCKED
     actions = decide_actions(default_data, default_eval, default_settings)
+    assert len(actions) == 0
+
+
+def test_decide_actions_skip_quality(default_data, default_eval, default_settings):
+    """
+    Test that SKIP quality returns no actions.
+    """
+    default_eval.quality = EssenceQuality.SKIP
+    actions = decide_actions(default_data, default_eval, default_settings)
+    assert actions == []
+
+
+def test_target_action_override_deprecate(default_data, default_eval, default_settings):
+    """
+    冗余清理：target_action 覆盖生效——即使 trash_action=unlock，
+    显式传入 DEPRECATE 也按弃用处理。
+    """
+    default_eval.quality = EssenceQuality.TRASH
+    default_settings.trash_action = Action.UNLOCK
+    default_data.lock_label = LockStatusLabel.LOCKED
+    default_data.abandon_label = AbandonStatusLabel.NOT_ABANDONED
+
+    actions = decide_actions(
+        default_data,
+        default_eval,
+        default_settings,
+        target_action=Action.DEPRECATE,
+    )
+    assert len(actions) == 1
+    assert actions[0].type == ActionType.CLICK_ABANDON
+
+
+def test_target_action_override_unlock(default_data, default_eval, default_settings):
+    """
+    冗余清理：target_action=UNLOCK 时，已锁定的基质被解锁。
+    """
+    default_eval.quality = EssenceQuality.TRASH
+    default_settings.trash_action = Action.DEPRECATE
+    default_data.lock_label = LockStatusLabel.LOCKED
+    default_data.abandon_label = AbandonStatusLabel.NOT_ABANDONED
+
+    actions = decide_actions(
+        default_data,
+        default_eval,
+        default_settings,
+        target_action=Action.UNLOCK,
+    )
+    assert len(actions) == 1
+    assert actions[0].type == ActionType.CLICK_LOCK
+
+
+def test_target_action_override_keep_no_effect(
+    default_data, default_eval, default_settings
+):
+    """
+    冗余清理：target_action=KEEP 时不产生任何动作。
+    """
+    default_eval.quality = EssenceQuality.TREASURE
+    default_settings.treasure_action = Action.LOCK
+    default_data.lock_label = LockStatusLabel.NOT_LOCKED
+    default_data.abandon_label = AbandonStatusLabel.NOT_ABANDONED
+
+    actions = decide_actions(
+        default_data,
+        default_eval,
+        default_settings,
+        target_action=Action.KEEP,
+    )
+    assert actions == []
     assert len(actions) == 0

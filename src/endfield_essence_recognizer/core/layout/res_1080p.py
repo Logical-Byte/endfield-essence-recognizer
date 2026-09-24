@@ -55,6 +55,10 @@ class Resolution1080p(ResolutionProfile):
         return Region(Point(1508, 468), Point(1700, 500))
 
     @property
+    def RARITY_ROI(self) -> Region:
+        return Region(Point(1468, 78), Point(1472, 82))
+
+    @property
     def MASK_ESSENCE_REGION_UID(self) -> Region:
         return Region(Point(0, 1040), Point(270, 1080))
 
@@ -79,3 +83,23 @@ class Resolution1080p(ResolutionProfile):
     @property
     def DELIVERY_JOB_REFRESH_BUTTON_POINT(self) -> Point:
         return Point(1745, 1003)
+
+    @property
+    def DRAG_START_POS(self) -> Point:
+        """拖动起始位置：基质图标区域底部"""
+        return Point(750, 870)
+
+    @property
+    def DRAG_END_POS(self) -> Point:
+        """拖动结束位置：向上滑动到顶部"""
+        return Point(750, 50)
+
+    @property
+    def SCROLLBAR_CHECK_POS(self) -> Point:
+        """滚动条检测位置，用于判断是否到达底部"""
+        return Point(1453, 950)
+
+    @property
+    def SCROLLBAR_TOP_CHECK_POS(self) -> Point:
+        """滚动条顶部检测位置，用于判断是否回到第一页"""
+        return Point(1453, 130)

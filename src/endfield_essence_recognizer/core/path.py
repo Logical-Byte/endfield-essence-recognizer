@@ -34,3 +34,8 @@ def get_logs_dir() -> Path:
 def get_screenshots_dir() -> Path:
     """Get the path to the screenshots directory in the root directory."""
     return get_root_dir() / "screenshots"
+
+
+def get_exports_dir() -> Path:
+    """Get the path to the exports directory in the root directory."""
+    return get_root_dir() / "exports"

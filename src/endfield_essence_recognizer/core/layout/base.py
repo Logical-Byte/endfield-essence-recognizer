@@ -104,6 +104,11 @@ class ResolutionProfile(Protocol):
         ...
 
     @property
+    def RARITY_ROI(self) -> Region:
+        """稀有度识别区域。"""
+        ...
+
+    @property
     def MASK_ESSENCE_REGION_UID(self) -> Region:
         """在基质界面截图中需要遮罩的 UID 区域。"""
         ...
@@ -131,4 +136,24 @@ class ResolutionProfile(Protocol):
     @property
     def DELIVERY_JOB_REFRESH_BUTTON_POINT(self) -> Point:
         """运送委托列表刷新按钮坐标。"""
+        ...
+
+    @property
+    def DRAG_START_POS(self) -> Point:
+        """拖动翻页的起始位置。"""
+        ...
+
+    @property
+    def DRAG_END_POS(self) -> Point:
+        """拖动翻页的终止位置。"""
+        ...
+
+    @property
+    def SCROLLBAR_CHECK_POS(self) -> Point:
+        """滚动条检测位置。"""
+        ...
+
+    @property
+    def SCROLLBAR_TOP_CHECK_POS(self) -> Point:
+        """滚动条顶部检测位置（冗余清理回页首时判断是否已滚动到位）。"""
         ...

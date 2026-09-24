@@ -1,25 +1,28 @@
-exclude: ^(frontend/)
-
 repos:
 - repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v3.2.0
+  rev: v6.0.0
   hooks:
   - id: trailing-whitespace
   - id: end-of-file-fixer
+    # exclude json files in data folder
+    exclude: ^src/endfield_essence_recognizer/data/.*\.json$
   - id: check-yaml
 - repo: https://github.com/astral-sh/uv-pre-commit
-  rev: 0.9.28
+  rev: 0.10.0
   hooks:
     # Update the uv lockfile
     - id: uv-lock
+      files: ^(pyproject\.toml|uv\.lock)$
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.14.14
+  rev: v0.15.0
   hooks:
     # Run the linter.
     - id: ruff-check
       args: [ --fix ]
+      types_or: [python, pyi]
     # Run the formatter.
     - id: ruff-format
+      types_or: [python, pyi]
 - repo: local
   hooks:
     - id: pytest
@@ -27,4 +30,46 @@ repos:
       language: system
       entry: uv run pytest tests
       types: [python]
+      pass_filenames: false
+    - id: frontend-lint
+      name: Frontend Lint
+      language: system
+      entry: npm run --prefix frontend lint
+      files: ^frontend/
+      pass_filenames: false
+    - id: frontend-format
+      name: Frontend Format Check
+      language: system
+      entry: npm run --prefix frontend format:check
+      files: ^frontend/
+      pass_filenames: false
+    - id: frontend-typecheck
+      name: Frontend Typecheck
+      language: system
+      entry: npm run --prefix frontend type-check
+      files: ^frontend/
+      pass_filenames: false
+    - id: frontend-test
+      name: Frontend Tests
+      language: system
+      entry: npm run --prefix frontend test
+      files: ^frontend/
+      pass_filenames: false
+    - id: rust-fmt
+      name: Rust fmt
+      language: system
+      entry: cargo fmt --manifest-path updater/Cargo.toml --check
+      files: ^updater/
+      pass_filenames: false
+    - id: rust-clippy
+      name: Rust clippy
+      language: system
+      entry: cargo clippy --manifest-path updater/Cargo.toml -- -D warnings
+      files: ^updater/
+      pass_filenames: false
+    - id: rust-test
+      name: Rust tests
+      language: system
+      entry: cargo test --manifest-path updater/Cargo.toml
+      files: ^updater/
       pass_filenames: false

@@ -1,4 +1,5 @@
 import threading
+import time
 from unittest.mock import MagicMock
 
 from endfield_essence_recognizer.services.scanner_service import ScannerService
@@ -99,3 +100,42 @@ def test_scanner_service_already_running():
     # Cleanup
     block_event.set()
     service.stop_scan()
+
+
+def test_scanner_service_does_not_start_while_stopping():
+    execute_started = threading.Event()
+    allow_exit = threading.Event()
+    stop_entered = threading.Event()
+
+    first_scanner = MagicMock()
+    second_scanner = MagicMock()
+
+    def first_execute(stop_event):
+        execute_started.set()
+        allow_exit.wait()
+
+    first_scanner.execute.side_effect = first_execute
+
+    service = ScannerService()
+    service.start_scan(scanner_factory=lambda: first_scanner)
+    assert execute_started.wait(timeout=1.0)
+
+    def stop_service():
+        stop_entered.set()
+        service.stop_scan()
+
+    stopper = threading.Thread(target=stop_service)
+    stopper.start()
+    assert stop_entered.wait(timeout=1.0)
+    deadline = time.monotonic() + 1.0
+    while not service._stopping and time.monotonic() < deadline:
+        time.sleep(0.01)
+    assert service._stopping
+
+    service.start_scan(scanner_factory=lambda: second_scanner)
+    second_scanner.execute.assert_not_called()
+
+    allow_exit.set()
+    stopper.join(timeout=1.0)
+    assert not stopper.is_alive()
+    assert not service.is_running()
