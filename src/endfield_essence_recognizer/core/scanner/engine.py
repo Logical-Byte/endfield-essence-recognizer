@@ -55,6 +55,16 @@ from endfield_essence_recognizer.utils.log import logger
 #: 过小的拖动可能无法被游戏识别。
 _SCROLL_TOP_DRAG_PX = 16
 
+#: 滚动条亮点检测框的水平半宽（逻辑像素）。滚动条亮区宽度经标定约为
+#: 6 物理像素，横向留出容差以吸收标定误差（如 2560×1600 实测亮区与
+#: 1080p 标定值相差约 3 逻辑像素）；该横向范围位于网格卡片右缘与右侧
+#: 面板之间的空档，放宽不会引入额外误报。
+_SCROLLBAR_SEARCH_HALF_WIDTH = 4
+
+#: 滚动条亮点检测框的垂直半高（逻辑像素）。纵向放宽会侵入卡片内容区，
+#: 故保持 1080p 标定时的紧致范围。
+_SCROLLBAR_SEARCH_HALF_HEIGHT = 2
+
 
 @dataclass
 class _CleanupRecord:
@@ -1601,6 +1611,29 @@ class DraggableScannerEngine(ScannerEngine):
                         f"<LIGHT-YELLOW><bold>{action.log_message}</></>"
                     )
 
+    def _scrollbar_check_roi(self, check_pos: Point) -> Region:
+        """构造滚动条亮点的检测区域。
+
+        横向半宽与纵向半高见 ``_SCROLLBAR_SEARCH_HALF_WIDTH`` /
+        ``_SCROLLBAR_SEARCH_HALF_HEIGHT`` 的说明。
+
+        Args:
+            check_pos: 检测位置（逻辑像素坐标）
+
+        Returns:
+            待截图的检测区域
+        """
+        return Region(
+            Point(
+                check_pos.x - _SCROLLBAR_SEARCH_HALF_WIDTH,
+                check_pos.y - _SCROLLBAR_SEARCH_HALF_HEIGHT,
+            ),
+            Point(
+                check_pos.x + _SCROLLBAR_SEARCH_HALF_WIDTH + 1,
+                check_pos.y + _SCROLLBAR_SEARCH_HALF_HEIGHT + 1,
+            ),
+        )
+
     def _check_scrollbar_at_bottom(self, check_pos: Point) -> bool:
         """
         检测滚动条是否已到达底部。
@@ -1615,17 +1648,9 @@ class DraggableScannerEngine(ScannerEngine):
             True 如果检测到滚动条（已到达底部），False 否则
         """
         try:
-            # 根据分辨率计算搜索半径（1080p 为 2，其他分辨率按比例缩放）
-            resolution = self._profile.RESOLUTION
-            scale_factor = resolution[1] / 1080
-            radius = max(1, round(2 * scale_factor))
-
-            # 截取检测位置附近的区域
-            roi = Region(
-                Point(check_pos.x - radius, check_pos.y - radius),
-                Point(check_pos.x + radius + 1, check_pos.y + radius + 1),
+            screenshot = self._image_source.screenshot(
+                self._scrollbar_check_roi(check_pos)
             )
-            screenshot = self._image_source.screenshot(roi)
 
             # 在区域内查找是否有亮点（BGR 三通道都高于 100）
             has_bright = bool(np.any(np.all(screenshot[:, :, :3] > 100, axis=2)))
@@ -1648,16 +1673,9 @@ class DraggableScannerEngine(ScannerEngine):
         """
         check_pos = self._profile.SCROLLBAR_TOP_CHECK_POS
         try:
-            # 根据分辨率计算搜索半径（1080p 为 2，其他分辨率按比例缩放）
-            resolution = self._profile.RESOLUTION
-            scale_factor = resolution[1] / 1080
-            radius = max(1, round(2 * scale_factor))
-
-            roi = Region(
-                Point(check_pos.x - radius, check_pos.y - radius),
-                Point(check_pos.x + radius + 1, check_pos.y + radius + 1),
+            screenshot = self._image_source.screenshot(
+                self._scrollbar_check_roi(check_pos)
             )
-            screenshot = self._image_source.screenshot(roi)
 
             has_bright = bool(np.any(np.all(screenshot[:, :, :3] > 100, axis=2)))
             if has_bright:
