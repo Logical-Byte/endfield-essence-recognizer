@@ -44,6 +44,11 @@ _BOTTOM_MARGIN = 120
 # 右侧面板距右边缘的距离
 _PANEL_RIGHT_MARGIN = _BASE_WIDTH - _BASE.AREA.x0  # 455
 
+# 滚动条检测点距窗口右/下/上边缘的距离（逻辑坐标系下恒定，由 1080p 基准值推导）
+_SCROLLBAR_RIGHT_MARGIN = _BASE_WIDTH - _BASE.SCROLLBAR_CHECK_POS.x  # 467
+_SCROLLBAR_BOTTOM_MARGIN = _BASE_HEIGHT - _BASE.SCROLLBAR_CHECK_POS.y  # 130
+_SCROLLBAR_TOP_MARGIN = _BASE.SCROLLBAR_TOP_CHECK_POS.y  # 130
+
 
 def _right_anchor_x(base_x: int, width: int) -> int:
     """将 1080p 基准 X 坐标按右边距映射到目标宽度。"""
@@ -250,49 +255,30 @@ class DynamicResolutionProfile(ResolutionProfile):
     def SCROLLBAR_CHECK_POS(self) -> Point:
         """滚动条检测位置，用于判断是否到达底部。
 
-        规律（通过多分辨率实测得出）：
-        - 滚动条位置基于窗口右下角锚定
-        - 右边距 ≈ 高度 × 0.432（16:9 分辨率下）
-        - 下边距 ≈ 高度 × 0.1（16:9 分辨率下）
+        滚动条在逻辑坐标系下基于窗口右下角恒定锚定，边距不随逻辑高度变化：
+        - 右边距 467：与右侧面板（右锚定 455）属于同一套锚定规律
+        - 下边距 130：与网格容器底部边距（120）一样是逻辑常量
 
-        实测数据验证（16:9 分辨率）：
-        - 1920×1080 → (1453, 950)：1080×0.432=467, 1080×0.12=130 ✓
-        - 2560×1080 → (2092, 950)：1080×0.432=467, 1080×0.12=130 ✓
-        - 1600×900  → (1210, 810)：900×0.433=390, 900×0.1=90 ✓
-        - 1280×720  → (969, 650)：720×0.432=311, 720×0.1=72 ✓
+        注意：**不能**按下边距 × 逻辑高度/1080 缩放。逻辑高度 > 1080 的窄比例
+        分辨率（16:10 / 3:2 / 4:3 / 5:4）下，按高度放大会让检测点向左上方漂移
+        进基质网格内部，被卡片边缘/稀有度色条的亮点误触发，提前判定“已到底”。
 
-        注意：1280×1024（5:4 比例）等非标分辨率可能不适用此规律。
+        实测数据：
+        - 1920×1080（逻辑 1920×1080）→ (1453, 950)：右距 467、下距 130
+        - 2560×1080（逻辑 2560×1080）→ (2093, 950)：右距 467、下距 130
+        - 2560×1600（逻辑 1920×1200）→ (1453, 1070)：反算物理 (1937, 1427)，
+          与实测滚动条位置 (1934, 1430) 一致（旧公式为逻辑 (1401, 1056)）
         """
-        # 基于 1080p 实测数据计算缩放系数
-        # 1080p 时：右边距 467，下边距 130
-        base_height = 1080
-        base_right_margin = 467
-        base_bottom_margin = 130
-
-        # 按高度比例动态缩放
-        scale = self._height / base_height
-        right_margin = round(base_right_margin * scale)
-        bottom_margin = round(base_bottom_margin * scale)
-
-        x = self._width - right_margin
-        y = self._height - bottom_margin
-        return Point(x, y)
+        return Point(
+            self._width - _SCROLLBAR_RIGHT_MARGIN,
+            self._height - _SCROLLBAR_BOTTOM_MARGIN,
+        )
 
     @property
     def SCROLLBAR_TOP_CHECK_POS(self) -> Point:
         """滚动条顶部检测位置，用于判断是否回到第一页。
 
-        与行末检测（SCROLLBAR_CHECK_POS）同一套缩放律，取对称的顶部边距：
-        右边距 ≈ 高度 × 0.432，顶部边距 ≈ 高度 × 0.12。
+        与行末检测（SCROLLBAR_CHECK_POS）共用同一套右下锚定律：右边距 467 恒定。
+        顶部边距 130 同样恒定——网格首行锚定在逻辑 y=130，不随逻辑高度变化。
         """
-        base_height = 1080
-        base_right_margin = 467
-        base_top_margin = 130
-
-        scale = self._height / base_height
-        right_margin = round(base_right_margin * scale)
-        top_margin = round(base_top_margin * scale)
-
-        x = self._width - right_margin
-        y = top_margin
-        return Point(x, y)
+        return Point(self._width - _SCROLLBAR_RIGHT_MARGIN, _SCROLLBAR_TOP_MARGIN)
