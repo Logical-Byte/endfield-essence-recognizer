@@ -41,8 +41,8 @@ def build_attribute_level_recognizer_profile() -> AttributeLevelRecognizerProfil
     """
     Builds the AttributeLevelRecognizerProfile (brightness only; icon points come from ResolutionProfile).
     """
-    # 等级亮点是纯白高光（中心亮度 254），而面板背景、词条文字、稀有度色条都
-    # 远低于该阈值。
+    # 等级亮点是纯白高光（实测中心亮度 252~253），而面板内亮点之外最亮的像素也只有
+    # 195，两者相差 57 以上，绝对阈值取两者之间即可。
     brightness_profile = BrightnessDetectorProfile(threshold=200, sample_radius=2)
     return AttributeLevelRecognizerProfile(
         brightness_profile=brightness_profile,
@@ -51,10 +51,11 @@ def build_attribute_level_recognizer_profile() -> AttributeLevelRecognizerProfil
         # 两版实测漂移不超过 2.5px，5px 足够覆盖且留有余量。
         search_dx=5,
         search_dy=5,
-        # 选中行下方的底色带（实测最亮约 135）是面板上最亮的“非亮点”元素：绝对
-        # 阈值 200 能挡住它，但为防 UI 以后把它调得更亮，再要求达到本行最亮采样值
-        # 的 60%（亮点间亮度一致，实测 247~254），把阈值抬到亮点与底色带之间。
-        relative_threshold=0.6,
+        # 8bit 灰度图的采样值上界是 255，所以相对阈值能被 max() 采纳的条件是
+        # row_max * relative_threshold > 200。实测 row_max ≈ 253，因此该值必须
+        # 大于 200 / 253 ≈ 0.79 才会生效；取 0.8 时阈值约为 202，正好把面板内
+        # 最亮 195 的干扰像素挡在门外，同时远低于亮点本身的 252。
+        relative_threshold=0.8,
     )
 
 
