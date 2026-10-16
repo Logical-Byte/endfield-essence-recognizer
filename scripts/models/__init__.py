@@ -1,4 +1,7 @@
 from .common import TranslationKey as TranslationKey
+from .TableCfg.ForesightWeaponTable import (
+    ForesightWeaponTable as ForesightWeaponTable,
+)
 from .TableCfg.GemTable import GemTable as GemTable
 from .TableCfg.GemTagIdTable import GemTagIdTable as GemTagIdTable
 from .TableCfg.I18nTextTable import I18nTextTable as I18nTextTable
