@@ -371,7 +371,7 @@ uv run python scripts/generate_manifest.py --dist-dir dist/endfield-essence-reco
    ```
    该脚本会读取原始游戏数据，生成 JSON 文件。
 
-3. **更新武器图片**
+3. **更新武器图片**：参考 <https://data.akedata.wiki/asset-sync-index.json>
 
 ### 2. 更新版本号并提交
 
