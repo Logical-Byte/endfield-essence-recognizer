@@ -44,15 +44,25 @@ class Resolution1080p(ResolutionProfile):
 
     @property
     def STATS_0_ROI(self) -> Region:
-        return Region(Point(1508, 358), Point(1700, 390))
+        """第一个属性词条的识别区域。
+
+        词条文字实测：旧版 y 363~383、新版 y 367~386（两版合起来 363~386，高 24px）。
+        这里取 44px 高，文字上下各留 9px 余量：`AttributeRecognizer` 用模板匹配定位
+        文字，只要文字完整落在区域内，整体偏移几个像素不影响匹配，余量决定的是还能
+        容忍 UI 再漂移多少。原来 32px 高的区域只留 4~8px，再漂移 3px 文字边缘就会被
+        切掉、匹配分数从 0.9 掉到 0.5 以下；现在实测可再漂移 4px 仍满分。
+        """
+        return Region(Point(1508, 357), Point(1700, 401))
 
     @property
     def STATS_1_ROI(self) -> Region:
-        return Region(Point(1508, 416), Point(1700, 448))
+        """第二个属性词条的识别区域，余量说明见 `STATS_0_ROI`。"""
+        return Region(Point(1508, 413), Point(1700, 457))
 
     @property
     def STATS_2_ROI(self) -> Region:
-        return Region(Point(1508, 468), Point(1700, 500))
+        """第三个属性词条的识别区域，余量说明见 `STATS_0_ROI`。"""
+        return Region(Point(1508, 469), Point(1700, 513))
 
     @property
     def RARITY_ROI(self) -> Region:
