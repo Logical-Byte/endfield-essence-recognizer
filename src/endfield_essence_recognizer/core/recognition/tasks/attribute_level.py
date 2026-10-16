@@ -2,12 +2,19 @@ from dataclasses import dataclass
 
 from cv2.typing import MatLike
 
-from endfield_essence_recognizer.core.layout.base import ResolutionProfile
+from endfield_essence_recognizer.core.layout.base import (
+    Point,
+    Region,
+    ResolutionProfile,
+)
 from endfield_essence_recognizer.core.recognition.brightness_detector import (
     BrightnessDetector,
     BrightnessDetectorProfile,
 )
-from endfield_essence_recognizer.utils.image import to_gray_image
+from endfield_essence_recognizer.utils.image import (
+    scope_to_slice,
+    to_gray_image,
+)
 from endfield_essence_recognizer.utils.log import logger
 
 
@@ -69,6 +76,78 @@ class AttributeLevelRecognizer:
     def __str__(self) -> str:
         return f"[{self.name}]"
 
+    def _level_brightness_map(
+        self,
+        image: MatLike,
+        resolution_profile: ResolutionProfile,
+    ) -> tuple[MatLike, Point]:
+        """
+        只为等级亮点所在的一小块区域预计算亮度图。
+
+        等级亮点只集中在面板右侧一条窄带上（1080p 下约 100x127 像素，占整帧
+        0.6%），因此先把这一块裁出来再去灰度、滤波；对整帧做同样的事开销要大两个
+        数量级，而 `recognize_levels` 每识别一个基质就要用一次。
+
+        Args:
+            image: 全局图像（客户区截图）。
+            resolution_profile: 当前分辨率的布局配置，提供等级图标标称坐标。
+
+        Returns:
+            (亮度图, 该亮度图左上角在 `image` 中的坐标)。
+        """
+        all_points = [
+            point
+            for icon_points in resolution_profile.STATS_LEVEL_ICON_POINTS
+            for point in icon_points
+        ]
+        # 标称坐标附近的搜索窗口（±search_d*）与采样窗口（±sample_radius）都可能
+        # 取到图像内容，裁剪范围必须把它们全部包含进来
+        margin = (
+            max(self.profile.search_dx, self.profile.search_dy)
+            + self.profile.brightness_profile.sample_radius
+        )
+        region = Region(
+            Point(
+                min(point.x for point in all_points) - margin,
+                min(point.y for point in all_points) - margin,
+            ),
+            Point(
+                max(point.x for point in all_points) + margin + 1,
+                max(point.y for point in all_points) + margin + 1,
+            ),
+        )
+        # 先裁剪再转灰度：转灰度的开销与像素数成正比，先转整帧是本块裁剪的 150 倍
+        roi = to_gray_image(image[scope_to_slice(region)])
+        return self._brightness_detector.build_brightness_map(roi), region.p0
+
+    def recognize_levels(
+        self,
+        image: MatLike,
+        resolution_profile: ResolutionProfile,
+    ) -> list[int | None]:
+        """
+        依次识别三行词条的等级，三行共用同一份亮度图。
+
+        等级亮点只占整帧的一小块，但 `recognize_level` 单独调用时无法把这笔开销摊
+        到三行上，所以批量识别走这个入口。
+
+        Args:
+            image: 全局图像（客户区截图）。
+            resolution_profile: 当前分辨率的布局配置。
+
+        Returns:
+            三个等级 (1-6) 或 None 的列表，按属性索引排列。
+        """
+        brightness_map, map_origin = self._level_brightness_map(
+            image, resolution_profile
+        )
+        return [
+            self._recognize_level_from_map(
+                stat_index, resolution_profile, brightness_map, map_origin
+            )
+            for stat_index in range(len(resolution_profile.STATS_LEVEL_ICON_POINTS))
+        ]
+
     def recognize_level(
         self,
         image: MatLike,
@@ -94,11 +173,37 @@ class AttributeLevelRecognizer:
         Returns:
             等级 (1-6) 或 None（识别失败）。
         """
-        gray = to_gray_image(image)
-        icon_points = resolution_profile.STATS_LEVEL_ICON_POINTS[stat_index]
-        # 每个亮点都要试遍搜索窗口，逐点计算区域均值太慢，先整张算好再查表
-        brightness_map = self._brightness_detector.build_brightness_map(gray)
+        brightness_map, map_origin = self._level_brightness_map(
+            image, resolution_profile
+        )
+        return self._recognize_level_from_map(
+            stat_index, resolution_profile, brightness_map, map_origin
+        )
 
+    def _recognize_level_from_map(
+        self,
+        stat_index: int,
+        resolution_profile: ResolutionProfile,
+        brightness_map: MatLike,
+        map_origin: Point,
+    ) -> int | None:
+        """
+        在已算好的亮度图上识别一行词条的等级。
+
+        Args:
+            stat_index: 属性索引 (0, 1, 2)。
+            resolution_profile: 当前分辨率的布局配置，提供等级图标标称坐标。
+            brightness_map: `_level_brightness_map` 得到的亮度图。
+            map_origin: `brightness_map` 左上角在整帧中的坐标。
+
+        Returns:
+            等级 (1-6) 或 None（识别失败）。
+        """
+        icon_points = [
+            # 亮度图只是整帧的一小块，标称坐标要换算成图内坐标
+            Point(point.x - map_origin.x, point.y - map_origin.y)
+            for point in resolution_profile.STATS_LEVEL_ICON_POINTS[stat_index]
+        ]
         found = [
             self._brightness_detector.locate_dot(
                 brightness_map,
@@ -110,10 +215,10 @@ class AttributeLevelRecognizer:
         ]
         # 同一行亮点的亮度由同一套 UI 渲染，用本行最亮采样值把阈值抬到亮点与背景
         # 之间，避免把行内的亮色 UI（如选中底色带）当成亮点
+        row_max = max(brightness for _, brightness in found)
         threshold = max(
             self.profile.brightness_profile.threshold,
-            max(brightness for _, brightness in found)
-            * self.profile.relative_threshold,
+            row_max * self.profile.relative_threshold,
         )
 
         active_count = 0
@@ -122,9 +227,11 @@ class AttributeLevelRecognizer:
         ):
             is_active = brightness > threshold
             logger.trace(
-                f"{self}属性 {stat_index} 标称点 {nominal_point} → "
-                f"采样点 {found_point} 亮度={brightness:.1f} 阈值={threshold:.1f}, "
-                f"状态={'亮色' if is_active else '暗色'}"
+                f"{self}属性 {stat_index} 标称点 "
+                f"({nominal_point.x + map_origin.x}, {nominal_point.y + map_origin.y}) → "
+                f"采样点 ({found_point.x + map_origin.x}, {found_point.y + map_origin.y}) "
+                f"亮度={brightness:.1f} 阈值={threshold:.1f} "
+                f"(本行最亮 {row_max:.1f}), 状态={'亮色' if is_active else '暗色'}"
             )
             if is_active:
                 active_count += 1

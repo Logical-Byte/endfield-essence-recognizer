@@ -179,13 +179,15 @@ def recognize_essence(
     profile: ResolutionProfile,
 ) -> EssenceData:
     stats: list[str | None] = []
-    levels: list[int | None] = []
 
     # 截取客户区全局截图用于等级检测和子区域裁剪
     mem_source = InMemoryImageSource.cache_from(image_source)
     full_screenshot = mem_source.screenshot()
 
     rois = [profile.STATS_0_ROI, profile.STATS_1_ROI, profile.STATS_2_ROI]
+
+    # 三行等级共用同一份亮度图（等级亮点只占面板右侧一条窄带），一次算完再逐行判定
+    levels = ctx.attr_level_recognizer.recognize_levels(full_screenshot, profile)
 
     for k, roi in enumerate(rois):
         screenshot_image = mem_source.screenshot(roi)
@@ -198,12 +200,7 @@ def recognize_essence(
                 stat_display = f"{stat_info.name}({attr})"
         logger.debug(f"属性 {k} 识别结果: {stat_display} (分数: {max_val:.3f})")
 
-        # 识别等级（通过检测坐标点状态）
-        level_value = ctx.attr_level_recognizer.recognize_level(
-            full_screenshot, k, profile
-        )
-        levels.append(level_value)
-
+        level_value = levels[k]
         if level_value is not None:
             logger.debug(f"属性 {k} 等级识别结果: +{level_value}")
         else:

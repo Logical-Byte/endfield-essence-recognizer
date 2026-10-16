@@ -113,7 +113,7 @@ def mock_scanner_context():
     attr_recognizer.recognize_roi.return_value = ("atk", 0.9)
 
     attr_level_recognizer = MagicMock(spec=AttributeLevelRecognizer)
-    attr_level_recognizer.recognize_level.return_value = 10
+    attr_level_recognizer.recognize_levels.return_value = [10, 10, 10]
 
     abandon_status_recognizer = MagicMock(spec=TemplateRecognizer)
     abandon_status_recognizer.recognize_roi_fallback.return_value = (
