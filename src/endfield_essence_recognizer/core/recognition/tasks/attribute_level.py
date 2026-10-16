@@ -46,9 +46,9 @@ def build_attribute_level_recognizer_profile() -> AttributeLevelRecognizerProfil
     brightness_profile = BrightnessDetectorProfile(threshold=200, sample_radius=2)
     return AttributeLevelRecognizerProfile(
         brightness_profile=brightness_profile,
-        # 相邻亮点间距 17px、相邻词条行间距 28px：搜索半径必须小于间距的一半
-        # （8.5px），否则某个暗点的搜索窗口会覆盖到相邻亮点上，把等级多计一级。
-        # 两版实测漂移不超过 2.5px，5px 足够覆盖且留有余量。
+        # 相邻亮点间距 17px、相邻词条行间距 56px：搜索半径必须分别小于两者的一半
+        # （8.5px / 28px），否则某个暗点的搜索窗口会覆盖到相邻亮点上，把等级多计
+        # 一级。两版实测漂移不超过 2.5px，5px 足够覆盖且留有余量。
         search_dx=5,
         search_dy=5,
         # 8bit 灰度图的采样值上界是 255，所以相对阈值能被 max() 采纳的条件是
@@ -81,7 +81,7 @@ class AttributeLevelRecognizer:
         self,
         image: MatLike,
         resolution_profile: ResolutionProfile,
-    ) -> tuple[MatLike, Point]:
+    ) -> tuple[MatLike, Point] | None:
         """
         只为等级亮点所在的一小块区域预计算亮度图。
 
@@ -94,7 +94,8 @@ class AttributeLevelRecognizer:
             resolution_profile: 当前分辨率的布局配置，提供等级图标标称坐标。
 
         Returns:
-            (亮度图, 该亮度图左上角在 `image` 中的坐标)。
+            (亮度图, 该亮度图左上角在 `image` 中的坐标)；图像尺寸不足以覆盖这一块
+            时返回 None。
         """
         all_points = [
             point
@@ -117,9 +118,21 @@ class AttributeLevelRecognizer:
                 max(point.y for point in all_points) + margin + 1,
             ),
         )
+        # 窗口尺寸小于布局标称分辨率时裁剪会越出画面，必须夹回图像范围，否则空数组
+        # 会在 cvtColor 上抛异常；夹完仍无交集就说明亮点根本不在画面内
+        height, width = image.shape[:2]
+        left, top = max(region.x0, 0), max(region.y0, 0)
+        right, bottom = min(region.x1, width), min(region.y1, height)
+        if left >= right or top >= bottom:
+            logger.debug(
+                f"{self} 图像尺寸 {width}x{height} 未覆盖等级亮点区域 "
+                f"({region.x0},{region.y0})-({region.x1},{region.y1})，按识别失败处理"
+            )
+            return None
+        clipped = Region(Point(left, top), Point(right, bottom))
         # 先裁剪再转灰度：转灰度的开销与像素数成正比，先转整帧是本块裁剪的 150 倍
-        roi = to_gray_image(image[scope_to_slice(region)])
-        return self._brightness_detector.build_brightness_map(roi), region.p0
+        roi = to_gray_image(image[scope_to_slice(clipped)])
+        return self._brightness_detector.build_brightness_map(roi), clipped.p0
 
     def recognize_levels(
         self,
@@ -137,11 +150,13 @@ class AttributeLevelRecognizer:
             resolution_profile: 当前分辨率的布局配置。
 
         Returns:
-            三个等级 (1-6) 或 None 的列表，按属性索引排列。
+            三个等级 (1-6) 或 None 的列表，按属性索引排列；图像尺寸不足以覆盖等级
+            亮点区域时三个都是 None。
         """
-        brightness_map, map_origin = self._level_brightness_map(
-            image, resolution_profile
-        )
+        built = self._level_brightness_map(image, resolution_profile)
+        if built is None:
+            return [None] * len(resolution_profile.STATS_LEVEL_ICON_POINTS)
+        brightness_map, map_origin = built
         return [
             self._recognize_level_from_map(
                 stat_index, resolution_profile, brightness_map, map_origin
@@ -174,9 +189,10 @@ class AttributeLevelRecognizer:
         Returns:
             等级 (1-6) 或 None（识别失败）。
         """
-        brightness_map, map_origin = self._level_brightness_map(
-            image, resolution_profile
-        )
+        built = self._level_brightness_map(image, resolution_profile)
+        if built is None:
+            return None
+        brightness_map, map_origin = built
         return self._recognize_level_from_map(
             stat_index, resolution_profile, brightness_map, map_origin
         )

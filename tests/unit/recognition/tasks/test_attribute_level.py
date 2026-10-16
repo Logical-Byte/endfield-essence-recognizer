@@ -168,7 +168,17 @@ def test_dark_dot_on_selected_row_band_is_not_active():
     assert recognize(build_panel_with_selected_row_band()) == [6, 6, 3]
 
 
-def test_handles_dots_far_outside_the_image():
-    # 亮点完全不在画面内时不应抛出异常，按识别失败处理
-    empty = np.full((PANEL_HEIGHT, PANEL_WIDTH, 3), PANEL_BACKGROUND, dtype=np.uint8)
-    assert recognize(empty) == [None, None, None]
+def test_returns_none_when_the_whole_level_region_is_outside_the_image():
+    # 窗口尺寸小于布局标称分辨率时，等级亮点区域可能整块落在画面外：
+    # 此时应按识别失败处理，既不抛异常也不报警告
+    assert recognize(np.full((400, 400, 3), PANEL_BACKGROUND, dtype=np.uint8)) == [
+        None,
+        None,
+        None,
+    ]
+
+
+def test_returns_none_when_panel_is_blank():
+    # 亮点区域在画面内、但一个亮点都没有时同样按识别失败处理
+    blank = np.full((PANEL_HEIGHT, PANEL_WIDTH, 3), PANEL_BACKGROUND, dtype=np.uint8)
+    assert recognize(blank) == [None, None, None]

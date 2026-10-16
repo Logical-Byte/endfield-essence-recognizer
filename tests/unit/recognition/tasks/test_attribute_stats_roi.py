@@ -44,10 +44,11 @@ SCREENSHOTS = {
 HIGH_THRESHOLD = 0.75
 #: 实测匹配分数在 0.87~0.94，留一条下限用于发现识别质量悄悄退化
 MIN_ACCEPTABLE_SCORE = 0.85
-#: 文字高度约 21px，区域高度需明显大于它才有多余量
-TEXT_HEIGHT = 21
+#: 两版文字并集的高度（实测 363~386）
+TEXT_HEIGHT = 24
 #: 允许的整体漂移量（逻辑像素）。
-#: 区域在文字上下各留约 9px 余量；实测再漂移 4px 时匹配仍满分行（0.87~0.94），
+#: 区域在文字上方留 6px、下方留 15px（实测，见 `STATS_0_ROI` 的 docstring），
+#: 能容忍的漂移由较小的一侧决定；实测再漂移 4px 时匹配仍满分行（0.87~0.94），
 #: 到 5px 时文字边缘被切掉、分数才掉到阈值以下，故这里按 4px 断言。
 DRIFT_TOLERANCE = 4
 
@@ -139,14 +140,18 @@ def test_tolerates_ui_drift(attribute_recognizer, screenshot, stat_index):
 
 
 def test_stats_roi_leaves_vertical_headroom():
-    """区域高度必须明显大于文字高度，否则 UI 稍一移位文字就会被切掉。"""
+    """区域高度必须明显大于文字高度，否则 UI 稍一移位文字就会被切掉。
+
+    这里只卡"总余量"（高度减去文字高度），不断言单侧余量 —— 实际余量是不对称的
+    （上 6px / 下 15px），真正的漂移容忍度由 `test_tolerates_ui_drift` 覆盖。
+    """
     for name, roi in (
         ("STATS_0_ROI", PROFILE.STATS_0_ROI),
         ("STATS_1_ROI", PROFILE.STATS_1_ROI),
         ("STATS_2_ROI", PROFILE.STATS_2_ROI),
     ):
         height = roi.y1 - roi.y0
-        headroom = (height - TEXT_HEIGHT) // 2
-        assert headroom >= 5, (
-            f"{name} 高度 {height}px，扣除 {TEXT_HEIGHT}px 文字后只剩 {headroom}px 余量"
+        headroom = height - TEXT_HEIGHT
+        assert headroom >= 10, (
+            f"{name} 高度 {height}px，扣除 {TEXT_HEIGHT}px 文字后只剩 {headroom}px 总余量"
         )
