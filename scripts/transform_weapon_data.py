@@ -219,32 +219,34 @@ def main():
     # check that raw type id to wiki mapping is consistent
     # i.e. there exists a mapping from raw_type to wiki weapon_type_id
     # for all weapons, e.g. { 1:2, 2:1, 3:3, ... }, no need to be identical
+    valid_wiki_types: set[str] = {
+        "SWORD",
+        "CLAYM",
+        "LANCE",
+        "PISTOL",
+        "WAND",
+    }
     weapon_id_generator = (
         weapon_id for weapon_id in weapon_basic_table.keys() if weapon_id in item_table
     )
-    # wpn_id -> (wpn_id, raw type of weapon, wiki generated weapon type id)
-    raw_type_and_wiki_type_generator = (
-        (
-            weapon_id,
-            weapon_basic_table[weapon_id].get("weaponType", -1),
-            item_to_weapon_type_id.get(weapon_id, -2),
-        )
-        for weapon_id in weapon_id_generator
-    )
     # build a mapping from raw_type to set of wiki weapon_type_id
-    raw_to_wiki_type_map: dict[int, set[int]] = {}
-    for _wpn_id, raw_type, wiki_type in raw_type_and_wiki_type_generator:
-        if raw_type not in raw_to_wiki_type_map:
-            raw_to_wiki_type_map[raw_type] = set()
-        raw_to_wiki_type_map[raw_type].add(wiki_type)
+    raw_to_wiki_type_map: dict[int, set[str]] = {}
+    for weapon_id in weapon_id_generator:
+        raw_type = weapon_basic_table[weapon_id].get("weaponType", -1)
+        wiki_type = item_to_weapon_type_id.get(weapon_id)
+        # skip weapons that are missing a valid raw type or wiki type; they are
+        # already reported by the validation pass above and would otherwise
+        # pollute the raw->wiki mapping with sentinel values.
+        if not isinstance(raw_type, int) or raw_type <= 0:
+            continue
+        if wiki_type not in valid_wiki_types:
+            continue
+        raw_to_wiki_type_map.setdefault(raw_type, set()).add(wiki_type)
     print("Raw Type to Wiki Weapon Type ID mapping:")
     for raw_type, wiki_types in raw_to_wiki_type_map.items():
-        wiki_types_list = list(wiki_types)
-        wiki_types_name_list = [
-            weapon_types[wt_id]["name"] for wt_id in wiki_types_list
-        ]
+        wiki_types_name_list = [weapon_types[wt_id]["name"] for wt_id in wiki_types]
         print(
-            f"  Raw Type {raw_type}: Wiki Weapon Types {wiki_types_list} ({wiki_types_name_list})"
+            f"  Raw Type {raw_type}: Wiki Weapon Types {sorted(wiki_types)} ({wiki_types_name_list})"
         )
         if len(wiki_types) > 1:
             print(
@@ -328,7 +330,7 @@ def main():
         level_id = energy_point["levelId"]
         loading_entry = level_loading_table[level_id]
         bg_name = loading_entry["bgNameGroup"][0]
-        image_url = f"https://cos.yituliu.cn/endfield/endfielddata/assets/beyond/dynamicassets/gameplay/ui/sprites/loading/{bg_name}.webp"
+        image_url = f"https://data.akedata.wiki/cdn-cgi/image/width=660,height=480,format=webp,quality=50/public/images/assets/beyond/dynamicassets/gameplay/ui/sprites/loading/{bg_name}.png"
 
         energy_alluviums[group_id] = {
             "battleId": group_id,
