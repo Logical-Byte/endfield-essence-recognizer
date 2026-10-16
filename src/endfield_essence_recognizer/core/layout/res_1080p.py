@@ -44,15 +44,27 @@ class Resolution1080p(ResolutionProfile):
 
     @property
     def STATS_0_ROI(self) -> Region:
-        return Region(Point(1508, 358), Point(1700, 390))
+        """第一个属性词条的识别区域。
+
+        词条文字实测：旧版 y 363~383、新版 y 367~386（两版合起来 363~386，高 24px）。
+        区域取 357~401，即文字上方 6px、下方 15px —— 相对扫描到的两版文字并集整体
+        偏下 2.5px，不是对称居中：上边界只比原来的 32px 区域上移 1px，下边界下移
+        11px。余量不对称没有影响，因为模板匹配只要求文字完整落在区域内 —— 只要
+        文字不被区域边界切掉，整体偏移几个像素不改变匹配，余量决定的是还能容忍 UI
+        再漂移多少，而窗口内的 ±4px 漂移在测试里覆盖过。原来 32px 高的区域只留
+        4~8px，再漂移 3px 文字边缘就会被切掉、匹配分数从 0.9 掉到 0.5 以下。
+        """
+        return Region(Point(1508, 357), Point(1700, 401))
 
     @property
     def STATS_1_ROI(self) -> Region:
-        return Region(Point(1508, 416), Point(1700, 448))
+        """第二个属性词条的识别区域，余量说明见 `STATS_0_ROI`。"""
+        return Region(Point(1508, 413), Point(1700, 457))
 
     @property
     def STATS_2_ROI(self) -> Region:
-        return Region(Point(1508, 468), Point(1700, 500))
+        """第三个属性词条的识别区域，余量说明见 `STATS_0_ROI`。"""
+        return Region(Point(1508, 469), Point(1700, 513))
 
     @property
     def RARITY_ROI(self) -> Region:
@@ -68,8 +80,14 @@ class Resolution1080p(ResolutionProfile):
 
     @property
     def STATS_LEVEL_ICON_POINTS(self) -> list[list[Point]]:
+        """三行词条等级亮点的标称坐标。
+
+        Y 取旧版（实测中心 y=397/453/509）与新版（实测中心 y=400/456/512）的
+        中点：`AttributeLevelRecognizer` 以这些坐标为基准在附近搜索真正的亮点，
+        取中点可让两版 UI 各自都留出对称的漂移余量。
+        """
         xs = np.linspace(1503, 1588, 6)
-        ys = np.linspace(395, 507, 3)
+        ys = (399, 455, 511)
         return [[Point(round(x), round(y)) for x in xs] for y in ys]
 
     @property
