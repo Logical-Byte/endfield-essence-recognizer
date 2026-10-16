@@ -68,8 +68,14 @@ class Resolution1080p(ResolutionProfile):
 
     @property
     def STATS_LEVEL_ICON_POINTS(self) -> list[list[Point]]:
+        """三行词条等级亮点的标称坐标。
+
+        Y 取旧版（实测中心 y=397/453/509）与新版（实测中心 y=400/456/512）的
+        中点：`AttributeLevelRecognizer` 以这些坐标为基准在附近搜索真正的亮点，
+        取中点可让两版 UI 各自都留出对称的漂移余量。
+        """
         xs = np.linspace(1503, 1588, 6)
-        ys = np.linspace(395, 507, 3)
+        ys = (399, 455, 511)
         return [[Point(round(x), round(y)) for x in xs] for y in ys]
 
     @property
