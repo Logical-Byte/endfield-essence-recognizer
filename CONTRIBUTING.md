@@ -402,21 +402,54 @@ uv run python scripts/generate_manifest.py --dist-dir dist/endfield-essence-reco
    git push origin vX.Y.Z
    ```
 
-### 3. 下载构建产物
+### 3. 等待工作流自动完成
 
-发布后 GitHub Actions 会自动构建，生成以下两个文件：
+推送标签后，`build-and-release.yml` 工作流会自动完成以下全部步骤，**无需人工干预**：
 
-- `endfield-essence-recognizer-B-windows.zip` — 完整包
-- `incremental-A-to-B-windows.zip` — 增量更新包
+1. 构建前端、更新器与 PyInstaller 产物
+2. 生成完整包与增量更新包（若无历史稳定版本则跳过增量包）
+3. 创建 GitHub Release 并上传产物
+4. 通过 `coscli` 将完整包与增量包上传至一图流 CDN（`cos.yituliu.cn/endfield/endfield-essence-recognizer/`）
+5. 生成 `version.json` 并上传至一图流 CDN
 
-下载后上传至一图流 CDN（对应资源目录）。
+只在最后确认一下即可：打开 `https://cos.yituliu.cn/endfield/endfield-essence-recognizer/version.json`，
+检查 `latestVersion` 是否为本次版本号。
 
-### 4. 生成一图流 Version JSON
+#### 工作流所需的 Secrets
 
-构建完成后，在本地执行以下命令生成 `version.json`：
+在仓库 `Settings → Secrets and variables → Actions` 中配置以下 Secrets（用于 CDN 上传）：
+
+| Secret           | 必填 | 说明                                                               |
+| ---------------- | ---- | ------------------------------------------------------------------ |
+| `COS_SECRET_ID`  | 是   | 腾讯云 COS 的 SecretId（建议使用仅授予目标桶写权限的子账号密钥）   |
+| `COS_SECRET_KEY` | 是   | 腾讯云 COS 的 SecretKey                                            |
+| `COS_BUCKET`     | 是   | 存储桶全称，格式 `<bucketname>-<appid>`，例如 `example-1250000000` |
+| `COS_REGION`     | 是   | 存储桶地域，例如 `ap-guangzhou`                                    |
+
+> 这些步骤仅在由标签（`refs/tags/*`）触发时执行，`workflow_dispatch` 手动触发会跳过。
+
+#### 本地手动兜底（可选）
+
+若需要手动执行，可先下载构建产物：
+
+```bash
+gh release download vX.Y.Z --dir dist
+```
+
+再生成 `version.json`：
 
 ```bash
 uv run python scripts/generate_yituliu_json.py --output version.json --use-api
 ```
 
-执行后根目录会生成 `version.json`，将其上传至一图流 CDN 即可。
+然后把 `version.json` 上传到 CDN（例如使用 `coscli`）：
+
+```bash
+coscli upload version.json cos://<bucketname>-<appid>/endfield/endfield-essence-recognizer/version.json
+```
+
+### 4. 更新 GitHub Release 描述
+
+### 5. 发公告、上传到 QQ 群
+
+### 6. （可选）发动态

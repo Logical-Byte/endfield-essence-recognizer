@@ -177,3 +177,55 @@ jobs:
             dist/endfield-essence-recognizer-${{ steps.release_tag.outputs.normalized }}-${{ matrix.os }}.zip
             dist/incremental-*-to-*-${{ matrix.os }}.zip
           generate_release_notes: true
+
+      # ----------------------------------------------------------------------
+      # 以下步骤仅在由 tag 触发时执行：
+      # 上传产物到一图流 CDN -> 生成 version.json -> 上传 version.json
+      # ----------------------------------------------------------------------
+      - name: Install coscli
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: pwsh
+        run: |
+          $coscliVersion = "v1.0.9"
+          $destDir = Join-Path $env:RUNNER_TEMP "coscli"
+          New-Item -ItemType Directory -Force $destDir | Out-Null
+          $url = "https://github.com/tencentyun/coscli/releases/download/$coscliVersion/coscli-$coscliVersion-windows-amd64.exe"
+          Invoke-WebRequest -Uri $url -OutFile (Join-Path $destDir "coscli.exe")
+          $destDir >> $env:GITHUB_PATH
+
+      - name: Upload release packages to CDN
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: pwsh
+        env:
+          COS_SECRET_ID: ${{ secrets.COS_SECRET_ID }}
+          COS_SECRET_KEY: ${{ secrets.COS_SECRET_KEY }}
+          COS_BUCKET: ${{ secrets.COS_BUCKET }}
+          COS_REGION: ${{ secrets.COS_REGION }}
+        run: |
+          $tag = "${{ steps.release_tag.outputs.normalized }}"
+          $prefix = "endfield/endfield-essence-recognizer"
+          # 不使用 coscli 配置文件，密钥与 endpoint 直接通过命令行传入
+          $cosArgs = @("--init-skip", "--secret-id", $env:COS_SECRET_ID, "--secret-key", $env:COS_SECRET_KEY, "--endpoint", "cos.$env:COS_REGION.myqcloud.com")
+
+          coscli cp "dist/endfield-essence-recognizer-$tag-${{ matrix.os }}.zip" "cos://$env:COS_BUCKET/$prefix/endfield-essence-recognizer-$tag-${{ matrix.os }}.zip" @cosArgs
+
+          if ("${{ steps.previous_release.outputs.has_previous }}" -eq "true") {
+            $incZip = "${{ steps.generate_incremental.outputs.incremental_zip }}"
+            coscli cp $incZip "cos://$env:COS_BUCKET/$prefix/$(Split-Path $incZip -Leaf)" @cosArgs
+          }
+
+      - name: Generate version.json
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: pwsh
+        run: uv run python scripts/generate_yituliu_json.py --output version.json --use-api
+
+      - name: Upload version.json to CDN
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: pwsh
+        env:
+          COS_SECRET_ID: ${{ secrets.COS_SECRET_ID }}
+          COS_SECRET_KEY: ${{ secrets.COS_SECRET_KEY }}
+          COS_BUCKET: ${{ secrets.COS_BUCKET }}
+          COS_REGION: ${{ secrets.COS_REGION }}
+        run: |
+          coscli cp version.json "cos://$env:COS_BUCKET/endfield/endfield-essence-recognizer/version.json" --init-skip --secret-id $env:COS_SECRET_ID --secret-key $env:COS_SECRET_KEY --endpoint "cos.$env:COS_REGION.myqcloud.com"
