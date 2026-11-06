@@ -410,6 +410,8 @@ class ClaimContext:
             skip = self.equal_skips.get(wid, 0)
             if skip > 0:
                 self.equal_skips[wid] = skip - 1
+                # 存量副本本轮已被扫到，旧等级可参与后续升级的级联分配
+                self.claimed_this_scan.add((wid, current_levels))
                 logger.debug(
                     f"[相同等级] 武器 {self._display(wid)} 已记录等级 {current_levels}，"
                     f"消耗存量跳过名额（剩余 {skip - 1}），不重复认领"

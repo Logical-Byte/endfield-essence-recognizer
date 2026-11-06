@@ -813,6 +813,61 @@ class TestClaimIdenticalLevel:
         assert ctx.best_levels["wpn_a"] == (4, 3, 3)
         assert ctx.best_levels["wpn_b"] == (4, 3, 3)
 
+    def test_skipped_existing_level_enables_cascade_on_upgrade(
+        self, mock_static_game_data, default_settings, default_essence_data
+    ):
+        """存量副本被扫到后，该武器升级时旧等级应级联给组内空槽武器。"""
+        from endfield_essence_recognizer.schemas.profile import TreasureMatrixEntry
+
+        default_settings.same_type_treasure_limit_enabled = True
+        default_settings.same_type_treasure_limit = 1
+        default_settings.same_type_group_mode = SameTypeGroupMode.BY_WEAPON
+        default_settings.same_type_keep_best = True
+
+        entries = [
+            TreasureMatrixEntry(
+                weapon_id="wpn_a",
+                weapon_name="a",
+                affix1_level=5,
+                affix2_level=5,
+                affix3_level=3,
+            )
+        ]
+        ctx = self._make_context_with_profile(
+            entries, default_settings, mock_static_game_data
+        )
+        mock_static_game_data.find_weapons_by_stats.return_value = ["wpn_a", "wpn_b"]
+
+        default_essence_data.levels = [5, 5, 3]
+        low_classification = classify_essence(
+            default_essence_data, default_settings, mock_static_game_data
+        )
+        first = ctx.claim(
+            low_classification,
+            default_essence_data,
+            default_settings,
+            static_game_data=mock_static_game_data,
+        )
+        assert first.claim_kind == ClaimKind.SKIP_EXISTING
+        assert first.owner_key == "wpn_a"
+
+        default_essence_data.levels = [6, 6, 3]
+        high_classification = classify_essence(
+            default_essence_data, default_settings, mock_static_game_data
+        )
+        upgraded = ctx.claim(
+            high_classification,
+            default_essence_data,
+            default_settings,
+            static_game_data=mock_static_game_data,
+        )
+
+        assert upgraded.claim_kind == ClaimKind.UPGRADE
+        assert upgraded.accepted_weapon_id == "wpn_a"
+        assert upgraded.cascade_updated == {"wpn_b": (5, 5, 3)}
+        assert ctx.best_levels["wpn_b"] == (5, 5, 3)
+        assert ctx.treasure_counts["wpn_b"] == 1
+
     def test_limit_off_count_only_syncs_existing_best(
         self, mock_static_game_data, default_settings
     ):
