@@ -46,7 +46,7 @@ UNLIMITED_LIMIT = 999
 
 
 class ClaimContext:
-    """扫描批次级的认领上下文——替代模块级全局状态和 UserSetting._same_type_* 字段。
+    """扫描批次级的认领上下文——封装一次扫描内的认领状态。
 
     在扫描开始时创建，扫描期间每枚基质调用 claim()，扫描结束后由 engine
     读取 group_scanned_counts 等数据用于展示。
@@ -339,14 +339,12 @@ class ClaimContext:
                 return ClaimResult()
             return ClaimResult(reject_reason=RejectReason.NON_DOWNGRADE)
 
-        # 相同等级命中统一路径：不分散升级其他武器
+        # 相同等级命中统一路径：先处理存量副本与组内空槽，其余回退常规路径
         identical_result = self._claim_identical_level(
             weapon_ids,
             current_levels,
             limit,
-            mode,
-            stat_types,
-            static_game_data,
+            limit_off,
         )
         if identical_result is not None:
             return identical_result
@@ -380,21 +378,26 @@ class ClaimContext:
         weapon_ids: list[str],
         current_levels: LevelTuple,
         limit: int,
-        mode: KeepBestMode,
-        stat_types: list[StatType | None],
-        static_game_data: StaticGameData | None,
+        limit_off: bool,
     ) -> ClaimResult | None:
-        """相同等级命中（组内已有武器记录了该等级）：不再分散给其他武器。
+        """相同等级命中（组内已有武器记录了该等级）：先处理存量副本与空槽。
 
         同一枚物理基质被重复评估（UI 未刷新/翻页重叠）时，若不拦截会把
         同等级的下一把武器误升级落盘，永久污染 profile。这里统一处理：
 
         ① 存量跳过：消耗已记录基质的相等跳过名额（重扫存量，不计数不落盘）；
         ② 组内空槽：把认领给优先序中第一把还没有记录的武器（孪生武器不饿死）；
-        ③ 无空槽：判定为宝藏、不落盘（占用该武器限额名额；全部满额则养成材料）。
+        ③ 同名武器仍有配额：仅计数（占用该武器限额名额）；
+        ④ 其余情况不在这里直接判上限，而是返回 None 回退常规认领路径：
+           先由"留大弃小"替换等级更低的记录，再按数量上限计数，最后才判
+           LIMIT——否则物理上真实存在的第二枚同级基质会被误判为养成材料
+           （issue #224）。
+
+        数量上限关闭时，①② 之后直接回退，由 `_claim_limit_off` 按
+        「每把武器一枚记录」分散分配。
 
         Returns:
-            已处理的 ClaimResult；组内没有同等级记录时返回 None（走常规认领）。
+            已处理的 ClaimResult；需要常规认领路径继续处理时返回 None。
         """
         identical_wids = [
             wid for wid in weapon_ids if self.best_levels.get(wid) == current_levels
@@ -407,6 +410,8 @@ class ClaimContext:
             skip = self.equal_skips.get(wid, 0)
             if skip > 0:
                 self.equal_skips[wid] = skip - 1
+                # 存量副本本轮已被扫到，旧等级可参与后续升级的级联分配
+                self.claimed_this_scan.add((wid, current_levels))
                 logger.debug(
                     f"[相同等级] 武器 {self._display(wid)} 已记录等级 {current_levels}，"
                     f"消耗存量跳过名额（剩余 {skip - 1}），不重复认领"
@@ -416,6 +421,10 @@ class ClaimContext:
                     claim_kind=ClaimKind.SKIP_EXISTING,
                     owner_key=wid,
                 )
+
+        # 数量上限关闭：交给 _claim_limit_off 按武器分散分配
+        if limit_off:
+            return None
 
         # ② 组内空槽：优先序中第一把无记录的武器认领落盘（孪生武器不饿死）
         for wid in weapon_ids:
@@ -449,16 +458,8 @@ class ClaimContext:
                     owner_key=wid,
                 )
 
-        # 全部满额：与限额语义一致，标记为养成材料
-        current_count = max(
-            (self.treasure_counts.get(w, 0) for w in weapon_ids),
-            default=0,
-        )
-        logger.debug("[相同等级] 所有匹配武器均已达上限，标记为养成材料")
-        return ClaimResult(
-            reject_reason=RejectReason.LIMIT,
-            current_count=current_count,
-        )
+        # ④ 所有同名武器满额：回退常规路径，先尝试留大弃小替换更低记录
+        return None
 
     def _claim_limit_off(
         self,

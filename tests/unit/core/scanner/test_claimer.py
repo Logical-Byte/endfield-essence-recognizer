@@ -12,6 +12,7 @@ from endfield_essence_recognizer.core.recognition import (
 from endfield_essence_recognizer.core.scanner.claimer import ClaimContext
 from endfield_essence_recognizer.core.scanner.classifier import classify_essence
 from endfield_essence_recognizer.core.scanner.models import (
+    ClaimKind,
     EssenceData,
     EssenceQuality,
     RejectReason,
@@ -393,7 +394,7 @@ class TestClaimNonTreasure:
 
 
 class TestClaimIdenticalLevel:
-    """相同等级命中：不分散升级其他武器（幽灵升级修复）。"""
+    """相同等级命中：存量/空槽优先，其余回退常规认领（含 #224）。"""
 
     def _make_context_with_profile(self, entries, settings, static_data):
         """用 profile 条目构造 ClaimContext（含静态武器数据用于 stat_key 解析）。"""
@@ -416,10 +417,10 @@ class TestClaimIdenticalLevel:
         static_data.get_weapon.side_effect = _get_weapon
         return ClaimContext(entries, settings, static_data)
 
-    def test_identical_hit_never_upgrades_other_weapon(
+    def test_identical_copy_is_counted_while_quota_available(
         self, mock_static_game_data, default_settings, default_essence_data
     ):
-        """同等级重复命中：不升级已有记录的下一把武器（幽灵升级场景）。"""
+        """同名武器仍有配额时，同等级副本先仅计数，不升级其它武器（配额吸收）。"""
         from endfield_essence_recognizer.schemas.profile import TreasureMatrixEntry
 
         default_settings.same_type_treasure_limit_enabled = True
@@ -454,7 +455,7 @@ class TestClaimIdenticalLevel:
         )
         assert first.accepted_weapon_id == "wpn_a"
 
-        # 第二枚（同一基质重复命中）：不得把 wpn_b 从 (4,4,2) 升级到 (6,6,3)
+        # 第二枚：wpn_a 仍有配额（limit=2）→ 先为 wpn_a 计数，不升级 wpn_b
         second = ctx.claim(
             classification,
             default_essence_data,
@@ -646,10 +647,72 @@ class TestClaimIdenticalLevel:
         assert second.reject_reason == RejectReason.LIMIT
         assert second.current_count == 1
 
-    def test_identical_no_upgrade_when_limit_off(
+    def test_identical_second_copy_upgrades_lower_record(
         self, mock_static_game_data, default_settings, default_essence_data
     ):
-        """数量上限关闭：同等级重复命中同样不升级下一把武器。"""
+        """#224：第二枚同等级副本应回退升级另一把武器的更低记录。"""
+        from endfield_essence_recognizer.schemas.profile import TreasureMatrixEntry
+
+        default_settings.same_type_treasure_limit_enabled = True
+        default_settings.same_type_treasure_limit = 1
+        default_settings.same_type_group_mode = SameTypeGroupMode.BY_WEAPON
+        default_settings.same_type_keep_best = True
+        default_settings.same_type_keep_best_mode = KeepBestMode.WEIGHTED_SUM
+        default_settings.same_type_non_downgrade_filter = False
+
+        entries = [
+            TreasureMatrixEntry(
+                weapon_id="wpn_a",
+                weapon_name="a",
+                affix1_level=6,
+                affix2_level=6,
+                affix3_level=3,
+            ),
+            TreasureMatrixEntry(
+                weapon_id="wpn_b",
+                weapon_name="b",
+                affix1_level=5,
+                affix2_level=5,
+                affix3_level=3,
+            ),
+        ]
+        ctx = self._make_context_with_profile(
+            entries, default_settings, mock_static_game_data
+        )
+        mock_static_game_data.find_weapons_by_stats.return_value = ["wpn_a", "wpn_b"]
+
+        classification = classify_essence(
+            default_essence_data, default_settings, mock_static_game_data
+        )
+        first = ctx.claim(
+            classification,
+            default_essence_data,
+            default_settings,
+            static_game_data=mock_static_game_data,
+        )
+        second = ctx.claim(
+            classification,
+            default_essence_data,
+            default_settings,
+            static_game_data=mock_static_game_data,
+        )
+
+        # 第一枚是 wpn_a 的存量副本；第二枚应替换 wpn_b 的低等级记录
+        assert first.claim_kind == ClaimKind.SKIP_EXISTING
+        assert first.owner_key == "wpn_a"
+        assert second.claim_kind == ClaimKind.UPGRADE
+        assert second.accepted_weapon_id == "wpn_b"
+        assert second.owner_key == "wpn_b"
+        assert second.updated_levels == {"wpn_b": (6, 6, 3)}
+        assert second.released_levels == (5, 5, 3)
+        assert ctx.best_levels["wpn_b"] == (6, 6, 3)
+        assert ctx.treasure_counts["wpn_a"] == 1
+        assert ctx.treasure_counts["wpn_b"] == 1
+
+    def test_identical_second_copy_upgrades_lower_record_when_limit_off(
+        self, mock_static_game_data, default_settings, default_essence_data
+    ):
+        """数量上限关闭：第二枚同等级副本应按武器分散，升级另一把武器的记录。"""
         from endfield_essence_recognizer.schemas.profile import TreasureMatrixEntry
 
         default_settings.same_type_treasure_limit_enabled = False
@@ -672,7 +735,7 @@ class TestClaimIdenticalLevel:
         classification = classify_essence(
             default_essence_data, default_settings, mock_static_game_data
         )
-        ctx.claim(
+        first = ctx.claim(
             classification,
             default_essence_data,
             default_settings,
@@ -685,9 +748,125 @@ class TestClaimIdenticalLevel:
             static_game_data=mock_static_game_data,
         )
 
+        assert first.claim_kind == ClaimKind.NEW_SLOT
+        assert second.claim_kind == ClaimKind.UPGRADE
+        assert second.accepted_weapon_id == "wpn_b"
         assert second.reject_reason is None
-        assert ctx.best_levels["wpn_b"] == (4, 4, 2)
+        assert ctx.best_levels["wpn_b"] == (6, 6, 3)
         assert ctx.best_levels["wpn_a"] == (6, 6, 3)
+
+    def test_identical_second_copy_upgrades_lower_record_after_in_scan_upgrade(
+        self, mock_static_game_data, default_settings, default_essence_data
+    ):
+        """第一枚本轮升级了高优先级武器后，第二枚仍应升级另一把武器的更低记录。"""
+        from endfield_essence_recognizer.schemas.profile import TreasureMatrixEntry
+
+        default_settings.same_type_treasure_limit_enabled = True
+        default_settings.same_type_treasure_limit = 1
+        default_settings.same_type_group_mode = SameTypeGroupMode.BY_WEAPON
+        default_settings.same_type_keep_best = True
+        default_settings.same_type_keep_best_mode = KeepBestMode.WEIGHTED_SUM
+        default_settings.same_type_non_downgrade_filter = False
+
+        entries = [
+            TreasureMatrixEntry(
+                weapon_id="wpn_a",
+                weapon_name="a",
+                affix1_level=3,
+                affix2_level=3,
+                affix3_level=3,
+            ),
+            TreasureMatrixEntry(
+                weapon_id="wpn_b",
+                weapon_name="b",
+                affix1_level=2,
+                affix2_level=2,
+                affix3_level=2,
+            ),
+        ]
+        ctx = self._make_context_with_profile(
+            entries, default_settings, mock_static_game_data
+        )
+        mock_static_game_data.find_weapons_by_stats.return_value = ["wpn_a", "wpn_b"]
+
+        default_essence_data.levels = [4, 3, 3]
+        classification = classify_essence(
+            default_essence_data, default_settings, mock_static_game_data
+        )
+        first = ctx.claim(
+            classification,
+            default_essence_data,
+            default_settings,
+            static_game_data=mock_static_game_data,
+        )
+        second = ctx.claim(
+            classification,
+            default_essence_data,
+            default_settings,
+            static_game_data=mock_static_game_data,
+        )
+
+        assert first.claim_kind == ClaimKind.UPGRADE
+        assert first.accepted_weapon_id == "wpn_a"
+        assert second.claim_kind == ClaimKind.UPGRADE
+        assert second.accepted_weapon_id == "wpn_b"
+        assert ctx.best_levels["wpn_a"] == (4, 3, 3)
+        assert ctx.best_levels["wpn_b"] == (4, 3, 3)
+
+    def test_skipped_existing_level_enables_cascade_on_upgrade(
+        self, mock_static_game_data, default_settings, default_essence_data
+    ):
+        """存量副本被扫到后，该武器升级时旧等级应级联给组内空槽武器。"""
+        from endfield_essence_recognizer.schemas.profile import TreasureMatrixEntry
+
+        default_settings.same_type_treasure_limit_enabled = True
+        default_settings.same_type_treasure_limit = 1
+        default_settings.same_type_group_mode = SameTypeGroupMode.BY_WEAPON
+        default_settings.same_type_keep_best = True
+
+        entries = [
+            TreasureMatrixEntry(
+                weapon_id="wpn_a",
+                weapon_name="a",
+                affix1_level=5,
+                affix2_level=5,
+                affix3_level=3,
+            )
+        ]
+        ctx = self._make_context_with_profile(
+            entries, default_settings, mock_static_game_data
+        )
+        mock_static_game_data.find_weapons_by_stats.return_value = ["wpn_a", "wpn_b"]
+
+        default_essence_data.levels = [5, 5, 3]
+        low_classification = classify_essence(
+            default_essence_data, default_settings, mock_static_game_data
+        )
+        first = ctx.claim(
+            low_classification,
+            default_essence_data,
+            default_settings,
+            static_game_data=mock_static_game_data,
+        )
+        assert first.claim_kind == ClaimKind.SKIP_EXISTING
+        assert first.owner_key == "wpn_a"
+
+        default_essence_data.levels = [6, 6, 3]
+        high_classification = classify_essence(
+            default_essence_data, default_settings, mock_static_game_data
+        )
+        upgraded = ctx.claim(
+            high_classification,
+            default_essence_data,
+            default_settings,
+            static_game_data=mock_static_game_data,
+        )
+
+        assert upgraded.claim_kind == ClaimKind.UPGRADE
+        assert upgraded.accepted_weapon_id == "wpn_a"
+        assert upgraded.cascade_updated == {"wpn_b": (5, 5, 3)}
+        assert ctx.best_levels["wpn_b"] == (5, 5, 3)
+        assert ctx.treasure_counts["wpn_b"] == 1
 
     def test_limit_off_count_only_syncs_existing_best(
         self, mock_static_game_data, default_settings
