@@ -28,9 +28,16 @@
         </v-tooltip>
       </div>
     </div>
-    <!-- 先用 id 选择器凑合一下,因为用 v-card 上用 ref 绑定的并不是 DOM 元素,而是那个奇妙的 v-card 对象 -->
-    <v-card id="log-card" class="flex-grow-1 pa-4 overflow-auto" rounded="lg" variant="outlined">
-      <pre v-if="logs.length > 0" class="logs-content text-pre-wrap h-0" v-html="logs.join('')" />
+    <!-- 卡片 id 供自动滚动取 DOM 用（v-card 上 ref 绑定的是组件实例而非 DOM 元素） -->
+    <v-card id="log-card" class="log-card pa-4 overflow-auto" rounded="lg" variant="outlined">
+      <template v-if="logs.length > 0">
+        <pre
+          v-for="line in logs"
+          :key="line.id"
+          class="log-line text-pre-wrap"
+          v-html="line.html"
+        />
+      </template>
       <pre v-else>暂无日志...</pre>
     </v-card>
 
@@ -252,37 +259,54 @@ function openLogsFolder() {
   fetch('/api/open_logs_folder', { method: 'POST' })
 }
 
-// 监听日志变化，自动滚动
-watch(
-  logs,
-  () => {
-    if (autoScroll.value) {
-      nextTick(() => {
-        // 用 id 选择器凑合一下
-        const logsContainer = document.querySelector('#log-card')
-        if (logsContainer) {
-          logsContainer.scrollTop = logsContainer.scrollHeight
-        }
-      })
+// --- 日志自动滚动 ---
+// 滚动容器缓存一次即可：卡片是 v-card 组件，ref 绑定的不是 DOM 元素，只能按 id 取。
+let logCardElement: HTMLElement | null = null
+// 每个刷新帧最多做一次布局读取，避免每条日志消息都触发一次强制同步布局。
+let scrollFrame = 0
+
+function scheduleScrollToBottom() {
+  if (!autoScroll.value || scrollFrame !== 0) {
+    return
+  }
+  scrollFrame = requestAnimationFrame(() => {
+    scrollFrame = 0
+    if (logCardElement) {
+      logCardElement.scrollTop = logCardElement.scrollHeight
     }
-  },
-  { deep: true },
-)
+  })
+}
+
+// 监听日志变化，自动滚动
+// 最后一行的 id 变化就代表有新日志；用它做依赖，环形缓冲满了一直在滑动时也能触发。
+watch(() => logs.value.at(-1)?.id, scheduleScrollToBottom)
 
 // 初始滚动到底部
 onMounted(() => {
   nextTick(() => {
-    // 用 id 选择器凑合一下
-    const logsContainer = document.querySelector('#log-card')
-    if (logsContainer) {
-      logsContainer.scrollTop = logsContainer.scrollHeight
-      console.log('日志页面已加载，滚动到底部')
-    }
+    // 卡片是 v-card 组件，ref 绑定的不是 DOM 元素，所以按 id 取一次并缓存
+    logCardElement = document.querySelector('#log-card')
+    scheduleScrollToBottom()
   })
 })
 </script>
 
-<style scoped lang="scss"></style>
+<style scoped lang="scss">
+// 卡片要在剩余空间里自己滚动，所以这里必须把 flex-basis 取 0：
+// .v-main 是 flex-shrink:0 的列向 flex 子项，只给 flex-grow 的话内容会把它撑高，
+// 结果整个 index 页面变长、滚动的是页面而不是日志区域。
+.log-card {
+  flex: 1 1 0;
+  // 允许收缩到比内容更矮，滚动条才会落在卡片自己身上
+  min-height: 0;
+}
+
+// 一行一个 pre：去掉浏览器默认的上下外边距，否则行与行之间会空一行
+.log-line {
+  margin: 0;
+  font-size: inherit;
+}
+</style>
 
 <style lang="scss">
 .qq-group-menu-content .v-list-item__spacer {
