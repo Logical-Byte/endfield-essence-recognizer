@@ -46,7 +46,7 @@ UNLIMITED_LIMIT = 999
 
 
 class ClaimContext:
-    """扫描批次级的认领上下文——替代模块级全局状态和 UserSetting._same_type_* 字段。
+    """扫描批次级的认领上下文——封装一次扫描内的认领状态。
 
     在扫描开始时创建，扫描期间每枚基质调用 claim()，扫描结束后由 engine
     读取 group_scanned_counts 等数据用于展示。
