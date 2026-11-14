@@ -4,7 +4,7 @@ from enum import StrEnum
 from typing import Any, ClassVar
 from uuid import uuid4
 
-from pydantic import BaseModel, Field, PrivateAttr, model_validator
+from pydantic import BaseModel, Field, model_validator
 
 from endfield_essence_recognizer.updater.mirrors import MIRRORS
 from endfield_essence_recognizer.updater.sources import (
@@ -122,18 +122,6 @@ class EssenceStats(BaseModel):
 
 class UserSetting(BaseModel):
     _VERSION: ClassVar[int] = 10
-    _same_type_treasure_counts: dict[tuple[str | None, ...], int] = PrivateAttr(
-        default_factory=dict
-    )
-    _same_type_best_levels: dict[tuple[str | None, ...] | str, tuple[int, int, int]] = (
-        PrivateAttr(default_factory=dict)
-    )
-    # 每个分组（stat_key 或 weapon_id）中，等级与已记录最佳等级相等时还可“跳过”
-    # 的次数；由 profile 中已保存的同等级基质数量初始化，用于完整扫描时避免把
-    # 已保存的那几枚误判为多出来的重复品。
-    _same_type_equal_skips: dict[tuple[str | None, ...] | str, int] = PrivateAttr(
-        default_factory=dict
-    )
 
     version: int = _VERSION
 
