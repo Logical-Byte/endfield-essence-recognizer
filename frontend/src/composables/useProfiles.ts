@@ -248,18 +248,34 @@ export function useProfiles() {
     }
   }
 
-  async function updateTreasureMatrix(entries: TreasureMatrixEntry[]) {
+  async function updateTreasureMatrix(entries: TreasureMatrixEntry[], profileName?: string) {
     try {
       const res = await fetch('/api/profiles/treasure_matrix', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ entries }),
+        // 导入可以写到非激活账号：带上 profile_name，后端就不会切换激活账号
+        body: JSON.stringify(
+          profileName === undefined ? { entries } : { entries, profile_name: profileName },
+        ),
       })
       applyActiveProfile(
         await parseJsonResponse<ProfileData>(res, 'Failed to update treasure matrix'),
       )
     } catch (error) {
       _handleError('更新宝藏基质失败', error)
+    }
+  }
+
+  async function createProfile(name: string) {
+    try {
+      const res = await fetch('/api/profiles/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      })
+      applyActiveProfile(await parseJsonResponse<ProfileData>(res, 'Failed to create profile'))
+    } catch (error) {
+      _handleError('新建账号失败', error)
     }
   }
 
@@ -425,6 +441,7 @@ export function useProfiles() {
     switchProfile,
     renameProfile,
     deleteProfile,
+    createProfile,
     clearProfileData,
     updateTreasureMatrix,
     addTreasureMatrixEntry,

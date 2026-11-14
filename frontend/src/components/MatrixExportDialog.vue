@@ -2,8 +2,8 @@
   <v-dialog v-model="open" max-width="960" scrollable>
     <v-card>
       <v-card-title class="d-flex align-center">
-        <v-icon class="mr-2">mdi-image-outline</v-icon>
-        导出宝藏基质图片
+        <v-icon class="mr-2">mdi-export-variant</v-icon>
+        导出宝藏基质
       </v-card-title>
 
       <v-card-text>
@@ -135,6 +135,23 @@
         >
           复制到剪贴板
         </v-btn>
+        <!-- 表格导出不依赖图片渲染，预览还没画完也能保存 -->
+        <v-btn
+          :disabled="totalCount === 0 || savingTable !== null"
+          :loading="savingTable === 'csv'"
+          variant="tonal"
+          @click="saveTable('csv')"
+        >
+          保存 CSV
+        </v-btn>
+        <v-btn
+          :disabled="totalCount === 0 || savingTable !== null"
+          :loading="savingTable === 'json'"
+          variant="tonal"
+          @click="saveTable('json')"
+        >
+          保存 JSON
+        </v-btn>
         <v-btn
           color="primary"
           :disabled="!previewUrl || rendering"
@@ -142,7 +159,7 @@
           variant="flat"
           @click="saveToDisk"
         >
-          保存并打开文件夹
+          保存图片并打开文件夹
         </v-btn>
       </v-card-actions>
     </v-card>
@@ -187,17 +204,21 @@ import {
   toCustomStatId,
 } from '@/utils/gameData/weapon'
 import { CARD_LAYOUTS, COLOR_SCHEMES, renderMatrixExport, toPngBlob } from '@/utils/matrixExport'
+import { exportRowsToCsv, exportRowsToJson, type ExportTableRow } from '@/utils/matrixExportTable'
 
 const open = defineModel<boolean>({ default: false })
 
 const toast = useToast()
 const { activeProfileName, treasureMatrix } = useProfiles()
 const { customStats } = useCustomStats()
-const { isCustomEntry, isWeaponMaxed, isWeaponOwned } = useWeaponStats()
+const { isCustomEntry, isWeaponMaxed, isWeaponOwned, matrixEntryByWeaponId, getUserPriority } =
+  useWeaponStats()
 const { weaponsMap, weaponTypes, matrixIcons } = useStaticData()
 
 /** 自定义基质在导出图里按 6★ 处理，与页面筛选口径一致 */
 const CUSTOM_RARITY_KEY = 'custom'
+/** 自定义基质在导出图与导出表格里都按 6★ 处理 */
+const CUSTOM_RARITY = 6
 /** 自定义基质卡片的底部色条 */
 const CUSTOM_TIER_COLOR = '#ff7100'
 
@@ -229,6 +250,8 @@ const renderInfo = ref<{
 const rendering = ref(false)
 const copying = ref(false)
 const saving = ref(false)
+/** 正在保存的表格格式；null 表示没有表格保存任务 */
+const savingTable = ref<'csv' | 'json' | null>(null)
 
 let renderToken = 0
 let redrawTimer: ReturnType<typeof setTimeout> | undefined
@@ -352,6 +375,15 @@ const weaponTypeIdByWeapon = computed(() => {
   return map
 })
 
+/** 武器分类 id → 分类名，供导出表格的「类型」列 */
+const weaponTypeNameById = computed(() => {
+  const map = new Map<string, string>()
+  for (const weaponType of weaponTypes.value) {
+    map.set(weaponType.id, weaponType.name)
+  }
+  return map
+})
+
 /**
  * 内置武器区的卡片。
  *
@@ -381,6 +413,7 @@ const weaponCards = computed<ExportCard[]>(() => {
 
     cards.push({
       kind: 'weapon',
+      weaponId: weapon.id,
       name: weapon.name,
       nameRuby: '★'.repeat(weapon.rarity),
       iconUrl: getItemIconUrl(weapon.id) ?? null,
@@ -404,6 +437,7 @@ const ownedCustomCards = computed<ExportCard[]>(() => {
     .filter((entry) => isCustomEntry(entry.weapon_id) && passesToggles(entry))
     .map((entry) => ({
       kind: 'custom' as const,
+      weaponId: entry.weapon_id,
       name: resolveCustomName(entry),
       iconUrl: null,
       essenceBgUrl: matrixIcons.value.essenceBg,
@@ -426,6 +460,7 @@ const unownedCustomCards = computed<ExportCard[]>(() => {
     .filter((item) => !isWeaponOwned(item.weaponId))
     .map((item) => ({
       kind: 'custom' as const,
+      weaponId: item.weaponId,
       name: item.name,
       iconUrl: null,
       essenceBgUrl: matrixIcons.value.essenceBg,
@@ -443,6 +478,41 @@ const customCards = computed<ExportCard[]>(() => [
 ])
 
 const totalCount = computed(() => weaponCards.value.length + customCards.value.length)
+
+/**
+ * 导出表格的数据行。
+ *
+ * 直接复用图片用的那批卡片，筛选项只在卡片层面生效一次，
+ * 所以两种导出的条目集合不可能各算各的、越改越不一样。
+ */
+const tableRows = computed<ExportTableRow[]>(() =>
+  [...weaponCards.value, ...customCards.value].map((card) => {
+    const entry = matrixEntryByWeaponId.value.get(card.weaponId)
+    return {
+      weaponId: card.weaponId,
+      name: card.name,
+      source: card.kind === 'custom' ? 'custom' : 'builtin',
+      weaponTypeName:
+        card.kind === 'custom' ? '' : (weaponTypeNameById.value.get(card.weaponTypeId ?? '') ?? ''),
+      rarity:
+        card.kind === 'custom'
+          ? CUSTOM_RARITY
+          : (weaponsMap.value.get(card.weaponId)?.rarity ?? null),
+      owned: isWeaponOwned(card.weaponId),
+      maxed: card.maxed,
+      traits: card.traits.map((trait) => ({
+        slot: trait.slot,
+        name: trait.name,
+        level: trait.level,
+        maxLevel: trait.pipCount,
+      })),
+      // 未获得的条目在 treasure_matrix 里没有配置，与页面「参与计算」口径一致
+      includeInCalculation: entry ? entry.include_in_calculation !== false : null,
+      priority: getUserPriority(card.weaponId),
+      essenceCount: essenceCounts.value[card.weaponId] ?? null,
+    }
+  }),
+)
 
 function releasePreview() {
   if (previewUrl.value) URL.revokeObjectURL(previewUrl.value)
@@ -573,6 +643,41 @@ async function saveToDisk() {
     toast.reportError('保存导出图片失败', error)
   } finally {
     saving.value = false
+  }
+}
+
+/**
+ * 把表格内容交给后端落盘。
+ *
+ * 内容先在前端序列化好（词条名、类型这些只在前端静态数据里有），
+ * 后端只负责按格式选扩展名、清洗文件名和写文件；CSV 的 BOM 也在后端补。
+ */
+async function saveTable(format: 'csv' | 'json') {
+  if (totalCount.value === 0) return
+
+  const content =
+    format === 'csv'
+      ? exportRowsToCsv(tableRows.value)
+      : exportRowsToJson(tableRows.value, {
+          profile: activeProfileName.value,
+          exportedAt: new Date().toISOString(),
+        })
+
+  savingTable.value = format
+  try {
+    const res = await fetch('/api/export/treasure_matrix/table', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ format, content, open_folder: true }),
+    })
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`)
+    const data = await res.json()
+    if (!data.success) throw new Error(data.message)
+    toast.success(`已保存到 ${data.file_path}`)
+  } catch (error) {
+    toast.reportError(`保存 ${format.toUpperCase()} 失败`, error)
+  } finally {
+    savingTable.value = null
   }
 }
 

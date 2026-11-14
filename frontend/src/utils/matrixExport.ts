@@ -32,6 +32,8 @@ export interface ExportTrait {
 export interface ExportCard {
   /** 'weapon' 画武器 icon + 基质小图；'custom' 只画放大的基质图 */
   kind: 'weapon' | 'custom'
+  /** 武器 ID；绘制不用，导出表格用它作为稳定主键 */
+  weaponId: string
   name: string
   /** 名称上方的小号注音行（内置武器放 ★ 星级）；缺省则该行留空 */
   nameRuby?: string

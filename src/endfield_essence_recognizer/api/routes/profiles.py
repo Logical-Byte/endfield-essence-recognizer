@@ -92,6 +92,24 @@ async def switch_profile(
         raise HTTPException(status_code=400, detail=str(e)) from e
 
 
+class CreateProfileRequest(BaseModel):
+    """新建账号请求体。"""
+
+    name: str
+
+
+@router.post("/create")
+async def create_profile(
+    request: CreateProfileRequest,
+    manager: ProfileManager = Depends(get_profile_manager),
+) -> ProfileData:
+    """新建账号但不切换激活账号（导入到新账号时用）。"""
+    try:
+        return manager.create_profile(request.name)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+
 class RenameProfileRequest(BaseModel):
     """重命名账号请求体。"""
 
@@ -166,6 +184,10 @@ class UpdateTreasureMatrixRequest(BaseModel):
     """更新完整宝藏基质配置的请求体。"""
 
     entries: list[TreasureMatrixEntry]
+    profile_name: str | None = Field(
+        default=None,
+        description="目标账号名称；省略或为 None 时更新当前激活账号",
+    )
 
 
 @router.post("/treasure_matrix")
@@ -173,8 +195,15 @@ async def update_treasure_matrix(
     request: UpdateTreasureMatrixRequest,
     manager: ProfileManager = Depends(get_profile_manager),
 ) -> ProfileData:
-    """更新当前激活账号的完整宝藏基质配置。"""
-    return manager.update_treasure_matrix(request.entries)
+    """更新指定账号的完整宝藏基质配置（默认当前激活账号）。
+
+    这条接口也是 CSV/JSON 导入的落盘路径：导入在前端完成解析与合并，
+    这里只做整表替换，指定 profile_name 时不会切换激活账号。
+    """
+    try:
+        return manager.update_treasure_matrix(request.entries, request.profile_name)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 class AddTreasureMatrixEntryRequest(BaseModel):

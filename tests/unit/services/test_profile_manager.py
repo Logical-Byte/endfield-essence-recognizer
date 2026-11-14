@@ -463,6 +463,82 @@ def test_update_treasure_matrix_keeps_removed_entry_priority(
     assert profile.weapon_priorities["wpn_001"] == 5
 
 
+def test_update_treasure_matrix_targets_named_profile(profile_manager: ProfileManager):
+    """指定 profile_name 时写入目标账号，且不切换激活账号。"""
+    profile_manager.load()
+    profile_manager.switch_profile("other")
+    profile_manager.switch_profile("default")
+
+    profile = profile_manager.update_treasure_matrix(
+        [TreasureMatrixEntry(weapon_id="wpn_001", weapon_name="W1", affix1_level=4)],
+        profile_name="other",
+    )
+
+    assert profile.name == "other"
+    assert [entry.weapon_id for entry in profile.treasure_matrix] == ["wpn_001"]
+    # 激活账号与目标账号的数据都不能被顺带改掉
+    assert profile_manager.get_active_profile_name() == "default"
+    assert profile_manager.get_active_profile().treasure_matrix == []
+    other = profile_manager.get_collection().profiles["other"]
+    assert other.treasure_matrix[0].affix1_level == 4
+
+
+def test_update_treasure_matrix_rejects_unknown_profile(
+    profile_manager: ProfileManager,
+):
+    """目标账号不存在时报错，而不是退回到当前激活账号静默写入。"""
+    profile_manager.load()
+
+    with pytest.raises(ValueError):
+        profile_manager.update_treasure_matrix([], profile_name="ghost")
+
+
+def test_create_profile_does_not_switch_and_persists(
+    profile_manager: ProfileManager, temp_profiles_file: Path
+):
+    """新建账号不应切换激活账号，并且要落盘。"""
+    profile_manager.load()
+
+    created = profile_manager.create_profile("backup")
+
+    assert created.name == "backup"
+    assert profile_manager.get_active_profile_name() == "default"
+    assert "backup" in profile_manager.get_collection().profiles
+
+    reloaded = ProfileManager(temp_profiles_file)
+    reloaded.load()
+    assert "backup" in reloaded.get_collection().profiles
+    assert reloaded.get_active_profile_name() == "default"
+
+
+def test_create_profile_rejects_duplicate(profile_manager: ProfileManager):
+    """同名账号不允许被重复新建。"""
+    profile_manager.load()
+    profile_manager.create_profile("backup")
+
+    with pytest.raises(ValueError):
+        profile_manager.create_profile("backup")
+
+
+def test_create_profile_rejects_invalid_name(profile_manager: ProfileManager):
+    """账号名规则与 switch_profile 保持一致。"""
+    profile_manager.load()
+
+    with pytest.raises(ValueError):
+        profile_manager.create_profile("   ")
+    with pytest.raises(ValueError):
+        profile_manager.create_profile("a/b")
+
+
+def test_create_profile_rejects_reserved_default_name(profile_manager: ProfileManager):
+    """默认账号改名后，'default' 成为保留名，不能被新建占用。"""
+    profile_manager.load()
+    profile_manager.rename_profile("default", "主账号")
+
+    with pytest.raises(ValueError):
+        profile_manager.create_profile("default")
+
+
 def test_entry_priority_is_projection_of_weapon_priorities(
     profile_manager: ProfileManager,
 ):

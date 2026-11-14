@@ -55,12 +55,21 @@
         </v-btn>
         <v-btn
           color="secondary"
-          prepend-icon="mdi-image-outline"
+          prepend-icon="mdi-export-variant"
           size="small"
           variant="tonal"
           @click="showExportDialog = true"
         >
-          导出为图片
+          导出
+        </v-btn>
+        <v-btn
+          color="secondary"
+          prepend-icon="mdi-file-import-outline"
+          size="small"
+          variant="tonal"
+          @click="showImportDialog = true"
+        >
+          导入
         </v-btn>
       </div>
 
@@ -228,6 +237,9 @@
 
   <!-- 宝藏基质导出弹窗 -->
   <matrix-export-dialog v-model="showExportDialog" />
+
+  <!-- 宝藏基质导入弹窗 -->
+  <matrix-import-dialog v-model="showImportDialog" />
 </template>
 
 <script lang="ts" setup>
@@ -235,6 +247,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import CustomStatIcon from '@/components/CustomStatIcon.vue'
 import ItemIcon from '@/components/ItemIcon.vue'
 import MatrixExportDialog from '@/components/MatrixExportDialog.vue'
+import MatrixImportDialog from '@/components/MatrixImportDialog.vue'
 import OverlapDetectionDialog from '@/components/OverlapDetectionDialog.vue'
 import WeaponDetailDialog from '@/components/WeaponDetailDialog.vue'
 import { useCustomStats } from '@/composables/useCustomStats'
@@ -387,6 +400,7 @@ const detailWeaponId = ref<string | null>(null)
 
 // 导出为图片弹窗
 const showExportDialog = ref(false)
+const showImportDialog = ref(false)
 
 /**
  * 计算指定武器的属性组合键。

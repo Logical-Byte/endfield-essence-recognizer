@@ -230,11 +230,20 @@
           <v-btn
             class="mt-2 ml-2"
             color="secondary"
-            prepend-icon="mdi-image-outline"
+            prepend-icon="mdi-export-variant"
             variant="tonal"
             @click="showExportDialog = true"
           >
-            导出为图片
+            导出
+          </v-btn>
+          <v-btn
+            class="mt-2 ml-2"
+            color="secondary"
+            prepend-icon="mdi-file-import-outline"
+            variant="tonal"
+            @click="showImportDialog = true"
+          >
+            导入
           </v-btn>
         </v-expansion-panel-text>
       </v-expansion-panel>
@@ -555,6 +564,9 @@
     <!-- 导出为图片弹窗 -->
     <matrix-export-dialog v-model="showExportDialog" />
 
+    <!-- 导入 CSV / JSON 弹窗 -->
+    <matrix-import-dialog v-model="showImportDialog" />
+
     <!-- 回到顶部按钮 -->
     <back-to-top />
   </v-container>
@@ -567,6 +579,7 @@ import BackToTop from '@/components/BackToTop.vue'
 import CustomStatIcon from '@/components/CustomStatIcon.vue'
 import ItemIcon from '@/components/ItemIcon.vue'
 import MatrixExportDialog from '@/components/MatrixExportDialog.vue'
+import MatrixImportDialog from '@/components/MatrixImportDialog.vue'
 import WeaponOverview from '@/components/WeaponOverview.vue'
 import { useCustomStats } from '@/composables/useCustomStats'
 import { type TreasureMatrixEntry, useProfiles } from '@/composables/useProfiles'
@@ -606,6 +619,7 @@ const essenceBgSrc = computed(() => matrixIcons.value.essenceBg)
 
 const showAddWeaponDialog = ref(false)
 const showExportDialog = ref(false)
+const showImportDialog = ref(false)
 const weaponSearch = ref('')
 const computing = ref(false)
 

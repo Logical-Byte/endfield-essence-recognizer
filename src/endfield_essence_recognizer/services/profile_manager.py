@@ -591,8 +591,10 @@ class ProfileManager:
             self._commit_collection_unlocked(collection)
             logger.info("删除账号: {}", name)
 
-    def update_treasure_matrix(self, entries: list[TreasureMatrixEntry]) -> ProfileData:
-        """替换激活账号的完整宝藏基质配置。
+    def update_treasure_matrix(
+        self, entries: list[TreasureMatrixEntry], profile_name: str | None = None
+    ) -> ProfileData:
+        """替换指定账号的完整宝藏基质配置。
 
         矩阵内条目的优先级以 entry.priority 为准同步进 weapon_priorities；
         未出现在矩阵中的武器（未拥有基质但用户设过优先级）保持原值不变，
@@ -600,15 +602,17 @@ class ProfileManager:
 
         Args:
             entries: 新的宝藏基质条目列表。
+            profile_name: 目标账号名称；None 表示当前激活账号。
 
         Returns:
             更新后的 ProfileData。
-        """
-        with self._lock:
-            collection = self._collection.model_copy(deep=True)
-            profile = collection.get_active()
-            profile.treasure_matrix = [entry.model_copy(deep=True) for entry in entries]
 
+        Raises:
+            ValueError: 指定的账号不存在。
+        """
+
+        def mutate(profile: ProfileData) -> None:
+            profile.treasure_matrix = [entry.model_copy(deep=True) for entry in entries]
             matrix_ids = {entry.weapon_id for entry in profile.treasure_matrix}
             # 先保留未拥有武器的优先级，再用矩阵内条目的 priority 覆盖同名键。
             merged = {
@@ -625,8 +629,41 @@ class ProfileManager:
             )
             profile.weapon_priorities = merged
             self._sync_priority_projection(profile)
+
+        with self._lock:
+            return self._update_active_profile_unlocked(mutate, name=profile_name)
+
+    def create_profile(self, name: str) -> ProfileData:
+        """新建账号，但**不**切换激活账号。
+
+        `switch_profile` 是"不存在则创建、同时切过去"：导入到新账号时用户
+        未必想立刻离开当前账号，所以新建与切换在这里拆开。
+
+        Args:
+            name: 账号名称，规则与 `switch_profile` 一致。
+
+        Returns:
+            新建的 ProfileData。
+
+        Raises:
+            ValueError: 名称非法、已存在或占用了保留名。
+        """
+        with self._lock:
+            collection = self._collection.model_copy(deep=True)
+            name = self._validate_profile_name(name)
+            if name in collection.profiles:
+                raise ValueError(f"账号 '{name}' 已存在")
+            if (
+                name == DEFAULT_PROFILE_NAME
+                and collection.default_profile != DEFAULT_PROFILE_NAME
+            ):
+                raise ValueError(
+                    f"不能使用保留名称 '{DEFAULT_PROFILE_NAME}' 作为账号名称"
+                )
+            collection.profiles[name] = ProfileData(name=name)
             self._commit_collection_unlocked(collection)
-            return profile.model_copy(deep=True)
+            logger.info("新建账号: {}", name)
+            return collection.profiles[name].model_copy(deep=True)
 
     def add_treasure_matrix_entry(self, entry: TreasureMatrixEntry) -> ProfileData:
         """添加或更新单个宝藏基质条目。

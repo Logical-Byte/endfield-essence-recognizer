@@ -350,4 +350,71 @@ describe('useProfiles', () => {
     expect(treasureMatrix.value).toHaveLength(1)
     expect(treasureMatrix.value[0].weapon_id).toBe('wpn_001')
   })
+
+  it('updateTreasureMatrix 带 profile_name 时写入目标账号，且不改激活账号', async () => {
+    fetchMock.mockResolvedValueOnce(
+      mockResponse({
+        version: 1,
+        name: 'alt',
+        treasure_matrix: [
+          {
+            weapon_id: 'wpn_001',
+            weapon_name: 'W1',
+            affix1_level: 4,
+            affix2_level: 1,
+            affix3_level: 1,
+          },
+        ],
+      }),
+    )
+    const { updateTreasureMatrix, collection, treasureMatrix } = useProfiles()
+
+    await updateTreasureMatrix(
+      [
+        {
+          weapon_id: 'wpn_001',
+          weapon_name: 'W1',
+          affix1_level: 4,
+          affix2_level: 1,
+          affix3_level: 1,
+        },
+      ],
+      'alt',
+    )
+
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(JSON.parse(String(init.body))).toMatchObject({ profile_name: 'alt' })
+    // 目标账号的快照被更新，当前激活账号不受影响
+    expect(collection.value.profiles.alt?.treasure_matrix[0]?.affix1_level).toBe(4)
+    expect(collection.value.active_profile).toBe('default')
+    expect(treasureMatrix.value).toEqual([])
+  })
+
+  it('不带 profile_name 时请求体里没有该字段（保持旧契约）', async () => {
+    fetchMock.mockResolvedValueOnce(
+      mockResponse({ version: 1, name: 'default', treasure_matrix: [] }),
+    )
+    const { updateTreasureMatrix } = useProfiles()
+
+    await updateTreasureMatrix([])
+
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(JSON.parse(String(init.body))).toEqual({ entries: [] })
+  })
+
+  it('createProfile 调新建接口并写入本地快照', async () => {
+    fetchMock.mockResolvedValueOnce(
+      mockResponse({ version: 1, name: 'backup', treasure_matrix: [] }),
+    )
+    const { createProfile, collection } = useProfiles()
+
+    await createProfile('backup')
+
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/profiles/create')
+    // 断言请求体：mock 返回值是固定的，只查 URL 的话名字传错也能过
+    expect(JSON.parse(String(init.body))).toEqual({ name: 'backup' })
+    expect(collection.value.profiles.backup?.name).toBe('backup')
+    expect(collection.value.active_profile).toBe('default')
+  })
 })

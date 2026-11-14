@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 # image_base64 允许的最大字符数，防止超长请求体把服务进程内存推高，
@@ -28,9 +30,33 @@ class TreasureMatrixExportResponse(BaseModel):
     message: str
     file_path: str | None = Field(
         default=None,
-        description="保存的导出图片的完整路径",
+        description="保存的导出文件完整路径",
     )
     file_name: str | None = Field(
         default=None,
-        description="保存的导出图片文件名",
+        description="保存的导出文件名",
+    )
+
+
+# 表格内容允许的最大字符数。几百条基质的 CSV/JSON 也就几十 KB，
+# 这里只是兜底防御：不让一个异常的请求把服务进程内存推高。
+MAX_TABLE_CONTENT_CHARS: int = 16 * 1024 * 1024
+
+
+class TreasureMatrixTableExportRequest(BaseModel):
+    format: Literal["csv", "json"] = Field(
+        description="导出文件格式，同时决定落盘扩展名",
+    )
+    content: str = Field(
+        max_length=MAX_TABLE_CONTENT_CHARS,
+        description="已序列化好的表格文本（UTF-8，不含 BOM）",
+    )
+    file_stem: str | None = Field(
+        default=None,
+        max_length=64,
+        description="文件名主干，会做非法字符清洗；省略时用当前激活账号名",
+    )
+    open_folder: bool = Field(
+        default=True,
+        description="保存成功后是否打开文件所在文件夹",
     )
