@@ -61,9 +61,9 @@ const ALLUVIUM_PREFIX = '重度能量淤积点·'
  * 如 "重度能量淤积点·枢纽区" → "枢纽区"。
  */
 export function getDisplayName(battleName: string): string {
-  return battleName.startsWith(ALLUVIUM_PREFIX)
-    ? battleName.slice(ALLUVIUM_PREFIX.length)
-    : battleName
+  if (!battleName.startsWith(ALLUVIUM_PREFIX)) return battleName
+  // 名称恰好只有前缀时保留原名，否则标签会显示成空白
+  return battleName.slice(ALLUVIUM_PREFIX.length) || battleName
 }
 
 // 所有属性词条

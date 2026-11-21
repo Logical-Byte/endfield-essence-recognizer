@@ -12,7 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { nextTick } from 'vue'
 import { useCustomAlluviums } from '@/composables/useCustomAlluviums'
 import { useCustomStats } from '@/composables/useCustomStats'
-import { useMatrixPlanner } from '@/composables/useMatrixPlanner'
+import { getDisplayName, useMatrixPlanner } from '@/composables/useMatrixPlanner'
 import { CUSTOM_ALLUVIUM_ID_PREFIX } from '@/utils/gameData/alluvium'
 import { useStaticData } from '@/utils/gameData/staticData'
 
@@ -198,5 +198,16 @@ describe('内置地点行为不变', () => {
     }
     const attributeCombos = new Set(choices.map((choice) => choice.selectedAttribute.join('|')))
     expect(attributeCombos.size).toBe(6)
+  })
+})
+
+describe('getDisplayName', () => {
+  it('裁掉内置地点名称前缀', () => {
+    expect(getDisplayName('重度能量淤积点·枢纽区')).toBe('枢纽区')
+    expect(getDisplayName('枢纽区')).toBe('枢纽区')
+  })
+
+  it('名称只有前缀时保留原名，避免显示成空白', () => {
+    expect(getDisplayName('重度能量淤积点·')).toBe('重度能量淤积点·')
   })
 })
