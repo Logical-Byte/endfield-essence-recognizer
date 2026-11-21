@@ -1,15 +1,15 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, Any
+import os
+import tempfile
+from pathlib import Path
+from typing import Any
 from uuid import uuid4
 
 from endfield_essence_recognizer.exceptions import ConfigVersionMismatchError
 from endfield_essence_recognizer.schemas.user_setting import UserSetting
 from endfield_essence_recognizer.utils.log import logger
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 __all__ = ["UserSettingManager"]
 
@@ -57,16 +57,37 @@ def _load_user_setting_from_file(
 
 def _save_user_setting_to_file(model: UserSetting, path: Path) -> bool:
     """
-    Save the current UserSetting to a file.
+    Atomically save the current UserSetting to a file.
+
+    先写同目录下的临时文件，再 `os.replace` 覆盖目标文件。直接 `write_text` 会先
+    截断再写，一旦进程中断或磁盘写满，配置文件就只剩半截 JSON；下次启动会把它
+    判为非法并重置为默认值，用户设置全部丢失。
 
     Return True if successful, False otherwise.
     """
+    data = model.model_dump_json(indent=4, ensure_ascii=False)
+    tmp_path: Path | None = None
     try:
-        path.write_text(
-            model.model_dump_json(indent=4, ensure_ascii=False), encoding="utf-8"
+        fd, tmp_name = tempfile.mkstemp(
+            prefix=f".{path.name}.",
+            suffix=".tmp",
+            dir=path.parent,
+            text=True,
         )
+        tmp_path = Path(tmp_name)
+        with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as file:
+            file.write(data)
+            file.flush()
+            os.fsync(file.fileno())
+        os.replace(tmp_path, path)
         return True
     except Exception:
+        # 失败时删掉临时文件，原来的配置文件保持不变
+        if tmp_path is not None:
+            try:
+                tmp_path.unlink(missing_ok=True)
+            except OSError:
+                pass
         # Do not log here, let the caller handle it
         return False
 

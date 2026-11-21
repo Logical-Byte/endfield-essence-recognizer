@@ -141,6 +141,32 @@ def test_save_user_setting(manager, settings_file):
     assert data["trash_weapon_ids"] == ["test_save"]
 
 
+def test_save_user_setting_keeps_previous_file_on_write_failure(
+    manager, settings_file, monkeypatch
+):
+    """写盘失败时保留原有配置，且不留下临时文件。
+
+    配置写盘走临时文件 + `os.replace`：直接截断重写一旦中途失败，配置文件就只剩
+    半截 JSON，下次启动会把整份配置判为非法并重置。
+    """
+    manager._user_setting.trash_weapon_ids = ["before_failure"]
+    manager.save_user_setting()
+    before = settings_file.read_text(encoding="utf-8")
+
+    def _fail_replace(*args, **kwargs):
+        raise OSError("disk full")
+
+    monkeypatch.setattr(
+        "endfield_essence_recognizer.services.user_setting_manager.os.replace",
+        _fail_replace,
+    )
+    manager._user_setting.trash_weapon_ids = ["after_failure"]
+    manager.save_user_setting()
+
+    assert settings_file.read_text(encoding="utf-8") == before
+    assert list(settings_file.parent.glob(f".{settings_file.name}.*.tmp")) == []
+
+
 def test_update_from_dict(manager, settings_file):
     """测试 update_from_dict 更新配置并保存到磁盘。"""
     manager.update_from_dict({"trash_weapon_ids": ["dict_update"]})
