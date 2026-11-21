@@ -141,6 +141,12 @@ def test_list_all_dedupes_duplicate_ids(
 
     assert len({item.id for item in entries}) == 2
 
+    # 拆开后的 ID 必须落盘：只在内存里换掉会让下一次读取再换一个，
+    # 账号里存着的筛选键就再也对不上这个地点了。
+    on_disk = json.loads(data_file.read_text(encoding="utf-8"))
+    assert [item["id"] for item in on_disk] == [item.id for item in entries]
+    assert [item.id for item in manager.list_all()] == [item.id for item in entries]
+
 
 def test_corrupt_file_is_backed_up_and_reported_as_empty(
     manager: CustomAlluviumManager, data_file: Path
