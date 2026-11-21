@@ -1338,6 +1338,23 @@ function isTypePartiallySelected(groupId: string): boolean {
   return selectedCount > 0 && selectedCount < weaponIds.length
 }
 
+/**
+ * 把窗口宽高钳制到合法范围。
+ *
+ * 输入框清空时 v-model.number 给的是空字符串，此时回落默认值；输入 `0` 之类
+ * 的越界值则钳到下限，不能当成「没填」而悄悄改回 1600×900。
+ */
+function clampWindowDimension(
+  value: number | string,
+  min: number,
+  max: number,
+  fallback: number,
+): number {
+  const numeric = typeof value === 'number' ? value : Number(value)
+  if (value === '' || !Number.isFinite(numeric)) return fallback
+  return Math.min(max, Math.max(min, numeric))
+}
+
 const config = computed(() => {
   const proxyUrl = updateProxyEnabled.value ? `http://127.0.0.1:${updateProxyPort.value}` : ''
   return {
@@ -1355,8 +1372,8 @@ const config = computed(() => {
     skip_deprecated_essence: skipDeprecatedEssence.value,
     // window_last_* 由程序在退出时写入，客户端不提交，避免用加载时的旧值覆盖新尺寸
     window_size_mode: windowSizeMode.value,
-    window_width: Math.min(10_000, Math.max(400, Number(windowWidth.value) || 1600)),
-    window_height: Math.min(10_000, Math.max(300, Number(windowHeight.value) || 900)),
+    window_width: clampWindowDimension(windowWidth.value, 400, 10_000, 1600),
+    window_height: clampWindowDimension(windowHeight.value, 300, 10_000, 900),
     high_level_treasure_enabled: highLevelTreasureEnabled.value,
     high_level_treasure_attribute_threshold: highLevelTreasureAttributeThreshold.value,
     high_level_treasure_secondary_threshold: highLevelTreasureSecondaryThreshold.value,
