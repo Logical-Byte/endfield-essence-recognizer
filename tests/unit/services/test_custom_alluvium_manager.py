@@ -8,6 +8,7 @@ import pytest
 from endfield_essence_recognizer.schemas.custom_alluvium import CustomAlluvium
 from endfield_essence_recognizer.services.custom_alluvium_manager import (
     CustomAlluviumManager,
+    CustomAlluviumReadError,
 )
 
 
@@ -153,3 +154,45 @@ def test_corrupt_file_is_backed_up_and_reported_as_empty(
     assert broken_files
     assert broken_files[0].read_text(encoding="utf-8") == "{bad json"
     assert not data_file.exists()
+
+
+def test_invalid_utf8_is_treated_as_corrupt_file(
+    manager: CustomAlluviumManager, data_file: Path
+):
+    """非法 UTF-8 也算内容损坏：备份后返回空列表，而不是让整个接口 500。"""
+    broken_bytes = b'[{"name": "\xff\xfe"}]'
+    data_file.write_bytes(broken_bytes)
+
+    assert manager.list_all() == []
+
+    broken_files = list(data_file.parent.glob("custom_alluviums.json.broken*"))
+    assert broken_files
+    assert broken_files[0].read_bytes() == broken_bytes
+
+
+def test_read_error_is_not_treated_as_corrupt_file(
+    manager: CustomAlluviumManager,
+    data_file: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """读取失败（占用、权限）时不备份、不返回空列表，也不覆盖原文件。
+
+    文件内容本身是好的，把读取失败当成「内容损坏」会把它改名备份，随后的
+    保存再写入一份新列表，用户的条目就这样丢了。
+    """
+    original = json.dumps([{"id": "keep", "name": "甲"}], ensure_ascii=False)
+    data_file.write_text(original, encoding="utf-8")
+
+    def _deny_read(self: Path, **_kwargs: object) -> str:
+        raise PermissionError("文件被占用")
+
+    with monkeypatch.context() as patched:
+        patched.setattr(Path, "read_text", _deny_read)
+
+        with pytest.raises(CustomAlluviumReadError):
+            manager.list_all()
+        with pytest.raises(CustomAlluviumReadError):
+            manager.upsert(_entry("乙"))
+
+    assert data_file.read_text(encoding="utf-8") == original
+    assert not list(data_file.parent.glob("custom_alluviums.json.broken*"))

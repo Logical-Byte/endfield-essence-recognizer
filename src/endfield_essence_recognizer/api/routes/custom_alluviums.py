@@ -4,6 +4,8 @@
 读取、保存、删除都是全局操作。
 """
 
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -13,9 +15,23 @@ from endfield_essence_recognizer.dependencies import get_custom_alluviums_path_d
 from endfield_essence_recognizer.schemas.custom_alluvium import CustomAlluvium
 from endfield_essence_recognizer.services.custom_alluvium_manager import (
     CustomAlluviumManager,
+    CustomAlluviumReadError,
 )
 
 router = APIRouter(prefix="/custom_alluviums", tags=["custom alluviums"])
+
+
+@contextmanager
+def _read_error_as_http() -> Iterator[None]:
+    """把「文件读不出来」翻译成 500。
+
+    读不到文件时不能返回空列表：前端会把空列表当成「没有自定义地点」，用户
+    随后保存就会覆盖掉读不出来的内容。
+    """
+    try:
+        yield
+    except CustomAlluviumReadError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 def get_custom_alluvium_manager(
@@ -33,7 +49,8 @@ async def list_custom_alluviums(
     manager: CustomAlluviumManager = Depends(get_custom_alluvium_manager),
 ) -> list[CustomAlluvium]:
     """获取全部自定义淤积点。"""
-    return manager.list_all()
+    with _read_error_as_http():
+        return manager.list_all()
 
 
 @router.post("")
@@ -46,7 +63,8 @@ async def save_custom_alluvium(
     `id` 为空表示新建，后端会分配稳定 ID；返回保存后的完整列表。
     """
     try:
-        return manager.upsert(entry)
+        with _read_error_as_http():
+            return manager.upsert(entry)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
@@ -63,4 +81,5 @@ async def delete_custom_alluvium(
     manager: CustomAlluviumManager = Depends(get_custom_alluvium_manager),
 ) -> list[CustomAlluvium]:
     """按稳定 ID 删除一条自定义淤积点，返回删除后的完整列表。"""
-    return manager.delete(request.id)
+    with _read_error_as_http():
+        return manager.delete(request.id)

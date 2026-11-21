@@ -23,7 +23,7 @@ from endfield_essence_recognizer.utils.log import logger
 if TYPE_CHECKING:
     from pathlib import Path
 
-__all__ = ["CustomAlluviumManager"]
+__all__ = ["CustomAlluviumManager", "CustomAlluviumReadError"]
 
 # FastAPI 的同步路由跑在线程池里，跨请求的「读-改-写」可能交错；
 # 管理器本身无内存状态，用模块级锁把同一文件的读改写串起来。
@@ -32,6 +32,15 @@ _FILE_LOCK = threading.Lock()
 _ALLUVIUMS_TYPE_ADAPTER: TypeAdapter[list[CustomAlluvium]] = TypeAdapter(
     list[CustomAlluvium]
 )
+
+
+class CustomAlluviumReadError(RuntimeError):
+    """数据文件存在但读不出来（权限、占用等）。
+
+    这类错误不能当成「文件为空」处理：调用方随后一次保存会把读不出来的条目
+    整体覆盖掉，等于丢掉用户已经保存的自定义地点。因此既不做 `.broken` 备份
+    （文件本身是好的，只是这次读不到），也不返回空列表。
+    """
 
 
 def _backup_broken_file(path: Path) -> None:
@@ -66,6 +75,9 @@ class CustomAlluviumManager:
 
         Returns:
             按文件顺序排列的条目；文件不存在时返回空列表。
+
+        Raises:
+            CustomAlluviumReadError: 文件存在但读取失败。
         """
         with _FILE_LOCK:
             alluviums, healed = self._read_unlocked()
@@ -90,6 +102,7 @@ class CustomAlluviumManager:
 
         Raises:
             ValueError: 名称为空。
+            CustomAlluviumReadError: 文件存在但读取失败（此时不会覆盖原文件）。
         """
         name = entry.name.strip()
         if not name:
@@ -117,6 +130,9 @@ class CustomAlluviumManager:
 
         Returns:
             删除后的完整列表。
+
+        Raises:
+            CustomAlluviumReadError: 文件存在但读取失败。
         """
         with _FILE_LOCK:
             alluviums, healed = self._read_unlocked()
@@ -131,14 +147,29 @@ class CustomAlluviumManager:
         Returns:
             (条目列表, 是否发生了 ID 补齐)。文件缺失或内容无效时返回空列表，
             后者会先把原文件备份成 `.broken`。
+
+        Raises:
+            CustomAlluviumReadError: 文件存在但读取失败（权限、被占用等）。
         """
         if not self._data_file.is_file():
             return [], False
 
         try:
-            raw = json.loads(self._data_file.read_text(encoding="utf-8"))
+            text = self._data_file.read_text(encoding="utf-8")
+        except UnicodeDecodeError as exc:
+            # 非法 UTF-8 与 JSON 语法错误同属内容损坏，按损坏处理并备份
+            logger.error("自定义淤积点文件编码无效: {}", exc)
+            _backup_broken_file(self._data_file)
+            return [], False
+        except OSError as exc:
+            raise CustomAlluviumReadError(
+                f"读取自定义淤积点文件失败: {self._data_file}"
+            ) from exc
+
+        try:
+            raw = json.loads(text)
             alluviums = _ALLUVIUMS_TYPE_ADAPTER.validate_python(raw)
-        except (OSError, JSONDecodeError, ValidationError) as exc:
+        except (JSONDecodeError, ValidationError) as exc:
             logger.error("加载自定义淤积点失败: {}", exc)
             _backup_broken_file(self._data_file)
             return [], False

@@ -1,6 +1,7 @@
 """custom_alluviums API 集成测试。"""
 
 import json
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -130,3 +131,19 @@ def test_delete_unknown_id_keeps_entries(client):
 
     assert response.status_code == 200
     assert len(response.json()) == 1
+
+
+def test_read_error_returns_500_instead_of_empty_list(client, data_file, monkeypatch):
+    """文件读不出来时明确报错，不能让前端把它当成「没有自定义地点」。"""
+    client.post("/api/custom_alluviums", json=_payload())
+
+    def _deny_read(self: Path, **_kwargs: object) -> str:
+        raise PermissionError("文件被占用")
+
+    with monkeypatch.context() as patched:
+        patched.setattr(Path, "read_text", _deny_read)
+
+        response = client.get("/api/custom_alluviums")
+
+    assert response.status_code == 500
+    assert "读取" in response.json()["detail"]
