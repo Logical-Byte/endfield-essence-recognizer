@@ -12,19 +12,40 @@ import { useToast } from '@/composables/useToast'
 /** 自定义淤积点列表（模块级单例，所有调用方共享同一份状态） */
 const customAlluviums = ref<CustomAlluvium[]>([])
 
+/**
+ * 状态版本号。
+ *
+ * 列表请求是异步的，而保存 / 删除成功后会直接把返回的完整列表写进状态。
+ * 用版本号淘汰过期响应：只有最后发起的那次请求才允许写回，否则一次在保存前
+ * 发出、保存后才返回的 GET 会把刚保存的条目又抹掉（删除同理）。
+ */
+let stateVersion = 0
+
 export function useCustomAlluviums() {
+  /** 写入共享列表，并让仍在途的列表请求失效 */
+  function commitList(list: CustomAlluvium[]) {
+    stateVersion++
+    customAlluviums.value = list
+  }
+
   /**
    * 从后端获取自定义淤积点列表
    */
   async function fetchCustomAlluviums() {
+    const version = ++stateVersion
     try {
       const res = await fetch('/api/custom_alluviums')
       if (!res.ok) {
         throw new Error(`HTTP ${res.status}: ${res.statusText}`)
       }
-      customAlluviums.value = await res.json()
+      const list: CustomAlluvium[] = await res.json()
+      // 期间发生过保存 / 删除或更新的一次拉取时，这份快照已经过期
+      if (version !== stateVersion) return
+      customAlluviums.value = list
     } catch (error) {
       console.error('获取自定义淤积点失败:', error)
+      // 请求失败时列表会停在旧快照上，必须让用户知道现在看到的可能不是最新数据
+      useToast().error('获取自定义淤积点失败，列表可能不是最新的')
     }
   }
 
@@ -45,7 +66,7 @@ export function useCustomAlluviums() {
       toast.error(msg)
       throw new Error(msg)
     }
-    customAlluviums.value = await res.json()
+    commitList(await res.json())
   }
 
   /**
@@ -63,7 +84,7 @@ export function useCustomAlluviums() {
       toast.error(msg)
       throw new Error(msg)
     }
-    customAlluviums.value = await res.json()
+    commitList(await res.json())
   }
 
   return {
