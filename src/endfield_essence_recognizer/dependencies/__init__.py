@@ -6,7 +6,12 @@ from .core import (
     get_scanner_context_dep,
     get_scanner_engine_dep,
 )
-from .paths import get_config_path_dep, get_exports_dir_dep, get_screenshots_dir_dep
+from .paths import (
+    get_config_path_dep,
+    get_custom_alluviums_path_dep,
+    get_exports_dir_dep,
+    get_screenshots_dir_dep,
+)
 from .recognition import (
     get_abandon_status_recognizer_dep,
     get_attribute_level_recognizer_dep,
@@ -45,6 +50,7 @@ __all__ = [
     "get_attribute_recognizer_dep",
     "get_audio_service",
     "get_config_path_dep",
+    "get_custom_alluviums_path_dep",
     "get_delivery_claimer_engine_dep",
     "get_delivery_job_reward_recognizer_dep",
     "get_delivery_scene_recognizer_dep",
