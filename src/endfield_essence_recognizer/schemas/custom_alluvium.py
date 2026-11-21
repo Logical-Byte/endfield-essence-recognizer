@@ -9,11 +9,18 @@ from __future__ import annotations
 
 from typing import Final
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 #: 自定义淤积点在各账号刷取地点筛选配置（`matrix_planner_farming_locations`）
 #: 中的 key 前缀，其后拼接稳定 ID。前端按同一规则生成 battleId。
 CUSTOM_ALLUVIUM_ID_PREFIX: Final[str] = "custom_alluvium:"
+
+#: 单组词条列表的长度上限。
+#:
+#: 规划器会把基础属性展开成 C(n,3) 个预刻组合，词条越多组合数涨得越快；界面
+#: 最多只能勾出静态数据里的全部词条（基础 5 / 附加 12 / 技能 14 项），因此这个
+#: 上限只用于拦住手改文件或异常请求塞进来的超长池，留足了小版本新增词条的余地。
+MAX_STAT_POOL_SIZE: Final[int] = 32
 
 
 class CustomAlluvium(BaseModel):
@@ -41,3 +48,20 @@ class CustomAlluvium(BaseModel):
 
     skill_stats: list[str] = []
     """该地点可刷出的技能属性词条 ID。"""
+
+    @field_validator("attribute_stats", "secondary_stats", "skill_stats")
+    @classmethod
+    def _normalize_stats(cls, stats: list[str]) -> list[str]:
+        """去重（保持原顺序）并限制长度。
+
+        重复词条会让规划器对同一条附加/技能属性重复生成方案；基础属性去重后
+        不足三项还会退化成「不限制」，与用户的勾选意图相反。落盘与手改文件都
+        走模型校验，因此在这里统一收敛。
+
+        Raises:
+            ValueError: 词条数量超过 `MAX_STAT_POOL_SIZE`。
+        """
+        unique = list(dict.fromkeys(stats))
+        if len(unique) > MAX_STAT_POOL_SIZE:
+            raise ValueError(f"单组词条不能超过 {MAX_STAT_POOL_SIZE} 项")
+        return unique
