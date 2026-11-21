@@ -20,10 +20,7 @@ def _write_config(tmp_path: Path, data: dict) -> Path:
 
 def test_read_window_size_without_config_uses_default(tmp_path: Path):
     """配置文件不存在时使用默认尺寸，而不是抛异常。"""
-    assert webui.read_window_size(tmp_path / "missing.json") == (
-        webui.DEFAULT_WINDOW_WIDTH,
-        webui.DEFAULT_WINDOW_HEIGHT,
-    )
+    assert webui.read_window_size(tmp_path / "missing.json") == (1600, 900)
 
 
 def test_read_window_size_with_corrupt_json_uses_default(tmp_path: Path):
@@ -31,10 +28,7 @@ def test_read_window_size_with_corrupt_json_uses_default(tmp_path: Path):
     path = tmp_path / "config.json"
     path.write_text("{ not json", encoding="utf-8")
 
-    assert webui.read_window_size(path) == (
-        webui.DEFAULT_WINDOW_WIDTH,
-        webui.DEFAULT_WINDOW_HEIGHT,
-    )
+    assert webui.read_window_size(path) == (1600, 900)
 
 
 def test_read_window_size_default_mode_ignores_size_fields(tmp_path: Path):
@@ -44,10 +38,7 @@ def test_read_window_size_default_mode_ignores_size_fields(tmp_path: Path):
         {"window_size_mode": "default", "window_width": 1000, "window_height": 700},
     )
 
-    assert webui.read_window_size(path) == (
-        webui.DEFAULT_WINDOW_WIDTH,
-        webui.DEFAULT_WINDOW_HEIGHT,
-    )
+    assert webui.read_window_size(path) == (1600, 900)
 
 
 def test_read_window_size_custom_mode_uses_configured_size(tmp_path: Path):
@@ -87,7 +78,7 @@ def test_read_window_size_clamps_out_of_range_values(tmp_path: Path):
         },
     )
 
-    assert webui.read_window_size(path) == (400, webui.DEFAULT_WINDOW_HEIGHT)
+    assert webui.read_window_size(path) == (400, 900)
 
     path = _write_config(
         tmp_path,

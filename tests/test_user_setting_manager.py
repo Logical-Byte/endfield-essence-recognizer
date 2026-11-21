@@ -586,23 +586,27 @@ def test_migration_sets_all_required_fields():
     assert migrated.window_last_height == 900
 
 
-def test_migrate_v9_to_v10_adds_skip_marked_essence_fields():
-    """v9 → v10: 补充"扫描前跳过已处理过的基质"开关，默认关闭，已有字段保留。"""
-    v9_config = {
-        "version": 9,
-        "trash_weapon_ids": ["w1"],
-        "redundant_cleanup_enabled": True,
-        "redundant_cleanup_trigger": "always",
-    }
+@pytest.mark.parametrize("from_version", range(2, UserSetting._VERSION))
+def test_migration_preserves_existing_settings(from_version):
+    """从任意旧版本迁移到当前版本，既有设置都不应被迁移逻辑覆盖。
 
-    migrated = UserSetting.migrate_from_old_version(v9_config)
+    逐版本手写用例只覆盖了部分步骤，这里对每个入口版本统一断言：迁移后落在当前
+    版本，且已经带值的字段原样保留。各版本新增字段的默认值由
+    `test_migration_sets_all_required_fields` 负责。
+    """
+    migrated = UserSetting.migrate_from_old_version(
+        {
+            "version": from_version,
+            "trash_weapon_ids": ["w1"],
+            "same_type_treasure_limit": 2,
+            "redundant_cleanup_trigger": "always",
+        }
+    )
 
     assert migrated.version == UserSetting._VERSION
     assert migrated.trash_weapon_ids == ["w1"]
-    assert migrated.redundant_cleanup_enabled is True
+    assert migrated.same_type_treasure_limit == 2
     assert migrated.redundant_cleanup_trigger == "always"
-    assert migrated.skip_locked_essence is False
-    assert migrated.skip_deprecated_essence is False
 
 
 def test_remember_window_size_persists_size(manager, settings_file):
@@ -722,45 +726,6 @@ def test_invalid_window_settings_keep_other_settings(manager, settings_file):
     assert setting.window_height == 900
     # 没有备份文件，说明走的是归一化而不是「非法配置 → 重置」
     assert list(settings_file.parent.glob("*.backup.*.json")) == []
-
-
-def test_migrate_v10_to_v11_adds_window_size_fields():
-    """v10 → v11: 补充窗口大小字段，默认记住上次关闭时的大小，已有字段保留。"""
-    v10_config = {
-        "version": 10,
-        "trash_weapon_ids": ["w1"],
-        "skip_locked_essence": True,
-    }
-
-    migrated = UserSetting.migrate_from_old_version(v10_config)
-
-    assert migrated.version == UserSetting._VERSION
-    assert migrated.trash_weapon_ids == ["w1"]
-    assert migrated.skip_locked_essence is True
-    assert migrated.window_size_mode == "remember"
-    assert migrated.window_width == 1600
-    assert migrated.window_height == 900
-    assert migrated.window_last_width == 1600
-    assert migrated.window_last_height == 900
-
-
-def test_migrate_v8_to_v9_adds_redundant_cleanup_fields():
-    """v8 → v9: 补充冗余清理字段，默认关闭，已有字段保留。"""
-    v8_config = {
-        "version": 8,
-        "trash_weapon_ids": ["w1"],
-        "same_type_treasure_limit_enabled": True,
-        "same_type_treasure_limit": 2,
-    }
-
-    migrated = UserSetting.migrate_from_old_version(v8_config)
-
-    assert migrated.version == UserSetting._VERSION
-    assert migrated.trash_weapon_ids == ["w1"]
-    assert migrated.same_type_treasure_limit == 2
-    assert migrated.redundant_cleanup_enabled is False
-    assert migrated.redundant_cleanup_trigger == "scan_complete"
-    assert migrated.redundant_action == "deprecate"
 
 
 def test_legacy_cn_update_mirror_normalizes_to_yituliu_flow():
