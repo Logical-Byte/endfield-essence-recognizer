@@ -1,4 +1,5 @@
 import json
+import os
 
 import pytest
 from pydantic import ValidationError
@@ -602,6 +603,98 @@ def test_migrate_v9_to_v10_adds_skip_marked_essence_fields():
     assert migrated.redundant_cleanup_trigger == "always"
     assert migrated.skip_locked_essence is False
     assert migrated.skip_deprecated_essence is False
+
+
+def test_remember_window_size_persists_size(manager, settings_file):
+    """记住模式下把窗口尺寸写回配置，其余设置保持不变。"""
+    manager.load_user_setting()
+    manager.update_from_dict(
+        {"window_size_mode": "remember", "trash_weapon_ids": ["w1"]}
+    )
+
+    manager.remember_window_size(1280, 720)
+
+    data = json.loads(settings_file.read_text(encoding="utf-8"))
+    assert data["window_last_width"] == 1280
+    assert data["window_last_height"] == 720
+    assert data["trash_weapon_ids"] == ["w1"]
+
+
+def test_remember_window_size_skips_before_load(manager, settings_file):
+    """配置尚未加载时不写盘，避免用内存里的默认值覆盖用户配置。"""
+    manager.remember_window_size(1280, 720)
+
+    assert not settings_file.exists()
+
+
+def test_remember_window_size_skips_other_modes(manager, settings_file):
+    """非记住模式不覆盖用户显式设定的尺寸。"""
+    manager.load_user_setting()
+    manager.update_from_dict(
+        {
+            "window_size_mode": "custom",
+            "window_width": 1000,
+            "window_height": 700,
+            "window_last_width": 1600,
+            "window_last_height": 900,
+        }
+    )
+
+    manager.remember_window_size(1280, 720)
+
+    data = json.loads(settings_file.read_text(encoding="utf-8"))
+    assert data["window_last_width"] == 1600
+    assert data["window_last_height"] == 900
+
+
+def test_remember_window_size_clamps_out_of_range(manager, settings_file):
+    """写回前钳制尺寸，避免写出下次加载会让整份配置校验失败的值。"""
+    manager.load_user_setting()
+    manager.update_from_dict({"window_size_mode": "remember"})
+
+    manager.remember_window_size(10, 999999)
+
+    data = json.loads(settings_file.read_text(encoding="utf-8"))
+    assert data["window_last_width"] == 400
+    assert data["window_last_height"] == 10000
+
+
+def test_remember_window_size_skips_unchanged_size(manager, settings_file):
+    """尺寸未变化时不重复写盘。"""
+    manager.load_user_setting()
+    manager.update_from_dict(
+        {
+            "window_size_mode": "remember",
+            "window_last_width": 1280,
+            "window_last_height": 720,
+        }
+    )
+    old_time = 1_000_000_000
+    os.utime(settings_file, (old_time, old_time))
+
+    manager.remember_window_size(1280, 720)
+
+    assert settings_file.stat().st_mtime == old_time
+
+
+def test_update_from_user_setting_keeps_recorded_window_size(manager, settings_file):
+    """客户端提交的整份配置不能覆盖程序记录的上次窗口尺寸。"""
+    manager.load_user_setting()
+    manager.update_from_dict(
+        {
+            "window_size_mode": "remember",
+            "window_last_width": 1280,
+            "window_last_height": 720,
+        }
+    )
+
+    # 客户端拿到的旧快照里是默认尺寸
+    manager.update_from_user_setting(UserSetting())
+
+    saved = json.loads(settings_file.read_text(encoding="utf-8"))
+    assert saved["window_last_width"] == 1280
+    assert saved["window_last_height"] == 720
+    assert manager.get_user_setting().window_last_width == 1280
 
 
 def test_migrate_v10_to_v11_adds_window_size_fields():

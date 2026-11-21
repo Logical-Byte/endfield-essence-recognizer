@@ -1353,11 +1353,10 @@ const config = computed(() => {
     fix_page_flip_overscroll: fixPageFlipOverscroll.value,
     skip_locked_essence: skipLockedEssence.value,
     skip_deprecated_essence: skipDeprecatedEssence.value,
+    // window_last_* 由程序在退出时写入，客户端不提交，避免用加载时的旧值覆盖新尺寸
     window_size_mode: windowSizeMode.value,
     window_width: Math.min(10_000, Math.max(400, Number(windowWidth.value) || 1600)),
     window_height: Math.min(10_000, Math.max(300, Number(windowHeight.value) || 900)),
-    window_last_width: windowLastWidth.value,
-    window_last_height: windowLastHeight.value,
     high_level_treasure_enabled: highLevelTreasureEnabled.value,
     high_level_treasure_attribute_threshold: highLevelTreasureAttributeThreshold.value,
     high_level_treasure_secondary_threshold: highLevelTreasureSecondaryThreshold.value,

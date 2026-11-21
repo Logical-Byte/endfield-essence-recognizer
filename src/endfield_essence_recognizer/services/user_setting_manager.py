@@ -3,12 +3,17 @@ from __future__ import annotations
 import json
 import os
 import tempfile
+import threading
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
 from endfield_essence_recognizer.exceptions import ConfigVersionMismatchError
-from endfield_essence_recognizer.schemas.user_setting import UserSetting
+from endfield_essence_recognizer.schemas.user_setting import (
+    UserSetting,
+    WindowSizeMode,
+    clamp_window_size,
+)
 from endfield_essence_recognizer.utils.log import logger
 
 __all__ = ["UserSettingManager"]
@@ -99,11 +104,19 @@ class UserSettingManager:
     - Holds a UserSetting instance in memory.
     - Provides interfaces to get and update settings.
     - Loads settings from disk and preserves them to disk when changed.
+
+    配置文件始终只有本管理器一个写者：设置保存来自事件循环线程，窗口尺寸写回来
+    自 GUI 线程，因此内存配置的修改与落盘共用一把可重入锁，避免一方的旧快照把
+    另一方的新值覆盖掉。
     """
 
     def __init__(self, user_setting_file: Path) -> None:
         self._user_setting_file = user_setting_file
         self._user_setting = UserSetting()  # In-memory UserSetting instance
+        self._lock = threading.RLock()
+        # 内存配置是否已经与磁盘一致。窗口可能在配置加载完成之前就被关闭，
+        # 此时内存里只有一份凭空默认值，写盘会覆盖用户的真实配置。
+        self._loaded = False
 
     def _cleanup_old_backups(self, config_path: Path, keep: int = 3) -> None:
         """清理旧备份文件，保留最近 N 个"""
@@ -183,11 +196,45 @@ class UserSettingManager:
         Save the current in-memory UserSetting to disk.
         """
         target_path = path or self._user_setting_file
-        success = _save_user_setting_to_file(self._user_setting, target_path)
+        with self._lock:
+            success = _save_user_setting_to_file(self._user_setting, target_path)
         if not success:
             logger.error(
                 "Failed to save user setting to file: {}", target_path.resolve()
             )
+            return
+        # 内存配置已经与磁盘一致，此后允许窗口尺寸等后台写入落盘
+        self._loaded = True
+
+    def remember_window_size(self, width: int, height: int) -> None:
+        """记录窗口尺寸，供「记住上次关闭时的大小」模式在下次启动时恢复。
+
+        窗口关闭发生在 GUI 线程，而设置保存发生在事件循环线程。这里不改「读盘 →
+        改两个字段 → 写盘」，而是直接修改内存配置并整份保存：`config.json` 始终
+        只有本管理器一个写者，两边的写入不会互相覆盖。
+
+        仅在「记住上次」模式下写盘；配置尚未加载或尺寸未变化时直接返回。
+
+        Args:
+            width: 当前窗口宽度（像素）。
+            height: 当前窗口高度（像素）。
+        """
+        if not self._loaded:
+            logger.debug("配置尚未加载，跳过记录窗口尺寸。")
+            return
+        with self._lock:
+            if self._user_setting.window_size_mode != WindowSizeMode.REMEMBER:
+                return
+            last_width, last_height = clamp_window_size(width, height)
+            if (
+                self._user_setting.window_last_width == last_width
+                and self._user_setting.window_last_height == last_height
+            ):
+                # 尺寸没变，省掉一次写盘
+                return
+            self._user_setting.window_last_width = last_width
+            self._user_setting.window_last_height = last_height
+            self.save_user_setting()
 
     def update_from_dict(self, data: dict[str, Any]) -> None:
         """
@@ -195,20 +242,30 @@ class UserSettingManager:
         """
         if "version" in data and data["version"] != UserSetting._VERSION:
             raise ConfigVersionMismatchError(UserSetting._VERSION, data["version"])
-        self._user_setting.update_from_dict(data)
-        self.ensure_custom_stat_ids()
-        self.save_user_setting()
+        with self._lock:
+            self._user_setting.update_from_dict(data)
+            self.ensure_custom_stat_ids()
+            self.save_user_setting()
 
     def update_from_user_setting(self, other: UserSetting) -> None:
         """
         Update the in-memory UserSetting from another UserSetting instance
         and save to disk.
+
+        `window_last_width` / `window_last_height` 由程序在退出时写入，属于服务端
+        所有：客户端提交的整份配置里带的是它加载时的旧值，直接采用会覆盖本次运行
+        记录的新尺寸，因此这里保留内存中的现有值。
         """
         if other.version != UserSetting._VERSION:
             raise ConfigVersionMismatchError(UserSetting._VERSION, other.version)
-        self._user_setting.update_from_model(other)
-        self.ensure_custom_stat_ids()
-        self.save_user_setting()
+        with self._lock:
+            last_width = self._user_setting.window_last_width
+            last_height = self._user_setting.window_last_height
+            self._user_setting.update_from_model(other)
+            self._user_setting.window_last_width = last_width
+            self._user_setting.window_last_height = last_height
+            self.ensure_custom_stat_ids()
+            self.save_user_setting()
 
     def ensure_custom_stat_ids(self) -> bool:
         """为缺少稳定 ID 的自定义基质补齐 ID（就地修改，不写盘）。
@@ -243,7 +300,8 @@ class UserSettingManager:
         Returns:
             A deep copy of the reset UserSetting.
         """
-        self._user_setting = UserSetting()
-        self.save_user_setting()
-        logger.info("配置已重置为默认值。")
-        return self._user_setting.model_copy(deep=True)
+        with self._lock:
+            self._user_setting = UserSetting()
+            self.save_user_setting()
+            logger.info("配置已重置为默认值。")
+            return self._user_setting.model_copy(deep=True)

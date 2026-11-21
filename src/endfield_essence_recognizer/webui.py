@@ -3,11 +3,7 @@ from typing import cast
 import webview
 
 from endfield_essence_recognizer.core.config import get_server_config
-from endfield_essence_recognizer.core.webui import (
-    get_webview_title,
-    read_window_size,
-    remember_window_size,
-)
+from endfield_essence_recognizer.core.webui import get_webview_title, read_window_size
 from endfield_essence_recognizer.utils.log import logger
 
 server_config = get_server_config()
@@ -29,8 +25,14 @@ window = cast(
 
 
 def _on_window_closing() -> None:
-    """窗口关闭前记录当前尺寸（仅在「记住上次大小」模式下写盘）。"""
-    remember_window_size(window.width, window.height)
+    """窗口关闭前记录当前尺寸，供「记住上次关闭时的大小」模式下次启动时恢复。
+
+    走 `UserSettingManager` 而不是自己读写 `config.json`：配置文件只由它一个
+    写者负责，否则窗口关闭的写回会和设置保存互相覆盖。
+    """
+    from endfield_essence_recognizer.dependencies import default_user_setting_manager
+
+    default_user_setting_manager().remember_window_size(window.width, window.height)
 
 
 window.events.closing += _on_window_closing

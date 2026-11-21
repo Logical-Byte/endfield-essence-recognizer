@@ -114,6 +114,39 @@ class WindowSizeMode(StrEnum):
 # 窗口尺寸的允许范围：既是配置字段的取值范围，也是窗口尺寸写回前的钳制依据。
 WINDOW_WIDTH_MIN, WINDOW_WIDTH_MAX = 400, 10000
 WINDOW_HEIGHT_MIN, WINDOW_HEIGHT_MAX = 300, 10000
+DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT = 1600, 900
+
+
+def clamp_window_size(width: Any, height: Any) -> tuple[int, int]:
+    """把窗口宽高钳制到允许范围，类型不符的一维回落到默认值。
+
+    启动读盘、窗口关闭写回、配置字段归一化都走这里，保证三处对「合法尺寸」的
+    理解一致。
+
+    Args:
+        width: 待规范化的宽度，来源可能是配置 JSON 或窗口实测值。
+        height: 待规范化的高度。
+
+    Returns:
+        (width, height) 落在允许范围内的整数尺寸。
+    """
+    return (
+        _clamp_window_dimension(
+            width, WINDOW_WIDTH_MIN, WINDOW_WIDTH_MAX, DEFAULT_WINDOW_WIDTH
+        ),
+        _clamp_window_dimension(
+            height, WINDOW_HEIGHT_MIN, WINDOW_HEIGHT_MAX, DEFAULT_WINDOW_HEIGHT
+        ),
+    )
+
+
+def _clamp_window_dimension(
+    value: Any, minimum: int, maximum: int, fallback: int
+) -> int:
+    """钳制单个维度；`bool` 是 `int` 的子类，需要单独排除。"""
+    if not isinstance(value, int) or isinstance(value, bool):
+        return fallback
+    return max(minimum, min(maximum, value))
 
 
 class EssenceStats(BaseModel):
@@ -233,16 +266,20 @@ class UserSetting(BaseModel):
 
     window_size_mode: WindowSizeMode = WindowSizeMode.REMEMBER
     """启动窗口大小的来源：默认 / 自定义 / 记住上次关闭时的大小。"""
-    window_width: int = Field(default=1600, ge=WINDOW_WIDTH_MIN, le=WINDOW_WIDTH_MAX)
+    window_width: int = Field(
+        default=DEFAULT_WINDOW_WIDTH, ge=WINDOW_WIDTH_MIN, le=WINDOW_WIDTH_MAX
+    )
     """自定义模式下的窗口宽度（像素）。"""
-    window_height: int = Field(default=900, ge=WINDOW_HEIGHT_MIN, le=WINDOW_HEIGHT_MAX)
+    window_height: int = Field(
+        default=DEFAULT_WINDOW_HEIGHT, ge=WINDOW_HEIGHT_MIN, le=WINDOW_HEIGHT_MAX
+    )
     """自定义模式下的窗口高度（像素）。"""
     window_last_width: int = Field(
-        default=1600, ge=WINDOW_WIDTH_MIN, le=WINDOW_WIDTH_MAX
+        default=DEFAULT_WINDOW_WIDTH, ge=WINDOW_WIDTH_MIN, le=WINDOW_WIDTH_MAX
     )
     """上次关闭时的窗口宽度（像素），由程序在退出时写入。"""
     window_last_height: int = Field(
-        default=900, ge=WINDOW_HEIGHT_MIN, le=WINDOW_HEIGHT_MAX
+        default=DEFAULT_WINDOW_HEIGHT, ge=WINDOW_HEIGHT_MIN, le=WINDOW_HEIGHT_MAX
     )
     """上次关闭时的窗口高度（像素），由程序在退出时写入。"""
 
