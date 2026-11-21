@@ -4,10 +4,11 @@
  * 改编自 ef-frontend-v1 的基质计算器逻辑，帮助用户找到刷取所需基质的最佳位置。
  */
 
-import type { EnergyAlluviumInfo } from '@/types/staticData'
 import { computed, onUnmounted, ref, type Ref, watch } from 'vue'
+import { useCustomAlluviums } from '@/composables/useCustomAlluviums'
 import { useCustomStats } from '@/composables/useCustomStats'
 import { useProfiles } from '@/composables/useProfiles'
+import { fallbackCustomAlluviumName, toCustomAlluviumId } from '@/utils/gameData/alluvium'
 import { useStaticData } from '@/utils/gameData/staticData'
 import { findCustomStat, getGemTagName, isCustomStatId } from '@/utils/gameData/weapon'
 import { safeLoadJson, safeRemoveJson, safeSetJson } from '@/utils/safeStorage'
@@ -38,8 +39,11 @@ export interface EnergyAlluvium {
   battleId: string
   battleName: string
   imageUrl?: string
+  attributeStats: string[]
   secondaryStats: string[]
   skillStats: string[]
+  /** 是否为用户自定义的淤积点（内置地点来自静态数据） */
+  isCustom: boolean
 }
 
 interface PlannerWeaponStats {
@@ -176,6 +180,7 @@ export function useMatrixPlanner(obtainedWeaponIds?: Ref<Set<string>>) {
   const { weaponsMap, essencesMap, energyAlluviums: energyAlluviumsFromApi } = useStaticData()
   const { activeProfileName } = useProfiles()
   const { customStats } = useCustomStats()
+  const { customAlluviums } = useCustomAlluviums()
 
   /** stat_id → 中文显示名映射（从 essencesMap 构建） */
   const statIdToNameMap = computed<Record<string, string>>(() => {
@@ -194,21 +199,49 @@ export function useMatrixPlanner(obtainedWeaponIds?: Ref<Set<string>>) {
     return statIdToNameMap.value[key] ?? key
   }
 
-  /** 能量淤积点数据（刷取位置），从 API 获取并转换为中文显示名 */
+  /**
+   * 能量淤积点数据（刷取位置）：内置地点来自静态数据，自定义地点来自用户配置。
+   *
+   * 两类地点用同一结构参与规划，靠 `isCustom` 与 battleId 前缀区分；键统一用
+   * battleId，名称只作展示，因此重名不会互相覆盖。
+   */
   const energyAlluviums = computed<Record<string, EnergyAlluvium>>(() => {
-    return Object.fromEntries(
-      energyAlluviumsFromApi.value.map((item: EnergyAlluviumInfo) => {
-        const converted: EnergyAlluvium = {
-          battleId: item.battleId,
-          battleName: item.battleName,
-          imageUrl: item.imageUrl,
-          secondaryStats: item.secondaryStats.map((key) => resolveStatKeyToDisplayName(key)),
-          skillStats: item.skillStats.map((key) => resolveStatKeyToDisplayName(key)),
-        }
-        return [converted.battleName, converted]
-      }),
-    )
+    const merged: Record<string, EnergyAlluvium> = {}
+    for (const item of energyAlluviumsFromApi.value) {
+      merged[item.battleId] = {
+        battleId: item.battleId,
+        battleName: item.battleName,
+        imageUrl: item.imageUrl,
+        attributeStats: [],
+        secondaryStats: item.secondaryStats.map((key) => resolveStatKeyToDisplayName(key)),
+        skillStats: item.skillStats.map((key) => resolveStatKeyToDisplayName(key)),
+        isCustom: false,
+      }
+    }
+    for (const [index, item] of customAlluviums.value.entries()) {
+      const battleId = toCustomAlluviumId(item)
+      merged[battleId] = {
+        battleId,
+        battleName: item.name || fallbackCustomAlluviumName(index),
+        attributeStats: (item.attribute_stats ?? []).map((key) => resolveStatKeyToDisplayName(key)),
+        secondaryStats: (item.secondary_stats ?? []).map((key) => resolveStatKeyToDisplayName(key)),
+        skillStats: (item.skill_stats ?? []).map((key) => resolveStatKeyToDisplayName(key)),
+        isCustom: true,
+      }
+    }
+    return merged
   })
+
+  /**
+   * 地点可刷出的基础属性三选组合。
+   *
+   * 内置地点对所有基础属性通用（5 项取 3 的全部组合）；自定义地点由用户勾选的
+   * 池决定。池不足 3 项时退化为「不限制」，避免手改配置后该地点静默算不出方案。
+   */
+  function attributeCombinationsFor(attributeStats: readonly string[]): string[][] {
+    const unique = [...new Set(attributeStats)]
+    return unique.length < 3 ? allAttributeCombinations : combinations(unique, 3)
+  }
 
   // 缓存 key 绑定到账号，避免跨账号数据污染
   const statsKey = computed(() => `matrixPlannerStats:${activeProfileName.value}`)
@@ -494,15 +527,20 @@ export function useMatrixPlanner(obtainedWeaponIds?: Ref<Set<string>>) {
 
   /**
    * 重新计算所有可能的刷取方案。
-   * 遍历每个能量淤积点，对每个地点生成所有 3 属性组合（共 C(5,3)=10 种），
-   * 再分别与该地点的附加属性、技能属性配对，筛选出至少满足一项需求的方案。
+   * 遍历每个能量淤积点，对每个地点生成所有基础属性三选组合（内置地点共
+   * C(5,3)=10 种），再分别与该地点的附加属性、技能属性配对，筛选出至少满足
+   * 一项需求的方案。
    */
   function _recomputeChoices() {
     const result: BattleChoice[] = []
-    for (const { battleId, battleName, secondaryStats, skillStats } of Object.values(
-      energyAlluviums.value,
-    )) {
-      for (const selectedAttribute of allAttributeCombinations) {
+    for (const {
+      battleId,
+      battleName,
+      attributeStats,
+      secondaryStats,
+      skillStats,
+    } of Object.values(energyAlluviums.value)) {
+      for (const selectedAttribute of attributeCombinationsFor(attributeStats)) {
         for (const selectedSecondary of secondaryStats) {
           const choice = buildChoiceForSecondary(
             battleId,
