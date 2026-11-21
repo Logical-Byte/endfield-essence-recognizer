@@ -47,3 +47,16 @@ export function toCustomAlluviumId(alluvium: Pick<CustomAlluvium, 'id'>): string
 export function fallbackCustomAlluviumName(index: number): string {
   return `自定义淤积点 ${index + 1}`
 }
+
+/**
+ * 判断某个地点的基础属性池是否覆盖指定基础属性。
+ *
+ * 池为空表示「不限制」（内置地点就是这样）；池非空时只有池里有的基础属性才能
+ * 在该地点刷出来，池外的武器即使附加 / 技能对得上也刷不到。
+ */
+export function alluviumAllowsAttribute(
+  attributeStats: readonly string[],
+  attribute: string,
+): boolean {
+  return attributeStats.length === 0 || attributeStats.includes(attribute)
+}

@@ -688,7 +688,7 @@ import { useCustomStats } from '@/composables/useCustomStats'
 import { type BattleChoice, getDisplayName, useMatrixPlanner } from '@/composables/useMatrixPlanner'
 import { useProfiles } from '@/composables/useProfiles'
 import { useRarityFilters } from '@/composables/useRarityFilters'
-import { isCustomAlluviumId } from '@/utils/gameData/alluvium'
+import { alluviumAllowsAttribute, isCustomAlluviumId } from '@/utils/gameData/alluvium'
 import { useStaticData } from '@/utils/gameData/staticData'
 import {
   findCustomStat,
@@ -916,25 +916,36 @@ const allLocationChoices = computed<LocationChoice[]>(() => {
     const matchedWeaponIds: string[] = []
 
     for (const [weaponId, weapon] of weaponsMap.value.entries()) {
-      // 检查武器的属性是否匹配该地点
-      // 基础属性总是匹配（所有地点都能刷基础属性）
-      // 检查附加属性和技能属性
+      // 基础属性也要落在该地点的池里：自定义地点可以只刷部分基础属性，
+      // 池里没有这条的地点即使附加 / 技能对得上也刷不出该武器的基质。
+      const attributeMatch = alluviumAllowsAttribute(
+        alluvium.attributeStats,
+        getStatDisplayName(weapon.attributeStatId),
+      )
       const secondaryMatch = alluvium.secondaryStats.includes(
         getStatDisplayName(weapon.secondaryStatId),
       )
       const skillMatch = alluvium.skillStats.includes(getStatDisplayName(weapon.skillStatId))
 
-      if (secondaryMatch && skillMatch) {
+      if (attributeMatch && secondaryMatch && skillMatch) {
         matchedWeaponIds.push(weaponId)
       }
     }
 
     // 检查自定义基质是否匹配该地点
     for (const stat of customStats.value) {
-      if (!stat.secondary || !stat.skill) continue
+      if (!stat.attribute || !stat.secondary || !stat.skill) continue
+      const attributeMatch = alluviumAllowsAttribute(
+        alluvium.attributeStats,
+        getStatDisplayName(stat.attribute),
+      )
       const secondary = getStatDisplayName(stat.secondary)
       const skill = getStatDisplayName(stat.skill)
-      if (alluvium.secondaryStats.includes(secondary) && alluvium.skillStats.includes(skill)) {
+      if (
+        attributeMatch &&
+        alluvium.secondaryStats.includes(secondary) &&
+        alluvium.skillStats.includes(skill)
+      ) {
         matchedWeaponIds.push(toCustomStatId(stat))
       }
     }

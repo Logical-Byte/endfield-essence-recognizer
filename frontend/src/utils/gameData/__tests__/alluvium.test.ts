@@ -8,6 +8,7 @@
 
 import { describe, expect, it } from 'vitest'
 import {
+  alluviumAllowsAttribute,
   createCustomAlluviumId,
   CUSTOM_ALLUVIUM_ID_PREFIX,
   fallbackCustomAlluviumName,
@@ -52,5 +53,16 @@ describe('fallbackCustomAlluviumName', () => {
   it('按下标生成 1 起算的兜底名', () => {
     expect(fallbackCustomAlluviumName(0)).toBe('自定义淤积点 1')
     expect(fallbackCustomAlluviumName(4)).toBe('自定义淤积点 5')
+  })
+})
+
+describe('alluviumAllowsAttribute', () => {
+  it('池为空表示不限制', () => {
+    expect(alluviumAllowsAttribute([], '敏捷提升')).toBe(true)
+  })
+
+  it('池非空时只有池里的基础属性能刷出来', () => {
+    expect(alluviumAllowsAttribute(['敏捷提升', '力量提升', '意志提升'], '敏捷提升')).toBe(true)
+    expect(alluviumAllowsAttribute(['敏捷提升', '力量提升', '意志提升'], '智识提升')).toBe(false)
   })
 })
