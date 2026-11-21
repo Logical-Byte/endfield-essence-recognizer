@@ -98,6 +98,60 @@ class CleanupTriggerMode(StrEnum):
     """所有情况下均清理（含手动停止扫描）。"""
 
 
+class WindowSizeMode(StrEnum):
+    """启动时采用哪种窗口大小。"""
+
+    DEFAULT = "default"
+    """固定使用默认尺寸（1600×900）。"""
+
+    CUSTOM = "custom"
+    """使用 `window_width` / `window_height` 指定的尺寸。"""
+
+    REMEMBER = "remember"
+    """恢复上次关闭前手动缩放的大小。"""
+
+
+_WINDOW_SIZE_MODES = frozenset(mode.value for mode in WindowSizeMode)
+
+
+# 窗口尺寸的允许范围：既是配置字段的取值范围，也是窗口尺寸写回前的钳制依据。
+WINDOW_WIDTH_MIN, WINDOW_WIDTH_MAX = 400, 10000
+WINDOW_HEIGHT_MIN, WINDOW_HEIGHT_MAX = 300, 10000
+DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT = 1600, 900
+
+
+def clamp_window_size(width: Any, height: Any) -> tuple[int, int]:
+    """把窗口宽高钳制到允许范围，类型不符的一维回落到默认值。
+
+    启动读盘、窗口关闭写回、配置字段归一化都走这里，保证三处对「合法尺寸」的
+    理解一致。
+
+    Args:
+        width: 待规范化的宽度，来源可能是配置 JSON 或窗口实测值。
+        height: 待规范化的高度。
+
+    Returns:
+        (width, height) 落在允许范围内的整数尺寸。
+    """
+    return (
+        _clamp_window_dimension(
+            width, WINDOW_WIDTH_MIN, WINDOW_WIDTH_MAX, DEFAULT_WINDOW_WIDTH
+        ),
+        _clamp_window_dimension(
+            height, WINDOW_HEIGHT_MIN, WINDOW_HEIGHT_MAX, DEFAULT_WINDOW_HEIGHT
+        ),
+    )
+
+
+def _clamp_window_dimension(
+    value: Any, minimum: int, maximum: int, fallback: int
+) -> int:
+    """钳制单个维度；`bool` 是 `int` 的子类，需要单独排除。"""
+    if not isinstance(value, int) or isinstance(value, bool):
+        return fallback
+    return max(minimum, min(maximum, value))
+
+
 class EssenceStats(BaseModel):
     """自定义宝藏基质属性组合，支持可选的显示名称。"""
 
@@ -121,7 +175,7 @@ class EssenceStats(BaseModel):
 
 
 class UserSetting(BaseModel):
-    _VERSION: ClassVar[int] = 10
+    _VERSION: ClassVar[int] = 11
 
     version: int = _VERSION
 
@@ -213,6 +267,25 @@ class UserSetting(BaseModel):
     skip_deprecated_essence: bool = False
     """是否在扫描前识别卡片的弃用角标，跳过已弃用的基质（不点击、不识别）。"""
 
+    window_size_mode: WindowSizeMode = WindowSizeMode.REMEMBER
+    """启动窗口大小的来源：默认 / 自定义 / 记住上次关闭时的大小。"""
+    window_width: int = Field(
+        default=DEFAULT_WINDOW_WIDTH, ge=WINDOW_WIDTH_MIN, le=WINDOW_WIDTH_MAX
+    )
+    """自定义模式下的窗口宽度（像素）。"""
+    window_height: int = Field(
+        default=DEFAULT_WINDOW_HEIGHT, ge=WINDOW_HEIGHT_MIN, le=WINDOW_HEIGHT_MAX
+    )
+    """自定义模式下的窗口高度（像素）。"""
+    window_last_width: int = Field(
+        default=DEFAULT_WINDOW_WIDTH, ge=WINDOW_WIDTH_MIN, le=WINDOW_WIDTH_MAX
+    )
+    """上次关闭时的窗口宽度（像素），由程序在退出时写入。"""
+    window_last_height: int = Field(
+        default=DEFAULT_WINDOW_HEIGHT, ge=WINDOW_HEIGHT_MIN, le=WINDOW_HEIGHT_MAX
+    )
+    """上次关闭时的窗口高度（像素），由程序在退出时写入。"""
+
     update_mirror: str = "github"
     """兼容旧字段：GitHub 下载镜像源。"""
     update_flow: str = DEFAULT_UPDATE_FLOW
@@ -261,6 +334,34 @@ class UserSetting(BaseModel):
             normalized["update_github_mirror"] = "github"
         if normalized.get("update_mirror") not in MIRRORS:
             normalized["update_mirror"] = normalized["update_github_mirror"]
+
+        return normalized
+
+    @model_validator(mode="before")
+    @classmethod
+    def _normalize_window_fields(cls, data: Any) -> Any:
+        """把非法的窗口字段归一化为默认值，避免一点小错让整份配置被重置。
+
+        窗口尺寸是纯界面偏好：手工把 `window_size_mode` 拼错、或把宽高写成越界
+        值，都会让 `UserSetting.model_validate` 整体失败；`UserSettingManager`
+        随后按「非法配置」处理——备份文件并用默认值覆盖，用户其余设置一并丢失。
+        这里就地纠正，让坏掉的窗口偏好只影响窗口本身。
+        """
+        if not isinstance(data, dict):
+            return data
+
+        normalized = dict(data)
+        if normalized.get("window_size_mode") not in _WINDOW_SIZE_MODES:
+            normalized["window_size_mode"] = WindowSizeMode.REMEMBER.value
+
+        for prefix in ("", "last_"):
+            width_key = f"window_{prefix}width"
+            height_key = f"window_{prefix}height"
+            width, height = clamp_window_size(
+                normalized.get(width_key), normalized.get(height_key)
+            )
+            normalized[width_key] = width
+            normalized[height_key] = height
 
         return normalized
 
@@ -360,6 +461,15 @@ class UserSetting(BaseModel):
         data.setdefault("skip_locked_essence", False)
         data.setdefault("skip_deprecated_essence", False)
 
+    @staticmethod
+    def _migrate_v10_to_v11(data: dict) -> None:
+        """v10 → v11: 添加窗口大小设置，默认沿用 1600×900 并记住上次关闭时的大小。"""
+        data.setdefault("window_size_mode", "remember")
+        data.setdefault("window_width", 1600)
+        data.setdefault("window_height", 900)
+        data.setdefault("window_last_width", 1600)
+        data.setdefault("window_last_height", 900)
+
     # 迁移函数映射表：版本号 -> 迁移函数
     # 使用 __func__ 提取底层函数，避免存储 staticmethod 对象（兼容性更好）
     _MIGRATIONS: ClassVar[dict[int, Any]] = {
@@ -371,6 +481,7 @@ class UserSetting(BaseModel):
         7: _migrate_v7_to_v8.__func__,
         8: _migrate_v8_to_v9.__func__,
         9: _migrate_v9_to_v10.__func__,
+        10: _migrate_v10_to_v11.__func__,
     }
 
     @classmethod
