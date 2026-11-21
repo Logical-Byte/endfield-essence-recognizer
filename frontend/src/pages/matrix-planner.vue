@@ -867,14 +867,16 @@ watch(
     if (oldSorted === newSorted) return
 
     // 当前勾选状态与「已保存配置 + 剩余地点默认勾选」一致时说明这是回填而非用户改动。
-    // saved 的键恒为 alluviumLocationOptions 的子集（battleId 来自固定的 EnergyAlluviums.json），
-    // 因此这个比较口径与回填 watcher 一致，不会漏掉用户真实的取消勾选。
+    // 比较口径与上面的回填 watcher 保持一致（都只按现有选项生成），因此不会漏掉
+    // 用户真实的取消勾选。
     const synced = alluviumLocationOptions.value
       .filter((option) => savedFarmingLocations.value[option.battleId] ?? true)
       .map((option) => option.battleId)
     if (synced.toSorted().join(',') === newSorted) return
 
-    const locations: Record<string, boolean> = {}
+    // 以已保存配置为底再覆盖现有选项：自定义地点列表还没加载完（或加载失败）时
+    // 选项里没有它们的键，直接用选项重建会把已保存的勾选整片抹掉。
+    const locations: Record<string, boolean> = { ...savedFarmingLocations.value }
     for (const option of alluviumLocationOptions.value) {
       locations[option.battleId] = newValue.includes(option.battleId)
     }
