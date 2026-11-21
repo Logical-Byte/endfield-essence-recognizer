@@ -3,23 +3,37 @@ from typing import cast
 import webview
 
 from endfield_essence_recognizer.core.config import get_server_config
-from endfield_essence_recognizer.core.webui import get_webview_title
+from endfield_essence_recognizer.core.webui import (
+    get_webview_title,
+    read_window_size,
+    remember_window_size,
+)
 from endfield_essence_recognizer.utils.log import logger
 
 server_config = get_server_config()
 is_dev = server_config.dev_mode
 webview_url = server_config.webview_url
 
+window_width, window_height = read_window_size()
+
 window = cast(
     "webview.Window",
     webview.create_window(
         title=get_webview_title(),
         url=webview_url,
-        width=1600,
-        height=900,
+        width=window_width,
+        height=window_height,
         resizable=True,
     ),
 )
+
+
+def _on_window_closing() -> None:
+    """窗口关闭前记录当前尺寸（仅在「记住上次大小」模式下写盘）。"""
+    remember_window_size(window.width, window.height)
+
+
+window.events.closing += _on_window_closing
 
 
 def start_pywebview():

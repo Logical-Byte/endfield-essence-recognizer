@@ -845,6 +845,16 @@
                 variant="outlined"
               />
             </v-col>
+            <v-col class="d-flex align-center" cols="12" md="6">
+              <v-btn
+                color="primary"
+                prepend-icon="mdi-monitor-edit"
+                variant="tonal"
+                @click="applyWindowSize"
+              >
+                立即应用
+              </v-btn>
+            </v-col>
           </v-row>
           <v-alert
             v-if="windowSizeMode === 'remember'"
@@ -1534,6 +1544,32 @@ async function postConfig() {
     },
     body: JSON.stringify(config.value),
   })
+}
+
+/** 按当前选择的模式把窗口调整为对应尺寸，无需重启程序。 */
+async function applyWindowSize() {
+  const size =
+    windowSizeMode.value === 'custom'
+      ? { width: config.value.window_width, height: config.value.window_height }
+      : windowSizeMode.value === 'remember'
+        ? { width: windowLastWidth.value, height: windowLastHeight.value }
+        : { width: 1600, height: 900 }
+
+  try {
+    const response = await fetch(`/api/window/resize`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(size),
+    })
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`)
+    }
+    useToast().success(`窗口大小已调整为 ${size.width}×${size.height}`)
+  } catch (error) {
+    useToast().reportError('调整窗口大小', error)
+  }
 }
 
 async function fetchWeaponEssenceCounts() {
