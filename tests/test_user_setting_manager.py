@@ -333,6 +333,11 @@ def test_user_setting_schema_stability():
         "fix_page_flip_overscroll",
         "skip_locked_essence",
         "skip_deprecated_essence",
+        "window_size_mode",
+        "window_width",
+        "window_height",
+        "window_last_width",
+        "window_last_height",
         "update_mirror",
         "update_flow",
         "update_github_mirror",
@@ -546,6 +551,13 @@ def test_migration_sets_all_required_fields():
     assert migrated.skip_locked_essence is False
     assert migrated.skip_deprecated_essence is False
 
+    # v10→v11 补充的字段（窗口大小，默认记住上次关闭时的大小）
+    assert migrated.window_size_mode == "remember"
+    assert migrated.window_width == 1600
+    assert migrated.window_height == 900
+    assert migrated.window_last_width == 1600
+    assert migrated.window_last_height == 900
+
 
 def test_migrate_v9_to_v10_adds_skip_marked_essence_fields():
     """v9 → v10: 补充"扫描前跳过已处理过的基质"开关，默认关闭，已有字段保留。"""
@@ -564,6 +576,26 @@ def test_migrate_v9_to_v10_adds_skip_marked_essence_fields():
     assert migrated.redundant_cleanup_trigger == "always"
     assert migrated.skip_locked_essence is False
     assert migrated.skip_deprecated_essence is False
+
+
+def test_migrate_v10_to_v11_adds_window_size_fields():
+    """v10 → v11: 补充窗口大小字段，默认记住上次关闭时的大小，已有字段保留。"""
+    v10_config = {
+        "version": 10,
+        "trash_weapon_ids": ["w1"],
+        "skip_locked_essence": True,
+    }
+
+    migrated = UserSetting.migrate_from_old_version(v10_config)
+
+    assert migrated.version == UserSetting._VERSION
+    assert migrated.trash_weapon_ids == ["w1"]
+    assert migrated.skip_locked_essence is True
+    assert migrated.window_size_mode == "remember"
+    assert migrated.window_width == 1600
+    assert migrated.window_height == 900
+    assert migrated.window_last_width == 1600
+    assert migrated.window_last_height == 900
 
 
 def test_migrate_v8_to_v9_adds_redundant_cleanup_fields():

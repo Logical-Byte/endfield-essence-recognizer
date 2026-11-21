@@ -98,6 +98,24 @@ class CleanupTriggerMode(StrEnum):
     """所有情况下均清理（含手动停止扫描）。"""
 
 
+class WindowSizeMode(StrEnum):
+    """启动时采用哪种窗口大小。"""
+
+    DEFAULT = "default"
+    """固定使用默认尺寸（1600×900）。"""
+
+    CUSTOM = "custom"
+    """使用 `window_width` / `window_height` 指定的尺寸。"""
+
+    REMEMBER = "remember"
+    """恢复上次关闭前手动缩放的大小。"""
+
+
+# 窗口尺寸的允许范围：既是配置字段的取值范围，也是窗口尺寸写回前的钳制依据。
+WINDOW_WIDTH_MIN, WINDOW_WIDTH_MAX = 400, 10000
+WINDOW_HEIGHT_MIN, WINDOW_HEIGHT_MAX = 300, 10000
+
+
 class EssenceStats(BaseModel):
     """自定义宝藏基质属性组合，支持可选的显示名称。"""
 
@@ -121,7 +139,7 @@ class EssenceStats(BaseModel):
 
 
 class UserSetting(BaseModel):
-    _VERSION: ClassVar[int] = 10
+    _VERSION: ClassVar[int] = 11
 
     version: int = _VERSION
 
@@ -212,6 +230,21 @@ class UserSetting(BaseModel):
     """是否在扫描前识别卡片的锁定角标，跳过已锁定的基质（不点击、不识别）。"""
     skip_deprecated_essence: bool = False
     """是否在扫描前识别卡片的弃用角标，跳过已弃用的基质（不点击、不识别）。"""
+
+    window_size_mode: WindowSizeMode = WindowSizeMode.REMEMBER
+    """启动窗口大小的来源：默认 / 自定义 / 记住上次关闭时的大小。"""
+    window_width: int = Field(default=1600, ge=WINDOW_WIDTH_MIN, le=WINDOW_WIDTH_MAX)
+    """自定义模式下的窗口宽度（像素）。"""
+    window_height: int = Field(default=900, ge=WINDOW_HEIGHT_MIN, le=WINDOW_HEIGHT_MAX)
+    """自定义模式下的窗口高度（像素）。"""
+    window_last_width: int = Field(
+        default=1600, ge=WINDOW_WIDTH_MIN, le=WINDOW_WIDTH_MAX
+    )
+    """上次关闭时的窗口宽度（像素），由程序在退出时写入。"""
+    window_last_height: int = Field(
+        default=900, ge=WINDOW_HEIGHT_MIN, le=WINDOW_HEIGHT_MAX
+    )
+    """上次关闭时的窗口高度（像素），由程序在退出时写入。"""
 
     update_mirror: str = "github"
     """兼容旧字段：GitHub 下载镜像源。"""
@@ -360,6 +393,15 @@ class UserSetting(BaseModel):
         data.setdefault("skip_locked_essence", False)
         data.setdefault("skip_deprecated_essence", False)
 
+    @staticmethod
+    def _migrate_v10_to_v11(data: dict) -> None:
+        """v10 → v11: 添加窗口大小设置，默认沿用 1600×900 并记住上次关闭时的大小。"""
+        data.setdefault("window_size_mode", "remember")
+        data.setdefault("window_width", 1600)
+        data.setdefault("window_height", 900)
+        data.setdefault("window_last_width", 1600)
+        data.setdefault("window_last_height", 900)
+
     # 迁移函数映射表：版本号 -> 迁移函数
     # 使用 __func__ 提取底层函数，避免存储 staticmethod 对象（兼容性更好）
     _MIGRATIONS: ClassVar[dict[int, Any]] = {
@@ -371,6 +413,7 @@ class UserSetting(BaseModel):
         7: _migrate_v7_to_v8.__func__,
         8: _migrate_v8_to_v9.__func__,
         9: _migrate_v9_to_v10.__func__,
+        10: _migrate_v10_to_v11.__func__,
     }
 
     @classmethod

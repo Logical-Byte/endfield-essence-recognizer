@@ -807,6 +807,55 @@
             <!-- [TODO] uvicorn 日志改等级? 之后默认启用 -->
           </v-alert>
 
+          <h3>窗口大小</h3>
+          <v-row class="my-4">
+            <v-col cols="12" md="6">
+              <v-select
+                v-model="windowSizeMode"
+                density="comfortable"
+                hide-details
+                :items="windowSizeModeOptions"
+                label="启动窗口大小"
+                variant="outlined"
+              />
+            </v-col>
+            <v-col v-if="windowSizeMode === 'custom'" cols="6" md="3">
+              <v-text-field
+                v-model.number="windowWidth"
+                density="comfortable"
+                hide-details
+                label="宽度"
+                :max="10000"
+                :min="400"
+                suffix="px"
+                type="number"
+                variant="outlined"
+              />
+            </v-col>
+            <v-col v-if="windowSizeMode === 'custom'" cols="6" md="3">
+              <v-text-field
+                v-model.number="windowHeight"
+                density="comfortable"
+                hide-details
+                label="高度"
+                :max="10000"
+                :min="300"
+                suffix="px"
+                type="number"
+                variant="outlined"
+              />
+            </v-col>
+          </v-row>
+          <v-alert
+            v-if="windowSizeMode === 'remember'"
+            border="start"
+            class="mb-4"
+            type="info"
+            variant="tonal"
+          >
+            上次记录的尺寸：{{ windowLastWidth }}×{{ windowLastHeight }}。
+          </v-alert>
+
           <v-divider class="my-4" />
 
           <h2>更新设置</h2>
@@ -996,6 +1045,19 @@ const { isScanning, pollingEnabled } = useScanningStatus()
 const { mirrorOptions, flowOptions } = useUpdateMirrors()
 const statusPollingEnabled = ref(pollingEnabled)
 const configVersion = ref(0)
+
+type WindowSizeMode = 'default' | 'custom' | 'remember'
+
+const windowSizeModeOptions = [
+  { title: '默认（1600×900）', value: 'default' },
+  { title: '自定义宽高', value: 'custom' },
+  { title: '记住上次关闭时的大小', value: 'remember' },
+]
+const windowSizeMode = ref<WindowSizeMode>('remember')
+const windowWidth = ref(1600)
+const windowHeight = ref(900)
+const windowLastWidth = ref(1600)
+const windowLastHeight = ref(900)
 
 const allAttributeStats = computed(() =>
   Array.from(essencesMap.value.values())
@@ -1269,7 +1331,7 @@ function isTypePartiallySelected(groupId: string): boolean {
 const config = computed(() => {
   const proxyUrl = updateProxyEnabled.value ? `http://127.0.0.1:${updateProxyPort.value}` : ''
   return {
-    version: 10,
+    version: 11,
     trash_weapon_ids: notSelectedWeaponIds.value,
     treasure_essence_stats: treasureEssenceStats.value,
     treasure_essence_match_mode: 'all' as const,
@@ -1281,6 +1343,11 @@ const config = computed(() => {
     fix_page_flip_overscroll: fixPageFlipOverscroll.value,
     skip_locked_essence: skipLockedEssence.value,
     skip_deprecated_essence: skipDeprecatedEssence.value,
+    window_size_mode: windowSizeMode.value,
+    window_width: Math.min(10_000, Math.max(400, Number(windowWidth.value) || 1600)),
+    window_height: Math.min(10_000, Math.max(300, Number(windowHeight.value) || 900)),
+    window_last_width: windowLastWidth.value,
+    window_last_height: windowLastHeight.value,
     high_level_treasure_enabled: highLevelTreasureEnabled.value,
     high_level_treasure_attribute_threshold: highLevelTreasureAttributeThreshold.value,
     high_level_treasure_secondary_threshold: highLevelTreasureSecondaryThreshold.value,
@@ -1339,6 +1406,11 @@ async function getConfig() {
     fix_page_flip_overscroll,
     skip_locked_essence,
     skip_deprecated_essence,
+    window_size_mode,
+    window_width,
+    window_height,
+    window_last_width,
+    window_last_height,
     high_level_treasure_enabled,
     high_level_treasure_attribute_threshold,
     high_level_treasure_secondary_threshold,
@@ -1384,6 +1456,12 @@ async function getConfig() {
   fixPageFlipOverscroll.value = fix_page_flip_overscroll === true
   skipLockedEssence.value = skip_locked_essence === true
   skipDeprecatedEssence.value = skip_deprecated_essence === true
+  windowSizeMode.value =
+    window_size_mode === 'default' || window_size_mode === 'custom' ? window_size_mode : 'remember'
+  windowWidth.value = window_width || 1600
+  windowHeight.value = window_height || 900
+  windowLastWidth.value = window_last_width || 1600
+  windowLastHeight.value = window_last_height || 900
   highLevelTreasureEnabled.value = high_level_treasure_enabled
   highLevelTreasureAttributeThreshold.value = high_level_treasure_attribute_threshold
   highLevelTreasureSecondaryThreshold.value = high_level_treasure_secondary_threshold
