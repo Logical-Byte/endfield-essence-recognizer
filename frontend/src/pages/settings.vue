@@ -807,6 +807,65 @@
             <!-- [TODO] uvicorn 日志改等级? 之后默认启用 -->
           </v-alert>
 
+          <h3>窗口大小</h3>
+          <v-row class="my-4">
+            <v-col cols="12" md="6">
+              <v-select
+                v-model="windowSizeMode"
+                density="comfortable"
+                hide-details
+                :items="windowSizeModeOptions"
+                label="启动窗口大小"
+                variant="outlined"
+              />
+            </v-col>
+            <v-col v-if="windowSizeMode === 'custom'" cols="6" md="3">
+              <v-text-field
+                v-model.number="windowWidth"
+                density="comfortable"
+                hide-details
+                label="宽度"
+                :max="10000"
+                :min="400"
+                suffix="px"
+                type="number"
+                variant="outlined"
+              />
+            </v-col>
+            <v-col v-if="windowSizeMode === 'custom'" cols="6" md="3">
+              <v-text-field
+                v-model.number="windowHeight"
+                density="comfortable"
+                hide-details
+                label="高度"
+                :max="10000"
+                :min="300"
+                suffix="px"
+                type="number"
+                variant="outlined"
+              />
+            </v-col>
+            <v-col class="d-flex align-center" cols="12" md="6">
+              <v-btn
+                color="primary"
+                prepend-icon="mdi-monitor-edit"
+                variant="tonal"
+                @click="applyWindowSize"
+              >
+                立即应用
+              </v-btn>
+            </v-col>
+          </v-row>
+          <v-alert
+            v-if="windowSizeMode === 'remember'"
+            border="start"
+            class="mb-4"
+            type="info"
+            variant="tonal"
+          >
+            上次记录的尺寸：{{ windowLastWidth }}×{{ windowLastHeight }}。
+          </v-alert>
+
           <v-divider class="my-4" />
 
           <h2>更新设置</h2>
@@ -996,6 +1055,19 @@ const { isScanning, pollingEnabled } = useScanningStatus()
 const { mirrorOptions, flowOptions } = useUpdateMirrors()
 const statusPollingEnabled = ref(pollingEnabled)
 const configVersion = ref(0)
+
+type WindowSizeMode = 'default' | 'custom' | 'remember'
+
+const windowSizeModeOptions = [
+  { title: '默认（1600×900）', value: 'default' },
+  { title: '自定义宽高', value: 'custom' },
+  { title: '记住上次关闭时的大小', value: 'remember' },
+]
+const windowSizeMode = ref<WindowSizeMode>('remember')
+const windowWidth = ref(1600)
+const windowHeight = ref(900)
+const windowLastWidth = ref(1600)
+const windowLastHeight = ref(900)
 
 const allAttributeStats = computed(() =>
   Array.from(essencesMap.value.values())
@@ -1266,10 +1338,27 @@ function isTypePartiallySelected(groupId: string): boolean {
   return selectedCount > 0 && selectedCount < weaponIds.length
 }
 
+/**
+ * 把窗口宽高钳制到合法范围。
+ *
+ * 输入框清空时 v-model.number 给的是空字符串，此时回落默认值；输入 `0` 之类
+ * 的越界值则钳到下限，不能当成「没填」而悄悄改回 1600×900。
+ */
+function clampWindowDimension(
+  value: number | string,
+  min: number,
+  max: number,
+  fallback: number,
+): number {
+  const numeric = typeof value === 'number' ? value : Number(value)
+  if (value === '' || !Number.isFinite(numeric)) return fallback
+  return Math.min(max, Math.max(min, numeric))
+}
+
 const config = computed(() => {
   const proxyUrl = updateProxyEnabled.value ? `http://127.0.0.1:${updateProxyPort.value}` : ''
   return {
-    version: 10,
+    version: 11,
     trash_weapon_ids: notSelectedWeaponIds.value,
     treasure_essence_stats: treasureEssenceStats.value,
     treasure_essence_match_mode: 'all' as const,
@@ -1281,6 +1370,10 @@ const config = computed(() => {
     fix_page_flip_overscroll: fixPageFlipOverscroll.value,
     skip_locked_essence: skipLockedEssence.value,
     skip_deprecated_essence: skipDeprecatedEssence.value,
+    // window_last_* 由程序在退出时写入，客户端不提交，避免用加载时的旧值覆盖新尺寸
+    window_size_mode: windowSizeMode.value,
+    window_width: clampWindowDimension(windowWidth.value, 400, 10_000, 1600),
+    window_height: clampWindowDimension(windowHeight.value, 300, 10_000, 900),
     high_level_treasure_enabled: highLevelTreasureEnabled.value,
     high_level_treasure_attribute_threshold: highLevelTreasureAttributeThreshold.value,
     high_level_treasure_secondary_threshold: highLevelTreasureSecondaryThreshold.value,
@@ -1339,6 +1432,11 @@ async function getConfig() {
     fix_page_flip_overscroll,
     skip_locked_essence,
     skip_deprecated_essence,
+    window_size_mode,
+    window_width,
+    window_height,
+    window_last_width,
+    window_last_height,
     high_level_treasure_enabled,
     high_level_treasure_attribute_threshold,
     high_level_treasure_secondary_threshold,
@@ -1384,6 +1482,12 @@ async function getConfig() {
   fixPageFlipOverscroll.value = fix_page_flip_overscroll === true
   skipLockedEssence.value = skip_locked_essence === true
   skipDeprecatedEssence.value = skip_deprecated_essence === true
+  windowSizeMode.value =
+    window_size_mode === 'default' || window_size_mode === 'custom' ? window_size_mode : 'remember'
+  windowWidth.value = window_width || 1600
+  windowHeight.value = window_height || 900
+  windowLastWidth.value = window_last_width || 1600
+  windowLastHeight.value = window_last_height || 900
   highLevelTreasureEnabled.value = high_level_treasure_enabled
   highLevelTreasureAttributeThreshold.value = high_level_treasure_attribute_threshold
   highLevelTreasureSecondaryThreshold.value = high_level_treasure_secondary_threshold
@@ -1456,6 +1560,32 @@ async function postConfig() {
     },
     body: JSON.stringify(config.value),
   })
+}
+
+/** 按当前选择的模式把窗口调整为对应尺寸，无需重启程序。 */
+async function applyWindowSize() {
+  const size =
+    windowSizeMode.value === 'custom'
+      ? { width: config.value.window_width, height: config.value.window_height }
+      : windowSizeMode.value === 'remember'
+        ? { width: windowLastWidth.value, height: windowLastHeight.value }
+        : { width: 1600, height: 900 }
+
+  try {
+    const response = await fetch(`/api/window/resize`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(size),
+    })
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`)
+    }
+    useToast().success(`窗口大小已调整为 ${size.width}×${size.height}`)
+  } catch (error) {
+    useToast().reportError('调整窗口大小', error)
+  }
 }
 
 async function fetchWeaponEssenceCounts() {

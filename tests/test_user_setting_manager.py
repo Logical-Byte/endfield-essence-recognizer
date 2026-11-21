@@ -1,4 +1,5 @@
 import json
+import os
 
 import pytest
 from pydantic import ValidationError
@@ -139,6 +140,32 @@ def test_save_user_setting(manager, settings_file):
     assert settings_file.exists()
     data = json.loads(settings_file.read_text(encoding="utf-8"))
     assert data["trash_weapon_ids"] == ["test_save"]
+
+
+def test_save_user_setting_keeps_previous_file_on_write_failure(
+    manager, settings_file, monkeypatch
+):
+    """写盘失败时保留原有配置，且不留下临时文件。
+
+    配置写盘走临时文件 + `os.replace`：直接截断重写一旦中途失败，配置文件就只剩
+    半截 JSON，下次启动会把整份配置判为非法并重置。
+    """
+    manager._user_setting.trash_weapon_ids = ["before_failure"]
+    manager.save_user_setting()
+    before = settings_file.read_text(encoding="utf-8")
+
+    def _fail_replace(*args, **kwargs):
+        raise OSError("disk full")
+
+    monkeypatch.setattr(
+        "endfield_essence_recognizer.services.user_setting_manager.os.replace",
+        _fail_replace,
+    )
+    manager._user_setting.trash_weapon_ids = ["after_failure"]
+    manager.save_user_setting()
+
+    assert settings_file.read_text(encoding="utf-8") == before
+    assert list(settings_file.parent.glob(f".{settings_file.name}.*.tmp")) == []
 
 
 def test_update_from_dict(manager, settings_file):
@@ -333,6 +360,11 @@ def test_user_setting_schema_stability():
         "fix_page_flip_overscroll",
         "skip_locked_essence",
         "skip_deprecated_essence",
+        "window_size_mode",
+        "window_width",
+        "window_height",
+        "window_last_width",
+        "window_last_height",
         "update_mirror",
         "update_flow",
         "update_github_mirror",
@@ -546,43 +578,154 @@ def test_migration_sets_all_required_fields():
     assert migrated.skip_locked_essence is False
     assert migrated.skip_deprecated_essence is False
 
-
-def test_migrate_v9_to_v10_adds_skip_marked_essence_fields():
-    """v9 → v10: 补充"扫描前跳过已处理过的基质"开关，默认关闭，已有字段保留。"""
-    v9_config = {
-        "version": 9,
-        "trash_weapon_ids": ["w1"],
-        "redundant_cleanup_enabled": True,
-        "redundant_cleanup_trigger": "always",
-    }
-
-    migrated = UserSetting.migrate_from_old_version(v9_config)
-
-    assert migrated.version == UserSetting._VERSION
-    assert migrated.trash_weapon_ids == ["w1"]
-    assert migrated.redundant_cleanup_enabled is True
-    assert migrated.redundant_cleanup_trigger == "always"
-    assert migrated.skip_locked_essence is False
-    assert migrated.skip_deprecated_essence is False
+    # v10→v11 补充的字段（窗口大小，默认记住上次关闭时的大小）
+    assert migrated.window_size_mode == "remember"
+    assert migrated.window_width == 1600
+    assert migrated.window_height == 900
+    assert migrated.window_last_width == 1600
+    assert migrated.window_last_height == 900
 
 
-def test_migrate_v8_to_v9_adds_redundant_cleanup_fields():
-    """v8 → v9: 补充冗余清理字段，默认关闭，已有字段保留。"""
-    v8_config = {
-        "version": 8,
-        "trash_weapon_ids": ["w1"],
-        "same_type_treasure_limit_enabled": True,
-        "same_type_treasure_limit": 2,
-    }
+@pytest.mark.parametrize("from_version", range(2, UserSetting._VERSION))
+def test_migration_preserves_existing_settings(from_version):
+    """从任意旧版本迁移到当前版本，既有设置都不应被迁移逻辑覆盖。
 
-    migrated = UserSetting.migrate_from_old_version(v8_config)
+    逐版本手写用例只覆盖了部分步骤，这里对每个入口版本统一断言：迁移后落在当前
+    版本，且已经带值的字段原样保留。各版本新增字段的默认值由
+    `test_migration_sets_all_required_fields` 负责。
+    """
+    migrated = UserSetting.migrate_from_old_version(
+        {
+            "version": from_version,
+            "trash_weapon_ids": ["w1"],
+            "same_type_treasure_limit": 2,
+            "redundant_cleanup_trigger": "always",
+        }
+    )
 
     assert migrated.version == UserSetting._VERSION
     assert migrated.trash_weapon_ids == ["w1"]
     assert migrated.same_type_treasure_limit == 2
-    assert migrated.redundant_cleanup_enabled is False
-    assert migrated.redundant_cleanup_trigger == "scan_complete"
-    assert migrated.redundant_action == "deprecate"
+    assert migrated.redundant_cleanup_trigger == "always"
+
+
+def test_remember_window_size_persists_size(manager, settings_file):
+    """记住模式下把窗口尺寸写回配置，其余设置保持不变。"""
+    manager.load_user_setting()
+    manager.update_from_dict(
+        {"window_size_mode": "remember", "trash_weapon_ids": ["w1"]}
+    )
+
+    manager.remember_window_size(1280, 720)
+
+    data = json.loads(settings_file.read_text(encoding="utf-8"))
+    assert data["window_last_width"] == 1280
+    assert data["window_last_height"] == 720
+    assert data["trash_weapon_ids"] == ["w1"]
+
+
+def test_remember_window_size_skips_before_load(manager, settings_file):
+    """配置尚未加载时不写盘，避免用内存里的默认值覆盖用户配置。"""
+    manager.remember_window_size(1280, 720)
+
+    assert not settings_file.exists()
+
+
+def test_remember_window_size_skips_other_modes(manager, settings_file):
+    """非记住模式不覆盖用户显式设定的尺寸。"""
+    manager.load_user_setting()
+    manager.update_from_dict(
+        {
+            "window_size_mode": "custom",
+            "window_width": 1000,
+            "window_height": 700,
+            "window_last_width": 1600,
+            "window_last_height": 900,
+        }
+    )
+
+    manager.remember_window_size(1280, 720)
+
+    data = json.loads(settings_file.read_text(encoding="utf-8"))
+    assert data["window_last_width"] == 1600
+    assert data["window_last_height"] == 900
+
+
+def test_remember_window_size_clamps_out_of_range(manager, settings_file):
+    """写回前钳制尺寸，避免写出下次加载会让整份配置校验失败的值。"""
+    manager.load_user_setting()
+    manager.update_from_dict({"window_size_mode": "remember"})
+
+    manager.remember_window_size(10, 999999)
+
+    data = json.loads(settings_file.read_text(encoding="utf-8"))
+    assert data["window_last_width"] == 400
+    assert data["window_last_height"] == 10000
+
+
+def test_remember_window_size_skips_unchanged_size(manager, settings_file):
+    """尺寸未变化时不重复写盘。"""
+    manager.load_user_setting()
+    manager.update_from_dict(
+        {
+            "window_size_mode": "remember",
+            "window_last_width": 1280,
+            "window_last_height": 720,
+        }
+    )
+    old_time = 1_000_000_000
+    os.utime(settings_file, (old_time, old_time))
+
+    manager.remember_window_size(1280, 720)
+
+    assert settings_file.stat().st_mtime == old_time
+
+
+def test_update_from_user_setting_keeps_recorded_window_size(manager, settings_file):
+    """客户端提交的整份配置不能覆盖程序记录的上次窗口尺寸。"""
+    manager.load_user_setting()
+    manager.update_from_dict(
+        {
+            "window_size_mode": "remember",
+            "window_last_width": 1280,
+            "window_last_height": 720,
+        }
+    )
+
+    # 客户端拿到的旧快照里是默认尺寸
+    manager.update_from_user_setting(UserSetting())
+
+    saved = json.loads(settings_file.read_text(encoding="utf-8"))
+    assert saved["window_last_width"] == 1280
+    assert saved["window_last_height"] == 720
+    assert manager.get_user_setting().window_last_width == 1280
+
+
+def test_invalid_window_settings_keep_other_settings(manager, settings_file):
+    """手改坏的窗口字段只影响窗口本身，不会让整份配置被判为非法。"""
+    settings_file.write_text(
+        json.dumps(
+            {
+                "version": UserSetting._VERSION,
+                "trash_weapon_ids": ["w1"],
+                "window_size_mode": "remeber",
+                "window_width": 10,
+                "window_height": "720",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    manager.load_user_setting()
+
+    setting = manager.get_user_setting()
+    assert setting.trash_weapon_ids == ["w1"]
+    assert setting.window_size_mode == "remember"
+    assert setting.window_width == 400
+    # 类型不符的一维回落到默认值
+    assert setting.window_height == 900
+    # 没有备份文件，说明走的是归一化而不是「非法配置 → 重置」
+    assert list(settings_file.parent.glob("*.backup.*.json")) == []
 
 
 def test_legacy_cn_update_mirror_normalizes_to_yituliu_flow():
