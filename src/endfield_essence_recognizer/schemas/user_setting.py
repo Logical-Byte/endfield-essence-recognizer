@@ -111,6 +111,9 @@ class WindowSizeMode(StrEnum):
     """恢复上次关闭前手动缩放的大小。"""
 
 
+_WINDOW_SIZE_MODES = frozenset(mode.value for mode in WindowSizeMode)
+
+
 # 窗口尺寸的允许范围：既是配置字段的取值范围，也是窗口尺寸写回前的钳制依据。
 WINDOW_WIDTH_MIN, WINDOW_WIDTH_MAX = 400, 10000
 WINDOW_HEIGHT_MIN, WINDOW_HEIGHT_MAX = 300, 10000
@@ -331,6 +334,34 @@ class UserSetting(BaseModel):
             normalized["update_github_mirror"] = "github"
         if normalized.get("update_mirror") not in MIRRORS:
             normalized["update_mirror"] = normalized["update_github_mirror"]
+
+        return normalized
+
+    @model_validator(mode="before")
+    @classmethod
+    def _normalize_window_fields(cls, data: Any) -> Any:
+        """把非法的窗口字段归一化为默认值，避免一点小错让整份配置被重置。
+
+        窗口尺寸是纯界面偏好：手工把 `window_size_mode` 拼错、或把宽高写成越界
+        值，都会让 `UserSetting.model_validate` 整体失败；`UserSettingManager`
+        随后按「非法配置」处理——备份文件并用默认值覆盖，用户其余设置一并丢失。
+        这里就地纠正，让坏掉的窗口偏好只影响窗口本身。
+        """
+        if not isinstance(data, dict):
+            return data
+
+        normalized = dict(data)
+        if normalized.get("window_size_mode") not in _WINDOW_SIZE_MODES:
+            normalized["window_size_mode"] = WindowSizeMode.REMEMBER.value
+
+        for prefix in ("", "last_"):
+            width_key = f"window_{prefix}width"
+            height_key = f"window_{prefix}height"
+            width, height = clamp_window_size(
+                normalized.get(width_key), normalized.get(height_key)
+            )
+            normalized[width_key] = width
+            normalized[height_key] = height
 
         return normalized
 

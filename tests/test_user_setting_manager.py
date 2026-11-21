@@ -697,6 +697,33 @@ def test_update_from_user_setting_keeps_recorded_window_size(manager, settings_f
     assert manager.get_user_setting().window_last_width == 1280
 
 
+def test_invalid_window_settings_keep_other_settings(manager, settings_file):
+    """手改坏的窗口字段只影响窗口本身，不会让整份配置被判为非法。"""
+    settings_file.write_text(
+        json.dumps(
+            {
+                "version": UserSetting._VERSION,
+                "trash_weapon_ids": ["w1"],
+                "window_size_mode": "remeber",
+                "window_width": 10,
+                "window_height": "720",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    manager.load_user_setting()
+
+    setting = manager.get_user_setting()
+    assert setting.trash_weapon_ids == ["w1"]
+    assert setting.window_size_mode == "remember"
+    assert setting.window_width == 400
+    # 类型不符的一维回落到默认值
+    assert setting.window_height == 900
+    # 没有备份文件，说明走的是归一化而不是「非法配置 → 重置」
+    assert list(settings_file.parent.glob("*.backup.*.json")) == []
+
+
 def test_migrate_v10_to_v11_adds_window_size_fields():
     """v10 → v11: 补充窗口大小字段，默认记住上次关闭时的大小，已有字段保留。"""
     v10_config = {
