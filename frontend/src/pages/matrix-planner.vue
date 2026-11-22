@@ -41,10 +41,19 @@
                           <v-icon class="mr-2" color="primary" icon="mdi-map-marker" size="small" />
                           <span class="text-subtitle-1 font-weight-bold">刷取地点</span>
                         </div>
-                        <div class="pl-1">
+                        <div class="pl-1 d-flex flex-wrap align-center ga-2">
                           <v-chip color="info" label size="large" variant="flat">
                             <v-icon size="small" start>mdi-sword-cross</v-icon>
                             {{ getDisplayName(choice.battleName) }}
+                          </v-chip>
+                          <v-chip
+                            v-if="isCustomAlluviumId(choice.battleId)"
+                            color="deep-purple"
+                            label
+                            size="small"
+                            variant="flat"
+                          >
+                            自定义
                           </v-chip>
                         </div>
                       </div>
@@ -145,10 +154,19 @@
                             />
                             <span class="text-subtitle-1 font-weight-bold">刷取地点</span>
                           </div>
-                          <div class="pl-1 mb-4">
+                          <div class="pl-1 mb-4 d-flex flex-wrap align-center ga-2">
                             <v-chip color="info" label size="large" variant="flat">
                               <v-icon size="small" start>mdi-sword-cross</v-icon>
                               {{ getDisplayName(choice.battleName) }}
+                            </v-chip>
+                            <v-chip
+                              v-if="isCustomAlluviumId(choice.battleId)"
+                              color="deep-purple"
+                              label
+                              size="small"
+                              variant="flat"
+                            >
+                              自定义
                             </v-chip>
                           </div>
                           <div class="d-flex align-center mb-3">
@@ -314,17 +332,28 @@
                       >
                     </template>
                   </v-tooltip>
+                  <v-spacer />
+                  <v-btn
+                    color="deep-purple"
+                    prepend-icon="mdi-map-marker-plus"
+                    size="small"
+                    variant="tonal"
+                    @click="customAlluviumDialogOpen = true"
+                  >
+                    自定义淤积点
+                  </v-btn>
                 </div>
                 <v-chip-group v-model="selectedFarmingLocations" column multiple>
                   <v-chip
                     v-for="location in alluviumLocationOptions"
                     :key="location.battleId"
-                    color="primary"
+                    :color="location.isCustom ? 'deep-purple' : 'primary'"
                     filter
                     size="small"
                     :value="location.battleId"
                     variant="outlined"
                   >
+                    <v-icon v-if="location.isCustom" class="mr-1" size="x-small">mdi-pencil</v-icon>
                     {{ getDisplayName(location.battleName) }}
                   </v-chip>
                 </v-chip-group>
@@ -639,6 +668,9 @@
       </v-col>
     </v-row>
 
+    <!-- 自定义淤积点设定弹窗 -->
+    <custom-alluvium-dialog v-model="customAlluviumDialogOpen" />
+
     <!-- 回到顶部按钮 -->
     <back-to-top />
   </v-container>
@@ -648,12 +680,15 @@
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import BackToTop from '@/components/BackToTop.vue'
+import CustomAlluviumDialog from '@/components/CustomAlluviumDialog.vue'
 import CustomStatIcon from '@/components/CustomStatIcon.vue'
 import ItemIcon from '@/components/ItemIcon.vue'
+import { useCustomAlluviums } from '@/composables/useCustomAlluviums'
 import { useCustomStats } from '@/composables/useCustomStats'
 import { type BattleChoice, getDisplayName, useMatrixPlanner } from '@/composables/useMatrixPlanner'
 import { useProfiles } from '@/composables/useProfiles'
 import { useRarityFilters } from '@/composables/useRarityFilters'
+import { alluviumAllowsAttribute, isCustomAlluviumId } from '@/utils/gameData/alluvium'
 import { useStaticData } from '@/utils/gameData/staticData'
 import {
   findCustomStat,
@@ -668,6 +703,7 @@ const { weaponTypes, weaponsMap, essencesMap, matrixIcons } = useStaticData()
 const { treasureMatrix, activeProfile, updateMatrixPlannerFarmingLocations } = useProfiles()
 const { selectedRarities } = useRarityFilters()
 const { customStats, customMatrixEntries, fetchCustomStats } = useCustomStats()
+const { fetchCustomAlluviums } = useCustomAlluviums()
 
 // 底板图片路径
 const essenceBgSrc = computed(() => matrixIcons.value.essenceBg)
@@ -765,6 +801,7 @@ function handleCustomStatClick(entry: { syntheticId: string; index: number }) {
 
 onMounted(() => {
   void fetchCustomStats()
+  void fetchCustomAlluviums()
 })
 
 /** 不使用预刻券模式：显示所有刷取地点 */
@@ -773,13 +810,17 @@ const noPrecraftMode = ref(false)
 /** 不使用预刻券模式下选中的武器ID，用于置顶包含该武器的地点 */
 const selectedWeaponForLocation = ref<string | null>(null)
 
+/** 自定义淤积点设定弹窗开关 */
+const customAlluviumDialogOpen = ref(false)
+
 // --- 刷取地点筛选 ---
 
-/** 所有可选的刷取地点（能量淤积点） */
+/** 所有可选的刷取地点（内置能量淤积点 + 用户自定义地点） */
 const alluviumLocationOptions = computed(() =>
   Object.values(energyAlluviums.value).map((alluvium) => ({
     battleId: alluvium.battleId,
     battleName: alluvium.battleName,
+    isCustom: alluvium.isCustom,
   })),
 )
 
@@ -826,14 +867,16 @@ watch(
     if (oldSorted === newSorted) return
 
     // 当前勾选状态与「已保存配置 + 剩余地点默认勾选」一致时说明这是回填而非用户改动。
-    // saved 的键恒为 alluviumLocationOptions 的子集（battleId 来自固定的 EnergyAlluviums.json），
-    // 因此这个比较口径与回填 watcher 一致，不会漏掉用户真实的取消勾选。
+    // 比较口径与上面的回填 watcher 保持一致（都只按现有选项生成），因此不会漏掉
+    // 用户真实的取消勾选。
     const synced = alluviumLocationOptions.value
       .filter((option) => savedFarmingLocations.value[option.battleId] ?? true)
       .map((option) => option.battleId)
     if (synced.toSorted().join(',') === newSorted) return
 
-    const locations: Record<string, boolean> = {}
+    // 以已保存配置为底再覆盖现有选项：自定义地点列表还没加载完（或加载失败）时
+    // 选项里没有它们的键，直接用选项重建会把已保存的勾选整片抹掉。
+    const locations: Record<string, boolean> = { ...savedFarmingLocations.value }
     for (const option of alluviumLocationOptions.value) {
       locations[option.battleId] = newValue.includes(option.battleId)
     }
@@ -875,25 +918,36 @@ const allLocationChoices = computed<LocationChoice[]>(() => {
     const matchedWeaponIds: string[] = []
 
     for (const [weaponId, weapon] of weaponsMap.value.entries()) {
-      // 检查武器的属性是否匹配该地点
-      // 基础属性总是匹配（所有地点都能刷基础属性）
-      // 检查附加属性和技能属性
+      // 基础属性也要落在该地点的池里：自定义地点可以只刷部分基础属性，
+      // 池里没有这条的地点即使附加 / 技能对得上也刷不出该武器的基质。
+      const attributeMatch = alluviumAllowsAttribute(
+        alluvium.attributeStats,
+        getStatDisplayName(weapon.attributeStatId),
+      )
       const secondaryMatch = alluvium.secondaryStats.includes(
         getStatDisplayName(weapon.secondaryStatId),
       )
       const skillMatch = alluvium.skillStats.includes(getStatDisplayName(weapon.skillStatId))
 
-      if (secondaryMatch && skillMatch) {
+      if (attributeMatch && secondaryMatch && skillMatch) {
         matchedWeaponIds.push(weaponId)
       }
     }
 
     // 检查自定义基质是否匹配该地点
     for (const stat of customStats.value) {
-      if (!stat.secondary || !stat.skill) continue
+      if (!stat.attribute || !stat.secondary || !stat.skill) continue
+      const attributeMatch = alluviumAllowsAttribute(
+        alluvium.attributeStats,
+        getStatDisplayName(stat.attribute),
+      )
       const secondary = getStatDisplayName(stat.secondary)
       const skill = getStatDisplayName(stat.skill)
-      if (alluvium.secondaryStats.includes(secondary) && alluvium.skillStats.includes(skill)) {
+      if (
+        attributeMatch &&
+        alluvium.secondaryStats.includes(secondary) &&
+        alluvium.skillStats.includes(skill)
+      ) {
         matchedWeaponIds.push(toCustomStatId(stat))
       }
     }

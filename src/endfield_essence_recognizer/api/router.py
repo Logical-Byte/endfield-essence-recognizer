@@ -2,6 +2,7 @@ from fastapi import APIRouter
 
 from .routes import (
     config,
+    custom_alluviums,
     matrix_export,
     profiles,
     scanner,
@@ -14,6 +15,7 @@ from .websockets import events, logs, update_progress
 
 api_router = APIRouter(prefix="/api")
 api_router.include_router(config.router)
+api_router.include_router(custom_alluviums.router)
 api_router.include_router(matrix_export.router)
 api_router.include_router(profiles.router)
 api_router.include_router(scanner.router)
